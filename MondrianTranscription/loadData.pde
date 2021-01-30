@@ -4,31 +4,34 @@ void setFloorPlan() {
   inputFloorPlanHeight = floorPlan.height;
   if (inputFloorPlanWidth > inputFloorPlanHeight) floorPlan.resize(width/2, 0);
   else floorPlan.resize(0, height);
-  // imageMode(CENTER);
-  //image(floorPlan, width/4, height/2);
-  image(floorPlan, 0, 0);
 }
 
-void setGUIWindows() {
-  // Floor plan display window
-  noFill();
-  strokeWeight(2);
-  rect(0, 0, width/2, height);
-  // video window
-  fill(255);
-  rect(width/2, 0, width/2, height/2);
-  // Keys Windwo
-  fill(150);
-  rect(width/2, height/2, width/2, height/2);
-}
-
-void setMovie() {
-  movie = new Movie(this, "video.mp4");
+void setMovie(String fileName) {
+  movie = new Movie(this, fileName);
   movie.play();
   movieDuration = movie.duration();
   movie.stop();
 }
 
-void setDrawStyles() {
-  strokeWeight(5);
+void setGUIWindows() {
+  windowFloorPlanWidth = width/2;
+  windowFloorPlanHeight = height;
+  windowVideoWidth = width/2;
+  windowVideoHeight = height/2;
+  windowKeysWidth = width/2;
+  windowKeysHeight = height/2;
+  drawGUIWindows();
+}
+
+void drawGUIWindows() {
+  noStroke();
+  // Floor plan display window
+  fill(150);
+  rect(0, 0, windowFloorPlanWidth, windowFloorPlanHeight);
+  // video window
+  fill(0);
+  rect(windowVideoWidth, 0, windowVideoWidth, windowVideoHeight);
+  // Keys Window
+  fill(255);
+  rect(windowKeysWidth, windowKeysHeight, windowKeysWidth, windowKeysHeight);
 }
