@@ -57,7 +57,10 @@ class UpdateData {
   // Create and write coordinates to output file, increment curFileToOutput for next recording when finished
   void writeFile() {
     PrintWriter output = createWriter("Path_" + curFileToOutput + ".csv");
-    for (int i = 0; i < curPath.xPos.size(); i++) output.println(curPath.tPos.get(i) + "," + curPath.xPos.get(i) + "," + curPath.yPos.get(i));
+    for (int i = 0; i < curPath.xPos.size(); i++) {
+      if (i == 0) output.println(fileHeaders[0] + "," + fileHeaders[1] + "," + fileHeaders[2]); // print table headers
+      output.println(curPath.tPos.get(i) + "," + curPath.xPos.get(i) + "," + curPath.yPos.get(i));
+    }
     output.flush(); // Writes the remaining data to the file
     output.close(); // Finishes the file
     curFileToOutput ++;

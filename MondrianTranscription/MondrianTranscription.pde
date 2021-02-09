@@ -13,6 +13,7 @@ class Path {
 
 UpdateData data = new UpdateData(); // holds methods to update data recording and video
 int curFileToOutput = 0; // current file number to write to output
+String [] fileHeaders = {"time", "x", "y"};
 
 // FLOOR PLAN
 PImage floorPlan;

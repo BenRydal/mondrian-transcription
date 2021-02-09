@@ -1,5 +1,5 @@
-void setFloorPlan() {
-  floorPlan = loadImage("floorplan.png");
+void setFloorPlan(String fileName) {
+  floorPlan = loadImage(fileName);
   inputFloorPlanWidth = floorPlan.width; // set values based on pixel size of original img before resizing
   inputFloorPlanHeight = floorPlan.height;
   floorPlan.resize(windowFloorPlanWidth, windowFloorPlanHeight);

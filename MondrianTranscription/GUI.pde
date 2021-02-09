@@ -25,7 +25,7 @@ void floorPlanFileSelected(File selection) {
   else {
     String fileName = selection.getAbsolutePath();
     if (fileName.endsWith(".png") || fileName.endsWith(".jpg")) { // If it is a CSV file load data
-      setFloorPlan();
+      setFloorPlan(fileName);
       floorPlanLoaded = true;
       println("User selected " + selection.getAbsolutePath());
     }
