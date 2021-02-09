@@ -1,6 +1,5 @@
 void keyPressed() {
-  // toggle record mode and video play
-  if (key == 'p') data.playPauseMovie();
+  if (key == 'p') data.playPauseRecording();
   else if (key == 'r') data.reset();
   else if (key == 'b') data.rewind();
   else if (key == 'f') data.fastForward();

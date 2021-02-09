@@ -2,8 +2,12 @@ void setFloorPlan() {
   floorPlan = loadImage("floorplan.png");
   inputFloorPlanWidth = floorPlan.width; // set values based on pixel size of original img before resizing
   inputFloorPlanHeight = floorPlan.height;
-  if (inputFloorPlanWidth > inputFloorPlanHeight) floorPlan.resize(width/2, 0);
-  else floorPlan.resize(0, height);
+  //int imageRatio = inputFloorPlanHeight/inputFloorPlanWidth;
+  //if (inputFloorPlanWidth > inputFloorPlanHeight) floorPlan.resize(width/2, 0);
+  //else floorPlan.resize(0, height);
+  floorPlan.resize(windowFloorPlanWidth, windowFloorPlanHeight);
+  displayFloorPlanWidth = floorPlan.width; // set values based on pixel size of new img
+  displayFloorPlanHeight = floorPlan.height;
 }
 
 void setMovie(String fileName) {

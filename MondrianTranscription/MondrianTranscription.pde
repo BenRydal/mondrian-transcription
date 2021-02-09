@@ -1,6 +1,4 @@
-// fix floor plan scaling
-// test run/file writing
-// general errors
+// test run/file writing and scaling
 
 import processing.video.*;
 import java.util.ArrayList;
@@ -20,18 +18,17 @@ int curFileToOutput = 0; // current file number to write to output
 
 // FLOOR PLAN
 PImage floorPlan;
-int inputFloorPlanWidth;
-int inputFloorPlanHeight;
+int inputFloorPlanWidth, inputFloorPlanHeight; // real pixel width and height of floorPlan image file
+int displayFloorPlanWidth, displayFloorPlanHeight; // pixel width and height floorPlan is displayed
 
 // VIDEO
 Movie movie; // video file
 float movieDuration; // video duration set in loadData from video data
-boolean movieIsPlaying = false;
+boolean recording = false;
 float videoJumpValue = 5.0; // value in seconds to ff or rewind
 
 // GUI
-boolean movieLoaded = false;
-boolean floorPlanLoaded = false;
+boolean movieLoaded = false, floorPlanLoaded = false;
 PFont font;
 int windowFloorPlanWidth, windowFloorPlanHeight, windowVideoWidth, windowVideoHeight, windowKeysWidth, windowKeysHeight;
 boolean reSetAllData = true; 
@@ -56,16 +53,8 @@ void draw() {
 }
 
 void setDrawingSpace() {
-  // Runs once after data loaded
-  if (reSetAllData) {
-    data.reDrawAllData();
-    reSetAllData = false;
-  }
-  if (movieIsPlaying) {
-    image(movie, width/2, 0, width/2, height/2);
-    if (movie.time() < movieDuration) data.record();
-    else data.writeFile();
-  }
+  if (reSetAllData) data.reDrawAllData();   // Runs once after data is initially loaded or file is written
+  if (recording) data.record(); // records data and updates visualization if in record mode
 }
 
 void movieEvent(Movie m) {

@@ -1,5 +1,28 @@
 class UpdateData {
 
+  // Updates visualizatio and records data or writes file if at end of video
+  void record() {
+    image(movie, width/2, 0, width/2, height/2);
+    if (movie.time() < movieDuration) data.recordPoint();
+    else data.writeFile();
+  }
+
+  // Record data point and call update/draw line method
+  void recordPoint() {
+    //xPosition.add(int(map(mouseX, 0, floorPlan.width, 0, inputFloorPlanWidth)));
+    curPath.xPos.add(mouseX * (inputFloorPlanWidth/displayFloorPlanWidth)); // rescale x,y positions to input floor plan
+    curPath.yPos.add(mouseY * (inputFloorPlanHeight/displayFloorPlanHeight));
+    curPath.tPos.add(movie.time());
+    drawLine();
+}
+
+  // Draw the line segment scaled to visual screen
+  void drawLine() {
+    strokeWeight(5);
+    stroke(0);
+    line(constrain(mouseX, 0, windowFloorPlanWidth), constrain(mouseY, 0, windowFloorPlanHeight), constrain(pmouseX, 0, windowFloorPlanWidth), constrain(pmouseY, 0, windowFloorPlanHeight));
+  }
+
   void reDrawAllData() {
     image(floorPlan, 0, 0);
     image(movie, width/2, 0, width/2, height/2);
@@ -9,10 +32,10 @@ class UpdateData {
       // loop through path object and draw
       Path path = paths.get(i);
       for (int j = 1; j < path.xPos.size(); j++) { // start at 1
-        int x = path.xPos.get(j) / (inputFloorPlanWidth/floorPlan.width);
-        int y = path.yPos.get(j) / (inputFloorPlanHeight/floorPlan.height);
-        int px = path.xPos.get(j-1) / (inputFloorPlanWidth/floorPlan.width); // prior point
-        int py = path.yPos.get(j-1) / (inputFloorPlanHeight/floorPlan.height);
+        int x = path.xPos.get(j) / (inputFloorPlanWidth/displayFloorPlanWidth);
+        int y = path.yPos.get(j) / (inputFloorPlanHeight/displayFloorPlanHeight);
+        int px = path.xPos.get(j-1) / (inputFloorPlanWidth/displayFloorPlanWidth); // prior point
+        int py = path.yPos.get(j-1) / (inputFloorPlanHeight/displayFloorPlanHeight);
         line(x, y, px, py);
       }
     }
@@ -27,21 +50,6 @@ class UpdateData {
     }
   }
 
-  // Record data/draw line segment
-  void record() {
-    //xPosition.add(int(map(mouseX, 0, floorPlan.width, 0, inputFloorPlanWidth)));
-    curPath.xPos.add(mouseX * (inputFloorPlanWidth/floorPlan.width)); // rescale x,y positions to input floor plan
-    curPath.yPos.add(mouseY * (inputFloorPlanHeight/floorPlan.height));
-    curPath.tPos.add(movie.time());
-    setLineStyle();
-    line(constrain(mouseX, 0, width/2), mouseY, constrain(pmouseX, 0, width/2), pmouseY); // draw the line segment scaled to visual screen
-  }
-
-  void setLineStyle() {
-    strokeWeight(5);
-    stroke(0);
-  }
-
   // Create and write coordinates to output file, increment curFileToOutput for next recording when finished
   void writeFile() {
     PrintWriter output = createWriter("Path_" + curFileToOutput + ".csv");
@@ -53,7 +61,7 @@ class UpdateData {
     data.clearPositionData();
     reSetAllData = true;
     movie.stop();
-    movieIsPlaying = false;
+    recording = false;
   }
 
   // Clone current path into new Path object and add to paths ArrayList holder
@@ -72,20 +80,20 @@ class UpdateData {
     curPath.tPos.clear();
   }
 
-  void playPauseMovie() {
-    if (movieIsPlaying) {
+  void playPauseRecording() {
+    if (recording) {
       movie.pause();
-      movieIsPlaying = false;
+      recording = false;
     } else {
       movie.play();
-      movieIsPlaying = true;
+      recording = true;
     }
   }
 
-  // Reset arraylists, movieIsPlaying and redraw floor plan
+  // Reset arraylists, recording and redraw floor plan
   void reset() {
     movie.stop();
-    movieIsPlaying = false;
+    recording = false;
     reDrawAllData();
     curPath.xPos.clear();
     curPath.yPos.clear();
