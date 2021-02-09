@@ -1,5 +1,3 @@
-// test run/file writing and scaling
-
 import processing.video.*;
 import java.util.ArrayList;
 
@@ -8,8 +6,8 @@ Path curPath = new Path(); // current path to record
 
 // Each recorded path file
 class Path {
-  ArrayList<Integer> xPos = new ArrayList<Integer>();
-  ArrayList<Integer> yPos = new ArrayList<Integer>();
+  ArrayList<Float> xPos = new ArrayList<Float>();
+  ArrayList<Float> yPos = new ArrayList<Float>();
   ArrayList<Float> tPos = new ArrayList<Float>();
 }
 
@@ -18,8 +16,8 @@ int curFileToOutput = 0; // current file number to write to output
 
 // FLOOR PLAN
 PImage floorPlan;
-int inputFloorPlanWidth, inputFloorPlanHeight; // real pixel width and height of floorPlan image file
-int displayFloorPlanWidth, displayFloorPlanHeight; // pixel width and height floorPlan is displayed
+float inputFloorPlanWidth, inputFloorPlanHeight; // real pixel width and height of floorPlan image file
+float displayFloorPlanWidth, displayFloorPlanHeight; // pixel width and height floorPlan is displayed
 
 // VIDEO
 Movie movie; // video file

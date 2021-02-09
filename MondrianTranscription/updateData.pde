@@ -1,6 +1,6 @@
 class UpdateData {
 
-  // Updates visualizatio and records data or writes file if at end of video
+  // Updates visualization and records data or writes file if at end of video
   void record() {
     image(movie, width/2, 0, width/2, height/2);
     if (movie.time() < movieDuration) data.recordPoint();
@@ -14,7 +14,7 @@ class UpdateData {
     curPath.yPos.add(mouseY * (inputFloorPlanHeight/displayFloorPlanHeight));
     curPath.tPos.add(movie.time());
     drawLine();
-}
+  }
 
   // Draw the line segment scaled to visual screen
   void drawLine() {
@@ -32,10 +32,10 @@ class UpdateData {
       // loop through path object and draw
       Path path = paths.get(i);
       for (int j = 1; j < path.xPos.size(); j++) { // start at 1
-        int x = path.xPos.get(j) / (inputFloorPlanWidth/displayFloorPlanWidth);
-        int y = path.yPos.get(j) / (inputFloorPlanHeight/displayFloorPlanHeight);
-        int px = path.xPos.get(j-1) / (inputFloorPlanWidth/displayFloorPlanWidth); // prior point
-        int py = path.yPos.get(j-1) / (inputFloorPlanHeight/displayFloorPlanHeight);
+        float x = path.xPos.get(j) / (inputFloorPlanWidth/displayFloorPlanWidth);
+        float y = path.yPos.get(j) / (inputFloorPlanHeight/displayFloorPlanHeight);
+        float px = path.xPos.get(j-1) / (inputFloorPlanWidth/displayFloorPlanWidth); // prior point
+        float py = path.yPos.get(j-1) / (inputFloorPlanHeight/displayFloorPlanHeight);
         line(x, y, px, py);
       }
     }
@@ -45,8 +45,12 @@ class UpdateData {
   // redrawfloorPlan and loop through all lists to draw complete path
   void reDrawCurPath() {
     stroke(0);
-    for (int i = 0; i < curPath.xPos.size(); i++) {
-      if (i!=0) line(curPath.xPos.get(i), curPath.yPos.get(i), curPath.xPos.get(i-1), curPath.yPos.get(i-1)); // draw line segment
+    for (int i = 1; i < curPath.xPos.size(); i++) {
+      float x = curPath.xPos.get(i) / (inputFloorPlanWidth/displayFloorPlanWidth);
+      float y = curPath.yPos.get(i) / (inputFloorPlanHeight/displayFloorPlanHeight);
+      float px = curPath.xPos.get(i-1) / (inputFloorPlanWidth/displayFloorPlanWidth); // prior point
+      float py = curPath.yPos.get(i-1) / (inputFloorPlanHeight/displayFloorPlanHeight);
+      line(x, y, px, py); // draw line segment
     }
   }
 
@@ -67,8 +71,8 @@ class UpdateData {
   // Clone current path into new Path object and add to paths ArrayList holder
   void addPath() {
     Path path = new Path();
-    path.xPos = (ArrayList<Integer>)curPath.xPos.clone();
-    path.yPos = (ArrayList<Integer>)curPath.yPos.clone();
+    path.xPos = (ArrayList<Float>)curPath.xPos.clone();
+    path.yPos = (ArrayList<Float>)curPath.yPos.clone();
     path.tPos = (ArrayList<Float>)curPath.tPos.clone();
     paths.add(path);
   }
