@@ -44,14 +44,16 @@ void setup() {
 }
 
 void draw() {
-  if (floorPlanLoaded && movieLoaded) setDrawingSpace();
-  else {
-    drawGUIWindows();
-    drawKeys();
-  }
+  if (floorPlanLoaded && movieLoaded) setDrawingScreen();
+  else setLoadDataScreen();
 }
 
-void setDrawingSpace() {
+void setLoadDataScreen() {
+  drawGUIWindows();
+  drawKeys();
+}
+
+void setDrawingScreen() {
   if (reSetAllData) data.reDrawAllData();   // Runs once after data is initially loaded or file is written
   if (recording) data.record(); // records data and updates visualization if in record mode
 }
