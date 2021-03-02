@@ -1,3 +1,10 @@
+function loadFonts() {
+  font_PlayfairReg = loadFont("data/fonts/PlayfairDisplay-Regular.ttf");
+  font_PlayfairItalic = loadFont("data/fonts/PlayfairDisplay-Italic.ttf");
+  font_PlayfairBold = loadFont("data/fonts/PlayfairDisplay-Bold.ttf");
+  font_Lato = loadFont("data/fonts/Lato-Light.ttf");
+}
+
 // if image: replace floor plan and rerun movement?????
 function handleFloorPlanFile(input) {
   let file = input.files[0];

@@ -5,7 +5,9 @@
 
 function drawKeys() {
     fill(0);
-    text("Play/Pause (p), Reset (r), Rewind, (b), FF (f), Write (w)", windowVideoWidth, windowVideoHeight + windowVideoHeight/2);
+    //textFont(font_PlayfairReg, 30);
+    textFont(font_Lato, 30);
+    text("Play/Pause (p)\nFast-Forward (f)\nRewind (b)\nReset (r)\nWrite (w)", windowVideoWidth + spacing, windowVideoHeight + spacing);
   }
 
 function keyPressed() {
