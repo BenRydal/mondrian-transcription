@@ -1,19 +1,25 @@
 <html>
+
 <head>
     <script src="https://cdn.jsdelivr.net/npm/p5@0.10.2/lib/p5.js"></script>
     <script src="js/main.js"></script>
     <script src="js/loadData.js"></script>
     <script src="js/UpdateData.js"></script>
     <script src="js/GUI.js"></script>
+    <link rel="stylesheet" type="text/css" href="css/input.css" />
 </head>
 
 <body>
-    <form action="/action_page.php">
-        <label for="vid">Video:</label>
-        <input type="file" id="img" name="img" accept="video/*" onchange="handleVideoFile(this)">
-        <label for="img">Floor Plan:</label>
-        <input type="file" id="img" name="img" accept="image/*" onchange="handleFloorPlanFile(this)">
-    </form>
+    <div class="center">
+        <form action="/action_page.php">
+            <input type="file" name="file" id="inputFloorPlan" name="file" class="inputfile" accept="image/*"
+                onchange="handleFloorPlanFile(this)">
+            <label for="inputFloorPlan">Upload Floor Plan Image</label>
+            <input type="file" name="file" id="inputVideo" name="file" class="inputfile" accept="video/*"
+                onchange="handleVideoFile(this)">
+            <label for="inputVideo">Upload Video File</label>
+        </form>
+    </div>
 </body>
 
 </html>
