@@ -39,7 +39,7 @@ function handleVideoFile(input) {
 
 // Creates movie element specific to videoPlatform and params
 function setVideo() {
-  movie.size(windowVideoWidth, windowVideoHeight);
+  movie.size(displayVideoWidth, displayVideoHeight);
   movie.id('moviePlayer');
   movie.hide();
   // Native P5 onended and duration methods don't seem to work, so use below 

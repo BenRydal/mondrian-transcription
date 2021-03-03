@@ -2,7 +2,7 @@ function drawKeys() {
     fill(0);
     //textFont(font_PlayfairReg, 30);
     textFont(font_Lato, 30);
-    text("Play/Pause (p)\nFast-Forward (f)\nRewind (b)\nReset (r)\nWrite (w)", windowVideoWidth + spacing, windowVideoHeight + spacing);
+    text("Play/Pause (p)\nFast-Forward (f)\nRewind (b)\nReset (r)\nWrite (w)", displayVideoWidth + spacing, displayVideoHeight + spacing);
   }
 
 function keyPressed() {
@@ -14,12 +14,12 @@ function keyPressed() {
   }
 
 function setGUIWindows() {
-    windowFloorPlanWidth = width/2;
-    windowFloorPlanHeight = height;
-    windowVideoWidth = width/2;
-    windowVideoHeight = height/2;
-    windowKeysWidth = width/2;
-    windowKeysHeight = height/2;
+    displayFloorplanWidth = width/2;
+    displayFloorplanHeight = height;
+    displayVideoWidth = width/2;
+    displayVideoHeight = height/2;
+    displayKeysWidth = width/2;
+    displayKeysHeight = height/2;
     drawGUIWindows();
   }
   
@@ -27,11 +27,11 @@ function setGUIWindows() {
     noStroke();
     // Floor plan display window
     fill(150);
-    rect(0, 0, windowFloorPlanWidth, windowFloorPlanHeight);
+    rect(0, 0, displayFloorplanWidth, displayFloorplanHeight);
     // video window
     fill(0);
-    rect(windowVideoWidth, 0, windowVideoWidth, windowVideoHeight);
+    rect(displayVideoWidth, 0, displayVideoWidth, displayVideoHeight);
     // Keys Window
     fill(255);
-    rect(windowKeysWidth, windowKeysHeight, windowKeysWidth, windowKeysHeight);
+    rect(displayKeysWidth, displayKeysHeight, displayKeysWidth, displayKeysHeight);
   }

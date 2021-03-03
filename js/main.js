@@ -28,7 +28,7 @@ let videoJumpValue = 5; // value in seconds to ff or rewind
 let font_PlayfairReg, font_PlayfairItalic, font_PlayfairBold, font_Lato;
 let movieLoaded = false,
   floorPlanLoaded = false;
-let windowFloorPlanWidth, windowFloorPlanHeight, windowVideoWidth, windowVideoHeight, windowKeysWidth, windowKeysHeight;
+let displayFloorplanWidth, displayFloorplanHeight, displayVideoWidth, displayVideoHeight, displayKeysWidth, displayKeysHeight;
 
 let colorShades = ['#6a3d9a', '#ff7f00', '#33a02c', '#1f78b4', '#e31a1c', '#ffff99', '#b15928', '#cab2d6', '#fdbf6f', '#b2df8a', '#a6cee3', '#fb9a99'];
 let spacing = 50; // general spacing variable
