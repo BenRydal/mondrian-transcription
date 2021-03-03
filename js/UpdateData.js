@@ -1,14 +1,9 @@
 class UpdateData {
 
-    // constructor() {
-    // }
-
-    // Updates visualization and records data or writes file if at end of video
+    // Updates/draws video image and calls method to record data point
     record() {
         image(movie, width / 2, 0, width / 2, height / 2);
-        //if (movie.time() < movieDuration) 
         this.recordPoint();
-        // this.writeFile();
     }
 
     // Record data point and call update/draw line method
@@ -22,38 +17,28 @@ class UpdateData {
 
     // Draw the line segment scaled to visual screen
     drawLine() {
-        strokeWeight(5);
-        stroke(0);
+        strokeWeight(pathWeight);
+        stroke(curPathColor);
         line(constrain(mouseX, 0, windowFloorPlanWidth), constrain(mouseY, 0, windowFloorPlanHeight), constrain(pmouseX, 0, windowFloorPlanWidth), constrain(pmouseY, 0, windowFloorPlanHeight));
     }
 
+    // Redraws floor plan, movie, and all recorded paths
     reDrawAllData() {
         image(floorPlan, 0, 0, windowFloorPlanWidth, windowFloorPlanHeight);
         image(movie, width / 2, 0, width / 2, height / 2);
         // loop through all existing files and draw each one different color
-        for (let i = 0; i < paths.length; i++) {
-            stroke(colorShades[i % colorShades.length]); // set color
-            // loop through path object and draw
-            let path = paths[i];
-            for (let j = 1; j < path.xPos.length; j++) { // start at 1
-                let x = path.xPos[j] / (inputFloorPlanWidth / windowFloorPlanWidth);
-                let y = path.yPos[j] / (inputFloorPlanHeight / windowFloorPlanHeight);
-                let px = path.xPos[j - 1] / (inputFloorPlanWidth / windowFloorPlanWidth); // prior point
-                let py = path.yPos[j - 1] / (inputFloorPlanHeight / windowFloorPlanHeight);
-                line(x, y, px, py);
-            }
-        }
+        for (let i = 0; i < paths.length; i++) this.drawPath(paths[i], colorShades[i % colorShades.length]);
         reSetAllData = false;
     }
 
-    // redrawfloorPlan and loop through all lists to draw complete path
-    reDrawCurPath() {
-        stroke(0);
-        for (let i = 1; i < curPath.xPos.length; i++) {
-            let x = curPath.xPos[i] / (inputFloorPlanWidth / windowFloorPlanWidth);
-            let y = curPath.yPos[i] / (inputFloorPlanHeight / windowFloorPlanHeight);
-            let px = curPath.xPos[i - 1] / (inputFloorPlanWidth / windowFloorPlanWidth); // prior point
-            let py = curPath.yPos[i - 1] / (inputFloorPlanHeight / windowFloorPlanHeight);
+    // Takes path object and color, draws complete, correctly scaled path to floor plan image
+    drawPath(p, pathColor) {
+        stroke(pathColor);
+        for (let i = 1; i < p.xPos.length; i++) {
+            let x = p.xPos[i] / (inputFloorPlanWidth / windowFloorPlanWidth);
+            let y = p.yPos[i] / (inputFloorPlanHeight / windowFloorPlanHeight);
+            let px = p.xPos[i - 1] / (inputFloorPlanWidth / windowFloorPlanWidth);
+            let py = p.yPos[i - 1] / (inputFloorPlanHeight / windowFloorPlanHeight);
             line(x, y, px, py); // draw line segment
         }
     }
@@ -79,7 +64,7 @@ class UpdateData {
         recording = false;
     }
 
-    // Clone current path into new Path object and add to paths ArrayList holder
+    // Clone current path into new Path object and add new Path to paths ArrayList holder
     addPath() {
         let path = new Path();
         path.tPos = Object.assign([], curPath.tPos);
@@ -88,7 +73,7 @@ class UpdateData {
         paths.push(path);
     }
 
-    // reset curPath to record next file
+    // clear data in curPath to record next file
     clearPositionData() {
         curPath.xPos = [];
         curPath.yPos = [];
@@ -105,7 +90,7 @@ class UpdateData {
         }
     }
 
-    // Reset arraylists, recording and redraw floor plan
+    // Reset arraylists, stop recording and redraw all data
     reset() {
         movie.stop();
         recording = false;
@@ -115,15 +100,15 @@ class UpdateData {
         curPath.tPos = [];
     }
 
+    // Remove data from curPath equivalent to videoJumpValue, rewDraw all data and curPath
     rewind() {
         // Only rewind if not at very beginning of video
-        let curEndTime = curPath.tPos[curPath.tPos.length-1]; // get time value from last element in list
-        print(curEndTime, curPath.tPos.length);
+        let curEndTime = curPath.tPos[curPath.tPos.length - 1]; // get time value from last element in list
         let newEndTime = curEndTime - videoJumpValue; // subtract videoJumpValue to set newEndTime 
         if (movie.time() > videoJumpValue) movie.time(newEndTime); // rewind video to newEndTime or 0.1 if it is really close to start of video
         else movie.time(0);
         // Start at end of x or y list (NOT t) and delete up to newEndTime
-        for (let i = curPath.xPos.length-1; i >= 0; i--) {
+        for (let i = curPath.xPos.length - 1; i >= 0; i--) {
             if (curPath.tPos[i] > newEndTime) {
                 curPath.tPos.pop();
                 curPath.xPos.pop();
@@ -131,9 +116,10 @@ class UpdateData {
             } else break;
         }
         this.reDrawAllData();
-        this.reDrawCurPath();
+        this.drawPath(curPath, curPathColor);
     }
 
+    // Fast forward video by videoJumpValue
     fastForward() {
         // Only ff if not at very end of video
         // if (movie.time() < movieDuration - videoJumpValue) movie.time(movie.time() + videoJumpValue);

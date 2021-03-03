@@ -1,8 +1,3 @@
-// function keyPressed() {
-//     if (key == 'f') movie.time(movie.time() + 5); // jumps to time parameter
-//     else if (key == 'b') movie.time(movie.time() - 5); // jumps to time parameter
-// }
-
 function drawKeys() {
     fill(0);
     //textFont(font_PlayfairReg, 30);

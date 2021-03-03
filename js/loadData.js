@@ -50,23 +50,3 @@ function setVideo() {
   };
   movieLoaded = true;
 }
-
-// // parses inputted video files from user computer
-// function handleVideoFile(input) {
-//   let file = input.files[0];
-//   processVideo(URL.createObjectURL(file));
-//   // revoke url
-// }
-
-// // Creates movie element specific to videoPlatform and params
-// function processVideo(fileLocation) {
-//   movie = createVideo(fileLocation);
-//   // movie.id('moviePlayer');
-//   // movie.style('display', 'none');
-//   //setupMovie('moviePlayer', videoPlatform, videoParams); // set up the video player
-//   //let video = select('#moviePlayer').position(100, 0); // position video in upper left corner on timeline
-//   //movie.position(windowVideoWidth, 0);
-//   movie.size(windowVideoWidth, windowVideoHeight);
-//   movie.onended(stopRecording);
-//   movieLoaded = true;
-// }
