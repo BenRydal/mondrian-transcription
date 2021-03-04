@@ -1,3 +1,9 @@
+// TO DO
+// Add new display x/y pos to all references
+// test to make sure it works
+// then deal with constrain
+// then deal with proper recording
+
 // DATA
 let paths = []; // holds all recorded path files
 let curPath; // current path to record
@@ -29,7 +35,8 @@ let font_PlayfairReg, font_PlayfairItalic, font_PlayfairBold, font_Lato;
 let movieLoaded = false,
   floorPlanLoaded = false;
 let displayFloorplanWidth, displayFloorplanHeight, displayVideoWidth, displayVideoHeight, displayKeysWidth, displayKeysHeight;
-
+let displayFloorplanXpos, displayFloorplanYpos, displayVideoXpos, displayVideoYpos, displayKeysXpos, displayKeysYpos;
+let floorPlanBackgroundCol = 175, videoBackgroundColor = 0, keysBackgroundColor = 255;
 let colorShades = ['#6a3d9a', '#ff7f00', '#33a02c', '#1f78b4', '#e31a1c', '#ffff99', '#b15928', '#cab2d6', '#fdbf6f', '#b2df8a', '#a6cee3', '#fb9a99'];
 let spacing = 50; // general spacing variable
 let pathWeight = 5;
@@ -55,5 +62,5 @@ function setLoadDataScreen() {
 
 function setDrawingScreen() {
   if (reSetAllData) dataUpdate.reDrawAllData(); // Runs once after data is initially loaded or file is written
-  if (recording) dataUpdate.record(); // records data and updates visualization if in record mode
+  if (recording) dataUpdate.prepareRecording(); // records data and updates visualization if in record mode
 }

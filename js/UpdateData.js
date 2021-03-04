@@ -1,31 +1,44 @@
 class UpdateData {
 
-    // Updates/draws video image and calls method to record data point
-    record() {
-        image(movie, width / 2, 0, width / 2, height / 2);
-        this.recordPoint();
+    // Updates/draws video image and calls method to record data
+    prepareRecording() {
+        image(movie, displayVideoXpos, displayVideoYpos, displayVideoWidth, displayVideoHeight);
+        this.organizeRecording();
     }
 
-    // Record data point and call update/draw line method
-    recordPoint() {
-        //xPosition.add(int(map(mouseX, 0, floorPlan.width, 0, inputFloorPlanWidth)));
-        curPath.xPos.push(mouseX * (inputFloorPlanWidth / displayFloorplanWidth)); // rescale x,y positions to input floor plan
-        curPath.yPos.push(mouseY * (inputFloorPlanHeight / displayFloorplanHeight));
-        curPath.tPos.push(movie.time());
-        this.drawLine();
+    // Sets/sends correct x/y positions for drawing cur line segment to draw and record methods
+    organizeRecording() {
+        // Constrain mouse to floor plan display
+        let xPos = constrain(mouseX, displayFloorplanXpos, displayFloorplanXpos + displayFloorplanWidth);
+        let yPos = constrain(mouseY, displayFloorplanYpos, displayFloorplanYpos + displayFloorplanHeight);
+        let pXPos = constrain(pmouseX, displayFloorplanXpos, displayFloorplanXpos + displayFloorplanWidth);
+        let pYPos = constrain(pmouseY, displayFloorplanYpos, displayFloorplanYpos + displayFloorplanHeight);
+        // Adjust floor plan x/y positions to record to 0, 0 origin/coordinate system
+        let fpXPos = xPos - displayFloorplanXpos;
+        let fpYPos = yPos - displayFloorplanYpos;
+        // sned to draw/record methods
+        this.drawCurLineSegment(xPos, yPos, pXPos, pYPos);
+        this.recordCurPoint(fpXPos, fpYPos, movie.time());
     }
 
-    // Draw the line segment scaled to visual screen
-    drawLine() {
+    // Draw current line segment scaled to display Floor Plan
+    drawCurLineSegment(xPos, yPos, pXPos, pYPos) {
         strokeWeight(pathWeight);
         stroke(curPathColor);
-        line(constrain(mouseX, 0, displayFloorplanWidth), constrain(mouseY, 0, displayFloorplanHeight), constrain(pmouseX, 0, displayFloorplanWidth), constrain(pmouseY, 0, displayFloorplanHeight));
+        line(xPos, yPos, pXPos, pYPos);
+    }
+
+    // Record current data point
+    recordCurPoint(fpXPos, fpYPos, mTime) {
+        curPath.xPos.push(fpXPos * (inputFloorPlanWidth / displayFloorplanWidth)); // rescale x,y positions to input floor plan
+        curPath.yPos.push(fpYPos * (inputFloorPlanHeight / displayFloorplanHeight));
+        curPath.tPos.push(mTime);
     }
 
     // Redraws floor plan, movie, and all recorded paths
     reDrawAllData() {
-        image(floorPlan, 0, 0, displayFloorplanWidth, displayFloorplanHeight);
-        image(movie, width / 2, 0, width / 2, height / 2);
+        image(floorPlan, displayFloorplanXpos, displayFloorplanYpos, displayFloorplanWidth, displayFloorplanHeight);
+        image(movie, displayVideoXpos, displayVideoYpos, displayVideoWidth, displayVideoHeight);
         // loop through all existing files and draw each one different color
         for (let i = 0; i < paths.length; i++) this.drawPath(paths[i], colorShades[i % colorShades.length]);
         reSetAllData = false;
@@ -34,11 +47,12 @@ class UpdateData {
     // Takes path object and color, draws complete, correctly scaled path to floor plan image
     drawPath(p, pathColor) {
         stroke(pathColor);
+        // Must add back in floor plan display x/y pos to scale to display floor plan correctly
         for (let i = 1; i < p.xPos.length; i++) {
-            let x = p.xPos[i] / (inputFloorPlanWidth / displayFloorplanWidth);
-            let y = p.yPos[i] / (inputFloorPlanHeight / displayFloorplanHeight);
-            let px = p.xPos[i - 1] / (inputFloorPlanWidth / displayFloorplanWidth);
-            let py = p.yPos[i - 1] / (inputFloorPlanHeight / displayFloorplanHeight);
+            let x = displayFloorplanXpos + (p.xPos[i] / (inputFloorPlanWidth / displayFloorplanWidth));
+            let y = displayFloorplanYpos + (p.yPos[i] / (inputFloorPlanHeight / displayFloorplanHeight));
+            let px = displayFloorplanXpos + (p.xPos[i - 1] / (inputFloorPlanWidth / displayFloorplanWidth));
+            let py = displayFloorplanYpos + (p.yPos[i - 1] / (inputFloorPlanHeight / displayFloorplanHeight));
             line(x, y, px, py); // draw line segment
         }
     }
