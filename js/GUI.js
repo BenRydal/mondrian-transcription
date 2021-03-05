@@ -1,19 +1,14 @@
-function drawKeys() {
-  fill(0);
-  //textFont(font_PlayfairReg, 30);
-  textFont(font_Lato, 30);
-  text("Play/Pause (p)\nFast-Forward (f)\nRewind (b)\nReset (r)\nWrite (w)", displayKeysXpos + spacing, displayKeysYpos + spacing);
-}
-
 function keyPressed() {
-  if (key == 'p') dataUpdate.playPauseRecording();
-  else if (key == 'r') dataUpdate.reset();
-  else if (key == 'b') dataUpdate.rewind();
-  else if (key == 'f') dataUpdate.fastForward();
-  else if (key == 'w' && recording) dataUpdate.writeFile();
+  if (key == 'p' || key == 'P') dataUpdate.playPauseRecording();
+  else if (key == 'r' || key == 'R') dataUpdate.reset();
+  else if (key == 'b' || key == 'B') dataUpdate.rewind();
+  else if (key == 'f' || key == 'F') dataUpdate.fastForward();
+  else if (key == 's' || key == 'S') dataUpdate.writeFile();
 }
 
 function setGUIWindows() {
+  infoTextSize = width/100;
+  keyTextSize = width/75;
   // width/heights
   displayFloorplanWidth = width / 2;
   displayFloorplanHeight = height;
@@ -44,4 +39,12 @@ function drawGUIWindows() {
   // Keys
   fill(keysBackgroundColor);
   rect(displayKeysXpos, displayKeysYpos, displayKeysWidth, displayKeysHeight);
+}
+
+function drawKeys() {
+  fill(0);
+  textFont(font_Lato, keyTextSize);
+  text(descMSG, displayKeysXpos + spacing/2, displayKeysYpos + spacing/2, displayKeysWidth - spacing, displayKeysHeight - spacing);
+  textFont(font_PlayfairItalic, infoTextSize);
+  text(infoMsg, 0, height - spacing);
 }

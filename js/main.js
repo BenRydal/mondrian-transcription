@@ -30,8 +30,8 @@ let movieLoaded = false,
   floorPlanLoaded = false;
 let displayFloorplanWidth, displayFloorplanHeight, displayVideoWidth, displayVideoHeight, displayKeysWidth, displayKeysHeight;
 let displayFloorplanXpos, displayFloorplanYpos, displayVideoXpos, displayVideoYpos, displayKeysXpos, displayKeysYpos;
-let floorPlanBackgroundCol = 175,
-  videoBackgroundColor = 0,
+let floorPlanBackgroundCol = 225,
+  videoBackgroundColor = 125,
   keysBackgroundColor = 255;
 let colorShades = ['#6a3d9a', '#ff7f00', '#33a02c', '#1f78b4', '#e31a1c', '#ffff99', '#b15928', '#cab2d6', '#fdbf6f', '#b2df8a', '#a6cee3', '#fb9a99'];
 let spacing = 50; // general spacing variable
@@ -39,8 +39,9 @@ let pathWeight = 5;
 let curPathColor = 0;
 
 // TITLE
-let infoMsg = "Mondrian Transcription\nby Ben Rydal Shapiro & contributers";
-
+let keyTextSize, infoTextSize;
+let infoMsg = "MONDRIAN TRANSCRIPTION\nby Ben Rydal Shapiro & contributers\nbuilt with p5.js";
+let descMSG = "Hi there! This is a beta version of Mondrian Transcription, a method to precisely transcribe movement from video data. To get started, use the top buttons to upload a floor plan image file and a video file. Then, use the key codes below to interact with the video and use your cursor/mouse to draw on the floor plan. As you interact with the video and simultaneously draw on the floor plan, movement is recorded. You can save this movement as a .CSV file anytime and then draw/record another movement path.\n\nPlay/Pause (p)\nFast-Forward (f)\nRewind (b)\nReset (r)\nSave Movement File (s)"
 
 function setup() {
   canvas = createCanvas(window.innerWidth, window.innerHeight, P2D);
@@ -53,7 +54,6 @@ function setup() {
 function draw() {
   if (floorPlanLoaded && movieLoaded) setDrawingScreen();
   else setLoadDataScreen();
-  drawInfo();
 }
 
 function setLoadDataScreen() {
@@ -64,10 +64,4 @@ function setLoadDataScreen() {
 function setDrawingScreen() {
   if (reSetAllData) dataUpdate.reDrawAllData(); // Runs once after data is initially loaded or file is written
   if (recording) dataUpdate.prepareRecording(); // records data and updates visualization if in record mode
-}
-
-function drawInfo() {
-  fill(0);
-  textFont(font_PlayfairItalic, 16);
-  text(infoMsg, 0, height - spacing * 2);
 }
