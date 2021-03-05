@@ -2,7 +2,7 @@ function drawKeys() {
   fill(0);
   //textFont(font_PlayfairReg, 30);
   textFont(font_Lato, 30);
-  text("Play/Pause (p)\nFast-Forward (f)\nRewind (b)\nReset (r)\nWrite (w)", displayVideoXpos + spacing, displayVideoYpos + spacing);
+  text("Play/Pause (p)\nFast-Forward (f)\nRewind (b)\nReset (r)\nWrite (w)", displayKeysXpos + spacing, displayKeysYpos + spacing);
 }
 
 function keyPressed() {
