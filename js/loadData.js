@@ -45,7 +45,6 @@ function setVideo() {
   // Native P5 onended and duration methods don't seem to work, so use below 
   var mov = document.getElementById('moviePlayer');
   mov.onended = function () {
-    dataUpdate.writeFile(); // write file when ended
     recording = false;
   };
   movieLoaded = true;
