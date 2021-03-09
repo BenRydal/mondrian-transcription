@@ -121,6 +121,8 @@ class UpdateData {
         let newEndTime = curEndTime - videoJumpValue; // subtract videoJumpValue to set newEndTime 
         if (movie.time() > videoJumpValue) movie.time(newEndTime); // rewind video to newEndTime or 0.1 if it is really close to start of video
         else movie.time(0);
+        movie.pause(); // pause movie/stop recording
+        recording = false;
         // Start at end of x or y list (NOT t) and delete up to newEndTime
         for (let i = curPath.xPos.length - 1; i >= 0; i--) {
             if (curPath.tPos[i] > newEndTime) {

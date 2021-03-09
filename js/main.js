@@ -1,3 +1,6 @@
+// Update setVIdeo with proper anonymous functino for video load
+// when you rewind, pause video, don't keep playing so you can set your pointer
+
 // DATA
 let paths = []; // holds all recorded path files
 let curPath; // current path to record
@@ -45,6 +48,7 @@ let descMSG = "Hi there! This is a beta version of Mondrian Transcription, a met
 
 function setup() {
   canvas = createCanvas(window.innerWidth, window.innerHeight, P2D);
+  frameRate(30);
   setGUIWindows();
   curPath = new Path();
   dataUpdate = new UpdateData();

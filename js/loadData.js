@@ -29,12 +29,8 @@ function processFloorPlan(fileName) {
 function handleVideoFile(input) {
   let file = input.files[0];
   let fileLocation = URL.createObjectURL(file);
-  print(movie);
   if (movie !== undefined) movie.remove(); // remove exisiting movie element if not first video loaded
   movie = createVideo(fileLocation, setVideo);
-  // movie.onload = function () {
-  //   URL.revokeObjectURL(this.src);
-  // }
 }
 
 // Creates movie element specific to videoPlatform and params
@@ -47,5 +43,8 @@ function setVideo() {
   mov.onended = function () {
     recording = false;
   };
+  movie.onload = function () {
+    URL.revokeObjectURL(this.src);
+  }
   movieLoaded = true;
 }
