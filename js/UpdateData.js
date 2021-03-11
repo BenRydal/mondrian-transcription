@@ -3,7 +3,7 @@ class UpdateData {
     // Updates/draws video image and calls method to record data
     prepareRecording() {
         image(movie, displayVideoXpos, displayVideoYpos, displayVideoWidth, displayVideoHeight);
-        this.organizeRecording();
+        if (mouseX != pmouseX || mouseY != pmouseY) this.organizeRecording(); // only record if mouse has changed position, reduces data and records/draws better curves
     }
 
     // Sets/sends correct x/y positions for drawing cur line segment to draw and record methods
@@ -114,8 +114,9 @@ class UpdateData {
         curPath.tPos = [];
     }
 
-    // Remove data from curPath equivalent to videoJumpValue, rewDraw all data and curPath
+    // Rewind video and remove data from curPath equivalent to videoJumpValue, rewDraw all data and curPath
     rewind() {
+        this.organizeRecording(); // record point before rewinding to make sure curEndTime is correct in case points were not recording if mouse was not moving
         // Only rewind if not at very beginning of video
         let curEndTime = curPath.tPos[curPath.tPos.length - 1]; // get time value from last element in list
         let newEndTime = curEndTime - videoJumpValue; // subtract videoJumpValue to set newEndTime 
@@ -137,14 +138,6 @@ class UpdateData {
 
     // Fast forward video by videoJumpValue
     fastForward() {
-        // Only ff if not at very end of video
-        // if (movie.time() < movieDuration - videoJumpValue) movie.time(movie.time() + videoJumpValue);
         movie.time(movie.time() + videoJumpValue);
-        // add x,y,time values to lists for each second
-        // for (int i = 0; i < videoJumpValue; i++) {
-        //   xPosition.add(xPosition.get(xPosition.size()-1));
-        //   yPosition.add(yPosition.get(yPosition.size()-1));
-        //   tPosition.add(tPosition.get(tPosition.size()-1));
-        // }
     }
 }
