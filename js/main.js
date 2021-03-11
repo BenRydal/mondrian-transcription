@@ -1,6 +1,3 @@
-// Update setVIdeo with proper anonymous functino for video load
-// when you rewind, pause video, don't keep playing so you can set your pointer
-
 // DATA
 let paths = []; // holds all recorded path files
 let curPath; // current path to record
