@@ -11,15 +11,15 @@ function handleFloorPlanFile(input) {
   let fileLocation = URL.createObjectURL(file);
   loadImage(fileLocation, img => {
     processFloorPlan(img);
-    //   img.onload = function () {
-    //     URL.revokeObjectURL(this.src);
-    //   }
+    img.onload = function () {
+      URL.revokeObjectURL(this.src);
+    }
   });
 }
 
 // From image file, sets floor plan width/height to display and scale movement data
-function processFloorPlan(fileName) {
-  floorPlan = fileName;
+function processFloorPlan(imgFile) {
+  floorPlan = imgFile;
   inputFloorPlanWidth = floorPlan.width; // set values based on pixel size of original img before resizing
   inputFloorPlanHeight = floorPlan.height;
   floorPlanLoaded = true;
