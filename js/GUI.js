@@ -7,8 +7,8 @@ function keyPressed() {
 }
 
 function setGUIWindows() {
-  infoTextSize = width/100;
-  keyTextSize = width/75;
+  infoTextSize = width / 100;
+  keyTextSize = width / 75;
   // width/heights
   displayFloorplanWidth = width / 2;
   displayFloorplanHeight = height;
@@ -44,7 +44,7 @@ function drawGUIWindows() {
 function drawKeys() {
   fill(0);
   textFont(font_Lato, keyTextSize);
-  text(descMSG, displayKeysXpos + spacing/2, displayKeysYpos + spacing/2, displayKeysWidth - spacing, displayKeysHeight - spacing);
+  text(descMSG, displayKeysXpos + spacing / 2, displayKeysYpos + spacing / 2, displayKeysWidth - spacing, displayKeysHeight - spacing);
   textFont(font_PlayfairItalic, infoTextSize);
   text(infoMsg, 0, height - spacing);
 }

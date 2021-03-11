@@ -46,6 +46,7 @@ let descMSG = "Hi there! This is a beta version of Mondrian Transcription, a met
 function setup() {
   canvas = createCanvas(window.innerWidth, window.innerHeight, P2D);
   frameRate(30);
+  //pixelDensity(displayDensity());
   setGUIWindows();
   curPath = new Path();
   dataUpdate = new UpdateData();
@@ -54,7 +55,12 @@ function setup() {
 
 function draw() {
   if (floorPlanLoaded && movieLoaded) setDrawingScreen();
-  else setLoadDataScreen();
+  else if (floorPlanLoaded) image(floorPlan, displayFloorplanXpos, displayFloorplanYpos, displayFloorplanWidth, displayFloorplanHeight);
+  else if (movieLoaded) {
+    // draw black screen if movie is loaded in video display
+    fill(0);
+    rect(displayVideoXpos, displayVideoYpos, displayVideoWidth, displayVideoHeight);
+  } else setLoadDataScreen();
 }
 
 function setLoadDataScreen() {
