@@ -30,21 +30,19 @@ function handleVideoFile(input) {
   let file = input.files[0];
   let fileLocation = URL.createObjectURL(file);
   if (movie !== undefined) movie.remove(); // remove exisiting movie element if not first video loaded
-  movie = createVideo(fileLocation, setVideo);
-}
-
-// Creates movie element specific to videoPlatform and params
-function setVideo() {
-  movie.size(displayVideoWidth, displayVideoHeight);
-  movie.id('moviePlayer');
-  movie.hide();
-  // Native P5 onended and duration methods don't seem to work, so use below 
-  var mov = document.getElementById('moviePlayer');
-  mov.onended = function () {
-    recording = false;
-  };
-  movie.onload = function () {
-    URL.revokeObjectURL(this.src);
-  }
-  movieLoaded = true;
+  movie = createVideo(fileLocation, function () {
+    movie.id('moviePlayer');
+    movie.size(displayVideoWidth, displayVideoHeight);
+    movie.hide();
+    // Native P5 onended and duration methods don't seem to work, so use below 
+    var mov = document.getElementById('moviePlayer');
+    mov.onended = function () {
+      recording = false;
+    };
+    movie.onload = function () {
+      URL.revokeObjectURL(this.src);
+    }
+    //loop(); // restart program loop (for other video platforms this is done in videoPlayer)
+    movieLoaded = true;
+  });
 }
