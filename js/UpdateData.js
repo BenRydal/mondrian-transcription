@@ -3,7 +3,8 @@ class UpdateData {
     // Draws video image and organizes recording if mouse is moving
     prepareRecording() {
         image(movie, displayVideoXpos, displayVideoYpos, displayVideoWidth, displayVideoHeight);
-        if (mouseX != pmouseX || mouseY != pmouseY) this.organizeRecording(); // only record if mouse has changed position, reduces data and records/draws better curves
+        //if (mouseX != pmouseX || mouseY != pmouseY) this.organizeRecording(); // only record if mouse has changed position, reduces data and records/draws better curves
+        this.organizeRecording();
     }
 
     // Sets/sends correct x/y positions for drawing cur line segment to draw and record methods
@@ -136,8 +137,22 @@ class UpdateData {
         this.drawPath(curPath, curPathColor);
     }
 
-    // Fast forward video by videoJumpValue
+    // Fast forward video by videoJumpValue and add xPos, yPos and tPos values to current list
     fastForward() {
-        movie.time(movie.time() + videoJumpValue);
+        // make sure not at end of video
+        if (movie.time() < movie.duration() - videoJumpValue) {
+            movie.time(movie.time() + videoJumpValue);
+            // movie.time(movie.time() + videoJumpValue);
+            // get last values from cur lists
+            let xPos = curPath.xPos[curPath.tPos.length - 1]; 
+            let yPos = curPath.yPos[curPath.tPos.length - 1]; 
+            let tPos = curPath.tPos[curPath.tPos.length - 1]; 
+            // add values for each second jumped by VideoJumpvalue, xPos and yPos are same but add i to tPos as time is increasing
+            for (let i = 0; i < videoJumpValue; i++) {
+                curPath.xPos.push(xPos);
+                curPath.yPos.push(yPos);
+                curPath.tPos.push(tPos + i);
+            }
+        }
     }
 }
