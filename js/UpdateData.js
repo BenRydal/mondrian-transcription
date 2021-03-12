@@ -1,6 +1,6 @@
 class UpdateData {
 
-    // Updates/draws video image and calls method to record data
+    // Draws video image and organizes recording if mouse is moving
     prepareRecording() {
         image(movie, displayVideoXpos, displayVideoYpos, displayVideoWidth, displayVideoHeight);
         if (mouseX != pmouseX || mouseY != pmouseY) this.organizeRecording(); // only record if mouse has changed position, reduces data and records/draws better curves

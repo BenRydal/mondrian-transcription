@@ -57,8 +57,7 @@ function draw() {
   if (floorPlanLoaded && movieLoaded) setDrawingScreen();
   else if (floorPlanLoaded) image(floorPlan, displayFloorplanXpos, displayFloorplanYpos, displayFloorplanWidth, displayFloorplanHeight);
   else if (movieLoaded) {
-    // draw black screen if movie is loaded in video display
-    fill(0);
+    fill(0); // draw black screen if movie is loaded in video display
     rect(displayVideoXpos, displayVideoYpos, displayVideoWidth, displayVideoHeight);
   } else setLoadDataScreen();
 }
