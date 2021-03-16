@@ -25,7 +25,7 @@ let recording = false; // controls path recording and video playing (always sync
 let videoJumpValue = 5; // value in seconds to ff or rewind
 
 // GUI
-let font_PlayfairReg, font_PlayfairItalic, font_PlayfairBold, font_Lato;
+let font_PlayfairItalic, font_Lato;
 let movieLoaded = false,
   floorPlanLoaded = false;
 let displayFloorplanWidth, displayFloorplanHeight, displayVideoWidth, displayVideoHeight, displayKeysWidth, displayKeysHeight;
