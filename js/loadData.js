@@ -29,6 +29,7 @@ function processFloorPlan(imgFile) {
 function handleVideoFile(input) {
   let file = input.files[0];
   let fileLocation = URL.createObjectURL(file);
+  noLoop();
   if (movie !== undefined) movie.remove(); // remove exisiting movie element if not first video loaded
   movie = createVideo(fileLocation, function () {
     movie.id('moviePlayer');
@@ -44,5 +45,6 @@ function handleVideoFile(input) {
     }
     //loop(); // restart program loop (for other video platforms this is done in videoPlayer)
     movieLoaded = true;
+    loop();
   });
 }
