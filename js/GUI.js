@@ -7,7 +7,7 @@ function keyPressed() {
 }
 
 function setGUIWindows() {
-  infoTextSize = width / 100;
+  infoTextSize = width / 110;
   keyTextSize = width / 75;
   // width/heights
   displayFloorplanWidth = width / 2;

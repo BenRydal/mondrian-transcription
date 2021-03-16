@@ -41,7 +41,7 @@ let curPathColor = 0;
 // TITLE
 let keyTextSize, infoTextSize;
 let infoMsg = "MONDRIAN TRANSCRIPTION\nby Ben Rydal Shapiro & contributers\nbuilt with p5.js";
-let descMSG = "Hi there! This is a beta version of Mondrian Transcription, a method to precisely transcribe movement from video data. To get started, use the top buttons to upload a floor plan image file and a video file. Then, use the key codes below to interact with the video and use your cursor/mouse to draw on the floor plan. As you interact with the video and simultaneously draw on the floor plan, movement is recorded. You can save this movement as a .CSV file anytime and then draw/record another movement path.\n\nPlay/Pause (p)\nFast-Forward (f)\nRewind (b)\nReset (r)\nSave Movement File (s)"
+let descMSG = "Hi there! This is a beta version of Mondrian Transcription, a method to transcribe movement from video. To get started, use the top buttons to upload a floor plan image file and a video file. Then, use the key codes below to interact with the video and use your cursor to draw on the floor plan. As you interact with the video and simultaneously draw on the floor plan, movement is recorded as a .CSV file organized by time in seconds and x/y pixel positions scaled to the size of your floor plan image. You can save and download this .CSV anytime and then draw/record another movement path.\n\nPLAY/PAUSE (p)\nFAST-FORWARD (f)\nREWIND (b)\nRESET (r)\nSAVE MOVEMENT FILE (s)"
 
 function setup() {
   canvas = createCanvas(window.innerWidth, window.innerHeight, P2D);
