@@ -6,6 +6,7 @@ function loadFonts() {
 // if image: replace floor plan and rerun movement?????
 function handleFloorPlanFile(input) {
   let file = input.files[0];
+  input.value = ''; // reset input value so you can load same file again in browser
   let fileLocation = URL.createObjectURL(file);
   loadImage(fileLocation, img => {
     processFloorPlan(img);
@@ -26,6 +27,7 @@ function processFloorPlan(imgFile) {
 // parses inputted video files from user computer
 function handleVideoFile(input) {
   let file = input.files[0];
+  input.value = ''; // reset input value so you can load same file again in browser
   let fileLocation = URL.createObjectURL(file);
   noLoop();
   if (movie !== undefined) movie.remove(); // remove exisiting movie element if not first video loaded
