@@ -43,7 +43,6 @@ function handleVideoFile(input) {
     movie.onload = function () {
       URL.revokeObjectURL(this.src);
     }
-    //loop(); // restart program loop (for other video platforms this is done in videoPlayer)
     movieLoaded = true;
     loop();
   });
