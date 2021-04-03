@@ -1,18 +1,22 @@
+/*
+CREDITS/LICENSE INFORMATION: This software is licensed under the GNU General Public License Version 2.0. See the GNU General Public License included with this software for more details. This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details. Mondrian Transcription Software originally developed by Ben Rydal Shapiro at Vanderbilt University as part of his dissertation titled Interaction Geography & the Learning Sciences. Copyright (C) 2018 Ben Rydal Shapiro, and contributers. To reference or read more about this work please see: https://etd.library.vanderbilt.edu/available/etd-03212018-140140/unrestricted/Shapiro_Dissertation.pdf
+*/
+
+// COLUMN HEADERS FOR FILES
+const fileHeaders = ["time", "x", "y"];
+
 // DATA
 let paths = []; // holds all recorded path files
 let curPath; // current path to record
-
-// Path object has x/y position and time lists (each recorded file)
+let dataUpdate; // object that holds methods to update data recording and video
+let reSetAllData = true; // controls redrawing of data
+let curFileToOutput = 0; // current file number to write to output
+// Path is conceptually a person's movement race and has x/y position and time lists 
 class Path {
   xPos = [];
   yPos = [];
   tPos = [];
 }
-
-let dataUpdate; // holds methods to update data recording and video
-let reSetAllData = true;
-let curFileToOutput = 0; // current file number to write to output
-const fileHeaders = ["time", "x", "y"];
 
 // FLOOR PLAN
 let floorPlan; // floor plan image file
@@ -36,7 +40,7 @@ let floorPlanBackgroundCol = 225,
 let colorShades = ['#6a3d9a', '#ff7f00', '#33a02c', '#1f78b4', '#e31a1c', '#ffff99', '#b15928', '#cab2d6', '#fdbf6f', '#b2df8a', '#a6cee3', '#fb9a99'];
 let spacing = 50; // general spacing variable
 let pathWeight = 5;
-let curPathColor = 0;
+let curPathColor = 0; // color for path while drawing
 
 // TITLE
 let keyTextSize, infoTextSize;
@@ -46,7 +50,6 @@ let descMSG = "Hi there! This tool allows you to transcribe fine-grained positio
 function setup() {
   canvas = createCanvas(window.innerWidth, window.innerHeight, P2D);
   frameRate(30);
-  //pixelDensity(displayDensity());
   setGUIWindows();
   curPath = new Path();
   dataUpdate = new UpdateData();
