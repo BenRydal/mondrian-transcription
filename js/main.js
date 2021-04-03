@@ -11,6 +11,7 @@ let curPath; // current path to record
 let dataUpdate; // object that holds methods to update data recording and video
 let reSetAllData = true; // controls redrawing of data
 let curFileToOutput = 0; // current file number to write to output
+let frameAndSampleWhenStoppedRate = 30; // controls both frameRate of program and amount data is sampled when cursor is not moving when recording data
 // Path is conceptually a person's movement race and has x/y position and time lists 
 class Path {
   xPos = [];
@@ -49,7 +50,7 @@ let descMSG = "Hi there! This tool allows you to transcribe fine-grained positio
 
 function setup() {
   canvas = createCanvas(window.innerWidth, window.innerHeight, P2D);
-  frameRate(30);
+  frameRate(frameAndSampleWhenStoppedRate);
   setGUIWindows();
   curPath = new Path();
   dataUpdate = new UpdateData();

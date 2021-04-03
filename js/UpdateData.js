@@ -3,8 +3,10 @@ class UpdateData {
     // Draws video image and organizes recording if mouse is moving
     prepareRecording() {
         image(movie, displayVideoXpos, displayVideoYpos, displayVideoWidth, displayVideoHeight);
-        //if (mouseX != pmouseX || mouseY != pmouseY) this.organizeRecording(); // only record if mouse has changed position, reduces data and records/draws better curves
-        this.organizeRecording();
+        // This is the simplest way to reduce data file size and draw smoother curves in IGS
+        // Always record when mouse has moved OR record at sampleRate when mouse has not moved
+        if (mouseX != pmouseX || mouseY != pmouseY) this.organizeRecording();
+        else if (frameCount % frameAndSampleWhenStoppedRate == 0) this.organizeRecording();
     }
 
     // Sets/sends correct x/y positions for drawing cur line segment to draw and record methods
