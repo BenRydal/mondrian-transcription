@@ -2,7 +2,7 @@ class UpdateData {
 
     // Draws video image and organizes recording if mouse is moving
     prepareRecording() {
-        image(movie, displayVideoXpos, displayVideoYpos, displayVideoWidth, displayVideoHeight);
+        image(movie, displayVideoXpos, displayVideoYpos);
         // This is the simplest way to reduce data file size and draw smoother curves in IGS
         // Always record when mouse has moved OR record at sampleRate when mouse has not moved
         if (mouseX != pmouseX || mouseY != pmouseY) this.organizeRecording();
@@ -41,7 +41,7 @@ class UpdateData {
     // Redraws floor plan, movie, and all recorded paths
     reDrawAllData() {
         image(floorPlan, displayFloorplanXpos, displayFloorplanYpos, displayFloorplanWidth, displayFloorplanHeight);
-        image(movie, displayVideoXpos, displayVideoYpos, displayVideoWidth, displayVideoHeight);
+        image(movie, displayVideoXpos, displayVideoYpos);
         // loop through all existing files and draw each one different color
         for (let i = 0; i < paths.length; i++) this.drawPath(paths[i], colorShades[i % colorShades.length]);
         reSetAllData = false;

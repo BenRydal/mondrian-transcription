@@ -33,7 +33,8 @@ function handleVideoFile(input) {
   if (movie !== undefined) movie.remove(); // remove exisiting movie element if not first video loaded
   movie = createVideo(fileLocation, function () {
     movie.id('moviePlayer');
-    movie.size(displayVideoWidth, displayVideoHeight);
+    setMovieSize();
+    movie.size(movie.width, movie.height);
     movie.hide();
     // Native P5 onended and duration methods don't seem to work, so use below 
     let mov = document.getElementById('moviePlayer');
@@ -46,4 +47,20 @@ function handleVideoFile(input) {
     movieLoaded = true;
     loop();
   });
+}
+
+function setMovieSize() {
+  let ratio = 0; // Used for aspect ratio
+  // Check if input video pixel width is larger than display container, scale down if it is
+  if (movie.width > displayVideoWidth) {
+    ratio = displayVideoWidth / movie.width; // get ratio for scaling image
+    movie.height = movie.height * ratio; // Reset height to match scaled image
+    movie.width = movie.width * ratio; // Reset width to match scaled image
+  }
+  // Then check if input video pixel height is still larger than display container, scale down if it is
+  if (movie.height > displayVideoHeight) {
+    ratio = displayVideoHeight / movie.height; // get ratio for scaling image
+    movie.height = movie.height * ratio; // Reset height to match scaled image
+    movie.width = movie.width * ratio; // Reset width to match scaled image
+  }
 }
