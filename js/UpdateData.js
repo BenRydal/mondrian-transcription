@@ -40,8 +40,10 @@ class UpdateData {
 
     // Redraws floor plan, movie, and all recorded paths
     reDrawAllData() {
-        image(floorPlan, displayFloorplanXpos, displayFloorplanYpos, displayFloorplanWidth, displayFloorplanHeight);
+        fill(0); // draw black screen background for movie
+        rect(displayVideoXpos, displayVideoYpos, displayVideoWidth, displayVideoHeight);
         image(movie, displayVideoXpos, displayVideoYpos, movie.width, movie.height);
+        image(floorPlan, displayFloorplanXpos, displayFloorplanYpos, displayFloorplanWidth, displayFloorplanHeight);
         // loop through all existing files and draw each one different color
         for (let i = 0; i < paths.length; i++) this.drawPath(paths[i], colorShades[i % colorShades.length]);
         reSetAllData = false;
