@@ -48,30 +48,38 @@ let keyTextSize, infoTextSize;
 let infoMsg = "MONDRIAN TRANSCRIPTION\nby Ben Rydal Shapiro & contributers\nbuilt with p5.js";
 let descMSG = "Hi there! This tool allows you to transcribe fine-grained positioning data from video. To get started, use the top buttons to upload a floor plan image file (PNG or JPG) and a video file (MP4). Then, use the key codes below to interact with the video and use your cursor to draw on the floor plan. As you interact with the video and simultaneously draw on the floor plan, positioning data is recorded as a CSV file organized by time in seconds and x/y pixel positions scaled to the pixel size of your floor plan image file. You can save this file anytime and then record another movement path.\n\nKEY CODES:\nPlay/Pause (p), Fast-Forward (f), Rewind (b), Reset (r), Save File (s)"
 
+function preload() {
+  font_PlayfairItalic = loadFont("data/fonts/PlayfairDisplay-Italic.ttf");
+  font_Lato = loadFont("data/fonts/Lato-Light.ttf");
+}
+
 function setup() {
   canvas = createCanvas(window.innerWidth, window.innerHeight, P2D);
   frameRate(frameAndSampleWhenStoppedRate);
   setGUIWindows();
-  curPath = new Path();
-  dataUpdate = new UpdateData();
-  loadFonts();
-}
-
-function draw() {
-  if (floorPlanLoaded && movieLoaded) setDrawingScreen();
-  else if (floorPlanLoaded) image(floorPlan, displayFloorplanXpos, displayFloorplanYpos, displayFloorplanWidth, displayFloorplanHeight);
-  else if (movieLoaded) {
-    fill(0); // draw black screen if movie is loaded in video display
-    rect(displayVideoXpos, displayVideoYpos, displayVideoWidth, displayVideoHeight);
-  } else setLoadDataScreen();
-}
-
-function setLoadDataScreen() {
   drawGUIWindows();
   drawKeys();
+  curPath = new Path();
+  dataUpdate = new UpdateData();
 }
 
+// Two modes for drawing when data is and is not all loaded
+function draw() {
+  if (floorPlanLoaded && movieLoaded) setDrawingScreen();
+  else setLoadDataScreen();
+}
+
+// Organizes methods for recording once all data is loaded
 function setDrawingScreen() {
   if (reSetAllData) dataUpdate.reDrawAllData(); // Runs once after data is initially loaded or file is written
   if (recording) dataUpdate.prepareRecording(); // records data and updates visualization if in record mode
+}
+
+// Displays image or blank screen indicating movie is loaded
+function setLoadDataScreen() {
+  if (floorPlanLoaded) image(floorPlan, displayFloorplanXpos, displayFloorplanYpos, displayFloorplanWidth, displayFloorplanHeight);
+  else if (movieLoaded) {
+    fill(0); // draw black screen if movie is loaded in video display
+    rect(displayVideoXpos, displayVideoYpos, displayVideoWidth, displayVideoHeight);
+  }
 }
