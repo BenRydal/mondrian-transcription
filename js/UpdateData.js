@@ -41,6 +41,7 @@ class UpdateData {
     // Redraws floor plan, movie, and all recorded paths
     reDrawAllData() {
         fill(0); // draw black screen background for movie
+        stroke(0);
         rect(displayVideoXpos, displayVideoYpos, displayVideoWidth, displayVideoHeight);
         image(movie, displayVideoXpos, displayVideoYpos, movie.width, movie.height);
         image(floorPlan, displayFloorplanXpos, displayFloorplanYpos, displayFloorplanWidth, displayFloorplanHeight);
