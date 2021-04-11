@@ -1,44 +1,60 @@
 class UpdateData {
-
-    // Draws video image and organizes recording if mouse is moving
+    /**
+     * @description draws video image and begins recording using samplerate set globally if mouse has moved
+     * NOTE: Recording based on mouse movement and sample rate is simplest way to reduce data file size and 
+     * draw smoother curves from outputted positioning data file in visualization tools
+     * If mouse moves, always record
+     * If mouse hasn't moved, record at sample rate so you still get some points while not moving
+     */
     prepareRecording() {
         image(movie, displayVideoXpos, displayVideoYpos, movie.width, movie.height);
-        // This is the simplest way to reduce data file size and draw smoother curves in IGS
-        // Always record when mouse has moved OR record at sampleRate when mouse has not moved
         if (mouseX != pmouseX || mouseY != pmouseY) this.organizeRecording();
-        else if (frameCount % frameAndSampleWhenStoppedRate == 0) this.organizeRecording();
+        else {
+            if (frameCount % frameAndSampleWhenStoppedRate == 0) this.organizeRecording();
+        }
     }
-
-    // Sets/sends correct x/y positions for drawing cur line segment to draw and record methods
+    
+    /**
+     * @description Organizes drawing and recording of current point
+     */
     organizeRecording() {
+        this.drawCurLineSegment();
+        this.recordCurPoint();
+    }
+    /**
+     * @description calculates correctly scaled x/y positions from mouse cursor and drawns line segment for current point
+     */
+    drawCurLineSegment() {
         // Constrain mouse to floor plan display
         let xPos = constrain(mouseX, displayFloorplanXpos, displayFloorplanXpos + displayFloorplanWidth);
         let yPos = constrain(mouseY, displayFloorplanYpos, displayFloorplanYpos + displayFloorplanHeight);
         let pXPos = constrain(pmouseX, displayFloorplanXpos, displayFloorplanXpos + displayFloorplanWidth);
         let pYPos = constrain(pmouseY, displayFloorplanYpos, displayFloorplanYpos + displayFloorplanHeight);
-        // Adjust floor plan x/y positions to record to 0, 0 origin/coordinate system
-        let fpXPos = xPos - displayFloorplanXpos;
-        let fpYPos = yPos - displayFloorplanYpos;
-        // sned to draw/record methods
-        this.drawCurLineSegment(xPos, yPos, pXPos, pYPos);
-        this.recordCurPoint(fpXPos, fpYPos, movie.time());
-    }
-
-    // Draw current line segment scaled to display Floor Plan
-    drawCurLineSegment(xPos, yPos, pXPos, pYPos) {
         strokeWeight(pathWeight);
         stroke(curPathColor);
         line(xPos, yPos, pXPos, pYPos);
     }
 
-    // Record current data point
-    recordCurPoint(fpXPos, fpYPos, mTime) {
+    /**
+     * @description Calculates correctly scaled x/y positions to actual image file of floor plan uploaded by user
+     * and pushes positions and movie time in seconds to curPath arraylists
+     */
+    recordCurPoint() {
+        // Constrain mouse to floor plan display
+        let xPos = constrain(mouseX, displayFloorplanXpos, displayFloorplanXpos + displayFloorplanWidth);
+        let yPos = constrain(mouseY, displayFloorplanYpos, displayFloorplanYpos + displayFloorplanHeight);
+        // Adjust floor plan x/y positions to record to 0, 0 origin/coordinate system
+        let fpXPos = xPos - displayFloorplanXpos;
+        let fpYPos = yPos - displayFloorplanYpos;
         curPath.xPos.push(fpXPos * (inputFloorPlanWidth / displayFloorplanWidth)); // rescale x,y positions to input floor plan
         curPath.yPos.push(fpYPos * (inputFloorPlanHeight / displayFloorplanHeight));
-        curPath.tPos.push(mTime);
+        curPath.tPos.push(movie.time());
     }
 
-    // Redraws floor plan, movie, and all recorded paths
+    /**
+     * @description Redraws movie background and image, floorplan display image, and all recorded paths
+     * resets resetAlldata to false
+     */
     reDrawAllData() {
         fill(0); // draw black screen background for movie
         stroke(0);
@@ -49,8 +65,12 @@ class UpdateData {
         for (let i = 0; i < paths.length; i++) this.drawPath(paths[i], colorShades[i % colorShades.length]);
         reSetAllData = false;
     }
-
-    // Takes path object and color, draws complete, correctly scaled path to floor plan image
+    
+    /**
+     * @description Draws complete and correctly scaled path to floor plan display image
+     * @param  {Path} p
+     * @param  {color} pathColor
+     */
     drawPath(p, pathColor) {
         stroke(pathColor);
         // Must add back in floor plan display x/y pos to scale to display floor plan correctly
@@ -63,7 +83,9 @@ class UpdateData {
         }
     }
 
-    // Create and write coordinates to output file, increment curFileToOutput for next recording when finished
+    /**
+     * @description Create and write coordinates to output file, increment curFileToOutput for next recording when finished
+     */
     writeFile() {
         let table = new p5.Table();
         table.addColumn(fileHeaders[0]);
@@ -77,6 +99,7 @@ class UpdateData {
         }
         saveTable(table, "Path_" + curFileToOutput + ".csv");
         curFileToOutput++;
+        // TO DO: 
         this.addPath();
         this.clearPositionData();
         reSetAllData = true;
@@ -149,9 +172,9 @@ class UpdateData {
             movie.time(movie.time() + videoJumpValue);
             // movie.time(movie.time() + videoJumpValue);
             // get last values from cur lists
-            let xPos = curPath.xPos[curPath.tPos.length - 1]; 
-            let yPos = curPath.yPos[curPath.tPos.length - 1]; 
-            let tPos = curPath.tPos[curPath.tPos.length - 1]; 
+            let xPos = curPath.xPos[curPath.tPos.length - 1];
+            let yPos = curPath.yPos[curPath.tPos.length - 1];
+            let tPos = curPath.tPos[curPath.tPos.length - 1];
             // add values for each second jumped by VideoJumpvalue, xPos and yPos are same but add i to tPos as time is increasing
             for (let i = 0; i < videoJumpValue; i++) {
                 curPath.xPos.push(xPos);
