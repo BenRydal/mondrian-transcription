@@ -28,7 +28,7 @@ To reference or read more about this work please see: https://etd.library.vander
 // DATA
 let paths = []; // holds all recorded path files
 let curPath; // current path to record
-let dataUpdate; // object that holds methods to update data recording and video
+let dataUpdate; // object that holds methods to synchronize updating of data recording and video
 let reSetAllData = true; // controls redrawing of data
 let curFileToOutput = 0; // current file number to write to output
 const frameAndSampleWhenStoppedRate = 30; // controls both frameRate of program and amount data is sampled when cursor is not moving when recording data
@@ -42,13 +42,13 @@ class Path {
 }
 
 // FLOOR PLAN
-let floorPlan; // floor plan image file
-let inputFloorPlanWidth, inputFloorPlanHeight; // real pixel width and height of floorPlan image file
+let floorPlan; // floor plan image file set by user uploaded image file
+let inputFloorPlanWidth, inputFloorPlanHeight; // User uploaded image file pixel width and height used to scale recording from displayed floor plan to actual image file
 
 // VIDEO
-let movie; // video file
-let movieDuration; // video duration set in loadData from video data
-let recording = false; // controls path recording and video playing (always synchronized)
+let movie; // P5.js media element to display/interact with HTML5 video from file uploaded by user
+let movieDuration; // Duration of video set in loadData
+let recording = false; // controls synchronized path recording and video playing
 let videoJumpValue = 5; // value in seconds to ff or rewind
 
 // GUI
