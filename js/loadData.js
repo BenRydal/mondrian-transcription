@@ -1,4 +1,7 @@
-// if image: replace floor plan and rerun movement?????
+/**
+ * @description Handles async loading of floor plan image file
+ * @param  {File} input
+ */
 function handleFloorPlanFile(input) {
   let file = input.files[0];
   input.value = ''; // reset input value so you can load same file again in browser
@@ -11,20 +14,27 @@ function handleFloorPlanFile(input) {
   });
 }
 
-// From image file, sets floor plan width/height to display and scale movement data
-function processFloorPlan(imgFile) {
-  floorPlan = imgFile;
+/**
+ * @description Sets floor plan image width/height to loaded image. 
+ * Note: All data recording that occurs after is scaled to the width/height of floor plan image
+ * @param  {PNG or JPG PImage} img
+ */
+function processFloorPlan(img) {
+  floorPlan = img;
   inputFloorPlanWidth = floorPlan.width; // set values based on pixel size of original img before resizing
   inputFloorPlanHeight = floorPlan.height;
   floorPlanLoaded = true;
 }
 
-// parses inputted video files from user computer
+/**
+ * @description handles ascyn loading of video file and creates/updates movie object with video file
+ * @param  {.MP4 File} input
+ */
 function handleVideoFile(input) {
   let file = input.files[0];
   input.value = ''; // reset input value so you can load same file again in browser
   let fileLocation = URL.createObjectURL(file);
-  noLoop();
+  noLoop(); // resumed after video has been loaded
   if (movie !== undefined) movie.remove(); // remove exisiting movie element if not first video loaded
   movie = createVideo(fileLocation, function () {
     movie.id('moviePlayer');
@@ -40,10 +50,12 @@ function handleVideoFile(input) {
       URL.revokeObjectURL(this.src);
     }
     movieLoaded = true;
-    loop();
+    loop(); // resume
   });
 }
-
+/**
+ * @description Sets movie width/height pixel dimenions proportionally to scale to GUI
+ */
 function setMovieSize() {
   let ratio = 0; // Used for aspect ratio
   // Check if input video pixel width is larger than display container, scale down if it is
