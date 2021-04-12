@@ -1,6 +1,6 @@
 function keyPressed() {
-  if (key == 'p' || key == 'P') dataUpdate.playPauseRecording();
-  else if (key == 'r' || key == 'R') dataUpdate.reset();
+  if (key == 'p' || key == 'P') dataUpdate.updateMovie.playPauseRecording();
+  else if (key == 'r' || key == 'R') dataUpdate.resetCurPath();
   else if (key == 'b' || key == 'B') dataUpdate.rewind();
   else if (key == 'f' || key == 'F') dataUpdate.fastForward();
   else if (key == 's' || key == 'S') dataUpdate.writeFile();

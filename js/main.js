@@ -71,14 +71,14 @@ let infoMsg = "MONDRIAN TRANSCRIPTION\nby Ben Rydal Shapiro & contributers\nbuil
 let descMSG = "Hi there! This tool allows you to transcribe fine-grained positioning data from video. To get started, use the top buttons to upload a floor plan image file (PNG or JPG) and a video file (MP4). Then, use the key codes below to interact with the video and use your cursor to draw on the floor plan. As you interact with the video and simultaneously draw on the floor plan, positioning data is recorded as a CSV file organized by time in seconds and x/y pixel positions scaled to the pixel size of your floor plan image file. You can save this file anytime and then record another movement path.\n\nKEY CODES:\nPlay/Pause (p), Fast-Forward (f), Rewind (b), Reset (r), Save File (s)"
 
 /**
- * @description Optional p5.js method, will complete before setup/draw begin
+ * Optional p5.js method, will complete before setup/draw begin
  */
 function preload() {
   font_PlayfairItalic = loadFont("data/fonts/PlayfairDisplay-Italic.ttf");
   font_Lato = loadFont("data/fonts/Lato-Light.ttf");
 }
 /**
- * @description Required p5.js method, here it sets canvas, GUI and initial drawing requirements
+ * Required p5.js method, here it sets canvas, GUI and initial drawing requirements
  */
 function setup() {
   canvas = createCanvas(window.innerWidth, window.innerHeight, P2D);
@@ -91,7 +91,7 @@ function setup() {
 }
 
 /**
- * @description Required p5.js method, here it organizes two drawing modes for when data is and is not loaded
+ * Required p5.js method, here it organizes two drawing modes for when data is and is not loaded
  */
 function draw() {
   if (floorPlanLoaded && movieLoaded) setDrawingScreen();
@@ -99,15 +99,15 @@ function draw() {
 }
 
 /**
- * @description Organizes methods for recording once all data is loaded
+ * Organizes methods for recording once all data is loaded
  */
 function setDrawingScreen() {
   if (reSetAllData) dataUpdate.reDrawAllData(); // Runs once after data is initially loaded or file is written
-  if (recording) dataUpdate.prepareRecording(); // records data and updates visualization if in record mode
+  if (recording) dataUpdate.setData(); // records data and updates visualization if in record mode
 }
 
 /**
- * @description Displays image or blank screen indicating movie is loaded
+ * Displays image or blank screen indicating movie is loaded
  */
 function setLoadDataScreen() {
   if (floorPlanLoaded) image(floorPlan, displayFloorplanXpos, displayFloorplanYpos, displayFloorplanWidth, displayFloorplanHeight);
