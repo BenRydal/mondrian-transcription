@@ -27,7 +27,7 @@ function processFloorPlan(img) {
 }
 
 /**
- * Handles async loading of video file and creates/updates movie object with video file
+ * Handles async loading of video file and creates movie object
  * @param  {.MP4 File} input
  */
 function handleVideoFile(input) {
@@ -36,23 +36,28 @@ function handleVideoFile(input) {
   let fileLocation = URL.createObjectURL(file);
   noLoop(); // resumed after video has been loaded
   if (movie !== undefined) movie.remove(); // remove exisiting movie element if not first video loaded
-  movie = createVideo(fileLocation, function () {
-    movie.id('moviePlayer');
-    setMovieSize();
-    movie.size(movie.width, movie.height);
-    movie.hide();
-    // Native P5 onended and duration methods don't seem to work, so use below 
-    let mov = document.getElementById('moviePlayer');
-    mov.onended = function () {
-      recording = false;
-    };
-    movie.onload = function () {
-      URL.revokeObjectURL(this.src);
-    }
-    movieLoaded = true;
-    loop(); // resume
-  });
+  movie = createVideo(fileLocation, setMovie);
 }
+/**
+ * Sets movie object and resumes program loop
+ */
+function setMovie() {
+  movie.id('moviePlayer');
+  setMovieSize();
+  movie.size(movie.width, movie.height);
+  movie.hide();
+  // Native P5 onended and duration methods don't seem to work, so use below 
+  let mov = document.getElementById('moviePlayer');
+  mov.onended = function () {
+    recording = false;
+  };
+  movie.onload = function () {
+    URL.revokeObjectURL(this.src);
+  }
+  movieLoaded = true;
+  loop(); // resume
+}
+
 /**
  * Sets movie width/height pixel dimenions proportionally to scale to GUI
  */
