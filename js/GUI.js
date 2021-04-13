@@ -24,8 +24,6 @@ function setGUIWindows() {
   displayVideoYpos = 0;
   displayKeysXpos = 0;
   displayKeysYpos = height / 2;
-  // Draw GUI
-  drawGUIWindows();
 }
 
 function drawGUIWindows() {
