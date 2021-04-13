@@ -1,5 +1,5 @@
 /**
- * @description Handles async loading of floor plan image file
+ * Handles async loading of floor plan image file
  * @param  {File} input
  */
 function handleFloorPlanFile(input) {
@@ -15,7 +15,7 @@ function handleFloorPlanFile(input) {
 }
 
 /**
- * @description Sets floor plan image width/height to loaded image. 
+ * Sets floor plan image width/height to loaded image. 
  * Note: All data recording that occurs after is scaled to the width/height of floor plan image
  * @param  {PNG or JPG PImage} img
  */
@@ -27,7 +27,7 @@ function processFloorPlan(img) {
 }
 
 /**
- * @description handles ascyn loading of video file and creates/updates movie object with video file
+ * Handles async loading of video file and creates/updates movie object with video file
  * @param  {.MP4 File} input
  */
 function handleVideoFile(input) {
@@ -54,7 +54,7 @@ function handleVideoFile(input) {
   });
 }
 /**
- * @description Sets movie width/height pixel dimenions proportionally to scale to GUI
+ * Sets movie width/height pixel dimenions proportionally to scale to GUI
  */
 function setMovieSize() {
   let ratio = 0; // Used for aspect ratio

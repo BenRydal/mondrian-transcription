@@ -42,8 +42,8 @@ class Path {
 }
 
 // FLOOR PLAN
-let floorPlan; // floor plan image file set by user uploaded image file
-let inputFloorPlanWidth, inputFloorPlanHeight; // User uploaded image file pixel width and height used to scale recording from displayed floor plan to actual image file
+let floorPlan; // floor plan display image file set by user uploaded image file
+let inputFloorPlanWidth, inputFloorPlanHeight; // User uploaded image file
 
 // VIDEO
 let movie; // P5.js media element to display/interact with HTML5 video from file uploaded by user
@@ -78,7 +78,7 @@ function preload() {
   font_Lato = loadFont("data/fonts/Lato-Light.ttf");
 }
 /**
- * Required p5.js method, here it sets canvas, GUI and initial drawing requirements
+ * Required p5.js method, sets canvas, GUI and initial drawing requirements
  */
 function setup() {
   canvas = createCanvas(window.innerWidth, window.innerHeight, P2D);
