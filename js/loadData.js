@@ -43,8 +43,8 @@ function handleVideoFile(input) {
  */
 function setMovie() {
   movie.id('moviePlayer');
-  setMovieSize();
-  movie.size(movie.width, movie.height);
+  setInputMovieSize(); // set global movie size constants
+  setDisplayMovieSize(displayVideoWidth, displayVideoHeight);
   movie.hide();
   // Native P5 onended and duration methods don't seem to work, so use below 
   let mov = document.getElementById('moviePlayer');
@@ -58,21 +58,33 @@ function setMovie() {
   loop(); // resume
 }
 
+// sets global pixel width/height for movie file to scale size dynamically in program
+function setInputMovieSize() {
+  inputMovieWidth = movie.width;
+  inputMovieHeight = movie.height;
+}
+
 /**
- * Sets movie width/height pixel dimenions proportionally to scale to GUI
+ * Sets pixel size to display video based on original input video size and container width/height parameters
+ * NOTE: temp width/height values are created/used because movie.width and movie.height cause issues
+ * @param  {} containterWidth
+ * @param  {} containerHeight
  */
-function setMovieSize() {
+function setDisplayMovieSize(containterWidth, containerHeight) {
   let ratio = 0; // Used for aspect ratio
+  let tempWidth = inputMovieWidth;
+  let tempHeight = inputMovieWidth;
   // Check if input video pixel width is larger than display container, scale down if it is
-  if (movie.width > displayVideoWidth) {
-    ratio = displayVideoWidth / movie.width; // get ratio for scaling image
-    movie.height = movie.height * ratio; // Reset height to match scaled image
-    movie.width = movie.width * ratio; // Reset width to match scaled image
+  if (inputMovieWidth > containterWidth) {
+    ratio = containterWidth / inputMovieWidth; // get ratio for scaling image
+    tempHeight = inputMovieHeight * ratio; // Reset height to match scaled image
+    tempWidth = inputMovieWidth * ratio; // Reset width to match scaled image
   }
   // Then check if input video pixel height is still larger than display container, scale down if it is
-  if (movie.height > displayVideoHeight) {
-    ratio = displayVideoHeight / movie.height; // get ratio for scaling image
-    movie.height = movie.height * ratio; // Reset height to match scaled image
-    movie.width = movie.width * ratio; // Reset width to match scaled image
+  if (inputMovieHeight > containerHeight) {
+    ratio = containerHeight / tempHeight; // get ratio for scaling image, use tempHeight
+    tempHeight = tempHeight * ratio; // Reset height to match scaled image
+    tempWidth = tempWidth * ratio; // Reset width to match scaled image
   }
+  movie.size(tempWidth, tempHeight); // set the element to the new width and height
 }

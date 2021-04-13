@@ -225,7 +225,8 @@ class UpdateMovie {
     drawCurFrame() {
         fill(0); // draw black screen background for movie
         stroke(0);
-        rect(displayVideoXpos, displayVideoYpos, displayVideoWidth, displayVideoHeight);
+        if (movieDisplayLarge) rect(displayVideoXpos, displayVideoYpos, displayVideoWidth, height);
+        else rect(displayVideoXpos, displayVideoYpos, displayVideoWidth, displayVideoHeight);
         image(movie, displayVideoXpos, displayVideoYpos, movie.width, movie.height);
     }
     /**
