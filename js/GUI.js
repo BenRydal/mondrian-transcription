@@ -5,7 +5,9 @@ function keyPressed() {
   else if (key == 'f' || key == 'F') dataUpdate.fastForward();
   else if (key == 's' || key == 'S') dataUpdate.writeFile();
 }
-
+/**
+ * Sets floor plan, video, and info message sizing/positions
+ */
 function setGUIWindows() {
   infoTextSize = width / 110;
   keyTextSize = width / 75;
@@ -25,7 +27,9 @@ function setGUIWindows() {
   displayKeysXpos = 0;
   displayKeysYpos = height / 2;
 }
-
+/**
+ * Draws floor plan, video, and key windows
+ */
 function drawGUIWindows() {
   noStroke();
   // Floor Plan
@@ -38,7 +42,9 @@ function drawGUIWindows() {
   fill(keysBackgroundColor);
   rect(displayKeysXpos, displayKeysYpos, displayKeysWidth, displayKeysHeight);
 }
-
+/**
+ * Draws key text
+ */
 function drawKeys() {
   fill(0);
   textFont(font_Lato, keyTextSize);
