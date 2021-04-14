@@ -41,10 +41,16 @@ function drawGUIWindows() {
 
 function drawMovieBackground() {
   fill(0); // draw black screen if movie is loaded in video display
-  noStroke();
+  stroke(0);
   rect(displayVideoXpos, displayVideoYpos, displayVideoWidth, displayVideoHeight);
 }
 
+function drawFloorPlanBackground() {
+  fill(255); // draw white screen in case floor plan image has any transparancy
+  stroke(255);
+  rect(displayFloorplanXpos, displayFloorplanYpos, displayFloorplanWidth, displayFloorplanHeight);
+  image(floorPlan, displayFloorplanXpos, displayFloorplanYpos, displayFloorplanWidth, displayFloorplanHeight);
+}
 /**
  * Draws key text
  */

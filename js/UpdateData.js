@@ -33,7 +33,7 @@ class UpdateData {
      * Redraws movie background and image, floorplan display image, and all recorded paths
      */
     reDrawAllData() {
-        image(floorPlan, displayFloorplanXpos, displayFloorplanYpos, displayFloorplanWidth, displayFloorplanHeight);
+        drawFloorPlanBackground();
         this.updateMovie.drawCurFrame();
         this.updatePath.reDrawAllPaths();
     }
