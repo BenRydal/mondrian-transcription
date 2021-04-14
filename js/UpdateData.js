@@ -223,7 +223,7 @@ class UpdateMovie {
      */
     drawCurFrame() {
         drawMovieBackground();
-        image(movie, displayVideoXpos, displayVideoYpos, movie.width, movie.height);
+        image(movie, displayVideoXpos, displayVideoYpos, reScaledMovieWidth, reScaledMovieHeight);
     }
     /**
      * Controls play/pause of movie and sets global recording boolean variable

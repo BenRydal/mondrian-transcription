@@ -33,6 +33,7 @@ let movieDuration; // Duration of video set in loadData
 let recording = false; // controls synchronized path recording and video playing
 let videoJumpValue = 5; // value in seconds to ff or rewind
 let inputMovieWidth, inputMovieHeight; // pixel width and height of inputted video file to scale size dynamically in program
+let reScaledMovieWidth, reScaledMovieHeight; // scaled movie width/height to display container from input video
 
 // GUI
 let font_PlayfairItalic, font_Lato;

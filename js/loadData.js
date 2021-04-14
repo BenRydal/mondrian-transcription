@@ -87,19 +87,19 @@ function setInputMovieSize() {
  */
 function setDisplayMovieSize(containterWidth, containerHeight) {
   let ratio = 0; // Used for aspect ratio
-  let tempWidth = inputMovieWidth;
-  let tempHeight = inputMovieWidth;
-  // Then check if input video pixel height is still larger than display container, scale down if it is
+  reScaledMovieWidth = inputMovieWidth; // set to equal input size in case first conditional is not triggered
+  reScaledMovieHeight = inputMovieHeight;
+  // Check if input video pixel height is larger than display container, scale down if it is
   if (inputMovieHeight > containerHeight) {
-    ratio = containerHeight / tempHeight; // get ratio for scaling image, use tempHeight
-    tempHeight = tempHeight * ratio; // Reset height to match scaled image
-    tempWidth = tempWidth * ratio; // Reset width to match scaled image
+    ratio = containerHeight / inputMovieHeight; // get ratio for scaling image, use tempHeight
+    reScaledMovieHeight = inputMovieHeight * ratio; // Reset height to match scaled image
+    reScaledMovieWidth = inputMovieWidth * ratio; // Reset width to match scaled image
   }
-  // Check if input video pixel width is larger than display container, scale down if it is
-  if (inputMovieWidth > containterWidth) {
-    ratio = containterWidth / inputMovieWidth; // get ratio for scaling image
-    tempHeight = inputMovieHeight * ratio; // Reset height to match scaled image
-    tempWidth = inputMovieWidth * ratio; // Reset width to match scaled image
+  // Then check if input/display video pixel width is still larger than display container, scale down if it is
+  if (reScaledMovieWidth > containterWidth) {
+    ratio = containterWidth / reScaledMovieWidth; // get ratio for scaling image
+    reScaledMovieHeight = reScaledMovieHeight * ratio; // Reset height to match scaled image
+    reScaledMovieWidth = reScaledMovieWidth * ratio; // Reset width to match scaled image
   }
-  movie.size(tempWidth, tempHeight); // set the element to the new width and height
+  movie.size(reScaledMovieWidth, reScaledMovieHeight); // set the element to the new width and height
 }
