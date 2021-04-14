@@ -83,10 +83,10 @@ function draw() {
  */
 function setDrawingScreen() {
   if (recording) dataUpdate.setData(); // records data and updates visualization if in record mode
-  if (showInfo) {
-    // redraw current screen first, then drawKeys if showing
+  if (showInfo ) {
+    // redraw current screen first, then drawKeys
     dataUpdate.reDrawAllData();
-    dataUpdate.updatePath.drawPath(curPath, curPathColor); // TO DO: combine functions??
+    dataUpdate.updatePath.drawPath(curPath, curPathColor);
     drawKeys();
   }
 }

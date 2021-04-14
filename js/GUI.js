@@ -1,7 +1,9 @@
 function keyPressed() {
   if (floorPlanLoaded && movieLoaded) {
-    if (key == 'p' || key == 'P') dataUpdate.updateMovie.playPauseRecording();
-    else if (key == 'r' || key == 'R') dataUpdate.resetCurPath();
+    if (key == 'p' || key == 'P') {
+      dataUpdate.updateMovie.playPauseRecording();
+      if (showInfo) handleIntroButton(); // prevent info screen from showing while recording for smooth user interaction
+    } else if (key == 'r' || key == 'R') dataUpdate.resetCurPath();
     else if (key == 'b' || key == 'B') dataUpdate.rewind();
     else if (key == 'f' || key == 'F') dataUpdate.fastForward();
   }
