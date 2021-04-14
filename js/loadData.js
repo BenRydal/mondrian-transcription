@@ -1,3 +1,17 @@
+function handleIntroButton() {
+  // re draw current screen 
+  if (showInfo && floorPlanLoaded && movieLoaded) {
+    dataUpdate.reDrawAllData();
+    dataUpdate.updatePath.drawPath(curPath, curPathColor); // TO DO: combine functions??
+  } 
+  showInfo = !showInfo;
+}
+
+function handleSaveFileButton() {
+  // ADD TESTS to not write file unless there is some data/movie floor plan have bene loaded
+  dataUpdate.writeFile();
+}
+
 /**
  * Handles async loading of floor plan image file
  * @param  {File} input
@@ -56,6 +70,7 @@ function setMovie() {
   }
   movieLoaded = true;
   loop(); // resume
+  drawMovieBackground(); // after loading video and restarting loop, draw background to indicate movie is loaded
 }
 
 // sets global pixel width/height for movie file to scale size dynamically in program
@@ -74,17 +89,17 @@ function setDisplayMovieSize(containterWidth, containerHeight) {
   let ratio = 0; // Used for aspect ratio
   let tempWidth = inputMovieWidth;
   let tempHeight = inputMovieWidth;
-  // Check if input video pixel width is larger than display container, scale down if it is
-  if (inputMovieWidth > containterWidth) {
-    ratio = containterWidth / inputMovieWidth; // get ratio for scaling image
-    tempHeight = inputMovieHeight * ratio; // Reset height to match scaled image
-    tempWidth = inputMovieWidth * ratio; // Reset width to match scaled image
-  }
   // Then check if input video pixel height is still larger than display container, scale down if it is
   if (inputMovieHeight > containerHeight) {
     ratio = containerHeight / tempHeight; // get ratio for scaling image, use tempHeight
     tempHeight = tempHeight * ratio; // Reset height to match scaled image
     tempWidth = tempWidth * ratio; // Reset width to match scaled image
+  }
+  // Check if input video pixel width is larger than display container, scale down if it is
+  if (inputMovieWidth > containterWidth) {
+    ratio = containterWidth / inputMovieWidth; // get ratio for scaling image
+    tempHeight = inputMovieHeight * ratio; // Reset height to match scaled image
+    tempWidth = inputMovieWidth * ratio; // Reset width to match scaled image
   }
   movie.size(tempWidth, tempHeight); // set the element to the new width and height
 }

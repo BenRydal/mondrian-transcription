@@ -12,7 +12,6 @@ To reference or read more about this work please see: https://etd.library.vander
 let paths = []; // holds all recorded path files
 let curPath; // current path to record
 let dataUpdate; // object that holds methods to synchronize updating of data recording and video
-let reSetAllData = true; // controls redrawing of data
 let curFileToOutput = 0; // current file number to write to output
 const frameAndSampleWhenStoppedRate = 30; // controls both frameRate of program and amount data is sampled when cursor is not moving when recording data
 const fileHeaders = ["time", "x", "y"]; // Column headers for outputted .CSV movement files
@@ -39,20 +38,19 @@ let inputMovieWidth, inputMovieHeight; // pixel width and height of inputted vid
 let font_PlayfairItalic, font_Lato;
 let movieLoaded = false,
   floorPlanLoaded = false;
-let displayFloorplanWidth, displayFloorplanHeight, displayVideoWidth, displayVideoHeight, displayKeysWidth, displayKeysHeight;
-let displayFloorplanXpos, displayFloorplanYpos, displayVideoXpos, displayVideoYpos, displayKeysXpos, displayKeysYpos;
+let displayFloorplanWidth, displayFloorplanHeight, displayVideoWidth, displayVideoHeight;
+let displayFloorplanXpos, displayFloorplanYpos, displayVideoXpos, displayVideoYpos;
 let floorPlanBackgroundCol = 225,
-  videoBackgroundColor = 125,
-  keysBackgroundColor = 255;
+  videoBackgroundColor = 200;
 let colorShades = ['#6a3d9a', '#ff7f00', '#33a02c', '#1f78b4', '#e31a1c', '#ffff99', '#b15928', '#cab2d6', '#fdbf6f', '#b2df8a', '#a6cee3', '#fb9a99'];
 let spacing = 50; // general spacing variable
 let pathWeight = 5;
 let curPathColor = 0; // color for path while drawing
 
 // TITLE
-let keyTextSize, infoTextSize;
-let infoMsg = "MONDRIAN TRANSCRIPTION\nby Ben Rydal Shapiro & contributers\nbuilt with p5.js";
-let descMSG = "Hi there! This tool allows you to transcribe fine-grained positioning data from video. To get started, use the top buttons to upload a floor plan image file (PNG or JPG) and a video file (MP4). Then, use the key codes below to interact with the video and use your cursor to draw on the floor plan. As you interact with the video and simultaneously draw on the floor plan, positioning data is recorded as a CSV file organized by time in seconds and x/y pixel positions scaled to the pixel size of your floor plan image file. You can save this file anytime and then record another movement path.\n\nKEY CODES:\nPlay/Pause (p), Fast-Forward (f), Rewind (b), Reset (r), Save File (s), Toggle Video Size (v)"
+let keyTextSize;
+let infoMsg = "MONDRIAN TRANSCRIPTION SOFTWARE\n\nby Ben Rydal Shapiro & contributers\nbuilt with p5.js\n\nHi there! This tool allows you to transcribe fine-grained positioning data from video. To get started, use the top buttons to upload a floor plan image file (PNG or JPG) and a video file (MP4). Then, use the key codes below to interact with the video and use your cursor to draw on the floor plan. As you interact with the video and simultaneously draw on the floor plan, positioning data is recorded as a CSV file organized by time in seconds and x/y pixel positions scaled to the pixel size of your floor plan image file. Use the top right button to save this file anytime and then record another movement path. For more information, see: https://www.benrydal.com/software/mondriantranscription\n\nKEY CODES:\nPlay/Pause (p), Fast-Forward (f), Rewind (b), Reset (r)"
+let showInfo = true;
 
 /**
  * Optional p5.js method, will complete before setup/draw begin
@@ -68,8 +66,6 @@ function setup() {
   canvas = createCanvas(window.innerWidth, window.innerHeight, P2D);
   frameRate(frameAndSampleWhenStoppedRate);
   setGUIWindows();
-  drawGUIWindows();
-  drawKeys();
   curPath = new Path(); // set initial path and UpdateData 
   dataUpdate = new UpdateData();
 }
@@ -86,17 +82,21 @@ function draw() {
  * Organizes methods for recording once all data is loaded
  */
 function setDrawingScreen() {
-  if (reSetAllData) dataUpdate.reDrawAllData(); // Runs once after data is initially loaded or file is written
   if (recording) dataUpdate.setData(); // records data and updates visualization if in record mode
+  if (showInfo) {
+    // redraw current screen first, then drawKeys if showing
+    dataUpdate.reDrawAllData();
+    dataUpdate.updatePath.drawPath(curPath, curPathColor); // TO DO: combine functions??
+    drawKeys();
+  }
 }
 
 /**
  * Displays image or blank screen indicating movie is loaded
  */
 function setLoadDataScreen() {
+  drawGUIWindows();
   if (floorPlanLoaded) image(floorPlan, displayFloorplanXpos, displayFloorplanYpos, displayFloorplanWidth, displayFloorplanHeight);
-  else if (movieLoaded) {
-    fill(0); // draw black screen if movie is loaded in video display
-    rect(displayVideoXpos, displayVideoYpos, displayVideoWidth, displayVideoHeight);
-  }
+  else if (movieLoaded) drawMovieBackground();
+  if (showInfo) drawKeys();
 }

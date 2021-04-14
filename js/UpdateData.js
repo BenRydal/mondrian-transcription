@@ -31,13 +31,11 @@ class UpdateData {
 
     /**
      * Redraws movie background and image, floorplan display image, and all recorded paths
-     * resets resetAlldata to false
      */
     reDrawAllData() {
         image(floorPlan, displayFloorplanXpos, displayFloorplanYpos, displayFloorplanWidth, displayFloorplanHeight);
         this.updateMovie.drawCurFrame();
         this.updatePath.reDrawAllPaths();
-        reSetAllData = false;
     }
 
     /**
@@ -75,7 +73,7 @@ class UpdateData {
         this.updatePath.addPath();
         this.updatePath.clearCurPath();
         this.updateMovie.stopMovie();
-        reSetAllData = true;
+        dataUpdate.reDrawAllData();
         recording = false;
     }
 
@@ -155,6 +153,7 @@ class UpdatePath {
      */
     drawPath(p, pathColor) {
         stroke(pathColor);
+        strokeWeight(pathWeight);
         // Must add back in floor plan display x/y pos to scale to display floor plan correctly
         for (let i = 1; i < p.xPos.length; i++) {
             let x = displayFloorplanXpos + (p.xPos[i] / (inputFloorPlanWidth / displayFloorplanWidth));
@@ -184,7 +183,7 @@ class UpdatePath {
         curPath.yPos = [];
         curPath.tPos = [];
     }
-    
+
     /**
      * Add to points to global curPath arraylits for each second being fast forwarded
      */
@@ -223,10 +222,7 @@ class UpdateMovie {
      * Draw current movie frame as an image and black background to GUI in video display
      */
     drawCurFrame() {
-        fill(0); // draw black screen background for movie
-        stroke(0);
-        if (movieDisplayLarge) rect(displayVideoXpos, displayVideoYpos, displayVideoWidth, height);
-        else rect(displayVideoXpos, displayVideoYpos, displayVideoWidth, displayVideoHeight);
+        drawMovieBackground();
         image(movie, displayVideoXpos, displayVideoYpos, movie.width, movie.height);
     }
     /**
@@ -245,7 +241,7 @@ class UpdateMovie {
     stopMovie() {
         movie.stop();
     }
-    
+
     /**
      * Fast forward video by videoJumpValue in seconds
      */

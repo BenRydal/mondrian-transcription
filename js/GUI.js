@@ -1,22 +1,9 @@
-let movieDisplayLarge = false; // controls dynamic sizing of video, set to false or size small to start
-
 function keyPressed() {
-  if (key == 'p' || key == 'P') dataUpdate.updateMovie.playPauseRecording();
-  else if (key == 'r' || key == 'R') dataUpdate.resetCurPath();
-  else if (key == 'b' || key == 'B') dataUpdate.rewind();
-  else if (key == 'f' || key == 'F') dataUpdate.fastForward();
-  else if (key == 's' || key == 'S') dataUpdate.writeFile();
-  else if (key == 'v' || key == 'V') {
-    if (movieDisplayLarge) {
-      setDisplayMovieSize(displayVideoWidth, displayVideoHeight);
-      movieDisplayLarge = false;
-    }
-    else {
-      setDisplayMovieSize(displayVideoWidth, displayKeysYpos + displayKeysHeight);
-      movieDisplayLarge = true;
-    }
-    drawKeys();
-    this.updateMovie.drawCurFrame();
+  if (floorPlanLoaded && movieLoaded) {
+    if (key == 'p' || key == 'P') dataUpdate.updateMovie.playPauseRecording();
+    else if (key == 'r' || key == 'R') dataUpdate.resetCurPath();
+    else if (key == 'b' || key == 'B') dataUpdate.rewind();
+    else if (key == 'f' || key == 'F') dataUpdate.fastForward();
   }
 }
 
@@ -24,23 +11,18 @@ function keyPressed() {
  * Sets floor plan, video, and info message sizing/positions
  */
 function setGUIWindows() {
-  infoTextSize = width / 110;
   keyTextSize = width / 75;
   // width/heights
   displayFloorplanWidth = width / 2;
   displayFloorplanHeight = height;
   displayVideoWidth = width / 2;
-  displayVideoHeight = height / 2;
-  displayKeysWidth = width / 2;
-  displayKeysHeight = height / 2;
+  displayVideoHeight = height;
 
   // x/y positions
   displayFloorplanXpos = width / 2;
   displayFloorplanYpos = 0;
   displayVideoXpos = 0;
   displayVideoYpos = 0;
-  displayKeysXpos = 0;
-  displayKeysYpos = height / 2;
 }
 /**
  * Draws floor plan, video, and key windows
@@ -53,22 +35,27 @@ function drawGUIWindows() {
   // Video
   fill(videoBackgroundColor);
   rect(displayVideoXpos, displayVideoYpos, displayVideoWidth, displayVideoHeight);
-  // Keys
-  fill(keysBackgroundColor);
-  rect(displayKeysXpos, displayKeysYpos, displayKeysWidth, displayKeysHeight);
 }
+
+function drawMovieBackground() {
+  fill(0); // draw black screen if movie is loaded in video display
+  noStroke();
+  rect(displayVideoXpos, displayVideoYpos, displayVideoWidth, displayVideoHeight);
+}
+
 /**
  * Draws key text
  */
 function drawKeys() {
-  stroke(255);
-  fill(keysBackgroundColor);
-  rect(displayKeysXpos, displayKeysYpos, displayKeysWidth, displayKeysHeight);
+  rectMode(CENTER);
+  stroke(0);
+  strokeWeight(1);
+  fill(255, 180);
+  rect(width / 2, height / 2, width / 2 + spacing, height / 2 + spacing);
   fill(0);
   textFont(font_Lato, keyTextSize);
-  text(descMSG, displayKeysXpos + spacing / 2, displayKeysYpos + spacing / 2, displayKeysWidth - spacing, displayKeysHeight - spacing);
-  textFont(font_PlayfairItalic, infoTextSize);
-  text(infoMsg, 0, height - spacing);
+  text(infoMsg, width / 2, height / 2, width / 2, height / 2);
+  rectMode(CORNER);
 }
 
 // Tests if over rectangle with x, y, and width/height
