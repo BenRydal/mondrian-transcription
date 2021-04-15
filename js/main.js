@@ -9,8 +9,8 @@ To reference or read more about this work please see: https://etd.library.vander
 */
 
 // DATA
-let paths = []; // holds all recorded path files
-let curPath; // current path to record
+let paths = []; // holds all recorded movement path files
+let curPath; // holds path object with lists of x/y positions and time values for current movement path
 let dataUpdate; // object that holds methods to synchronize updating of data recording and video
 let curFileToOutput = 0; // current file number to write to output
 const frameAndSampleWhenStoppedRate = 30; // controls both frameRate of program and amount data is sampled when cursor is not moving when recording data

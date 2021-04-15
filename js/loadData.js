@@ -8,8 +8,8 @@ function handleIntroButton() {
 }
 
 function handleSaveFileButton() {
-  // ADD TESTS to not write file unless there is some data/movie floor plan have bene loaded
-  dataUpdate.writeFile();
+  // TO DO: Add additional tests
+  if (floorPlanLoaded && movieLoaded && curPath.xPos.length > 0) dataUpdate.writeFile();
 }
 
 /**
