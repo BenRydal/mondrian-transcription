@@ -3,7 +3,7 @@ function keyPressed() {
     if (key == 'p' || key == 'P') {
       dataUpdate.updateMovie.playPauseRecording();
       if (showInfo) handleIntroButton(); // prevent info screen from showing while recording for smooth user interaction
-    } else if (key == 'r' || key == 'R') dataUpdate.resetCurPath();
+    } else if (key == 'r' || key == 'R') dataUpdate.resetCurRecording();
     else if (key == 'b' || key == 'B') dataUpdate.rewind();
     else if (key == 'f' || key == 'F') dataUpdate.fastForward();
   }
@@ -36,12 +36,6 @@ function drawGUIWindows() {
   rect(displayFloorplanXpos, displayFloorplanYpos, displayFloorplanWidth, displayFloorplanHeight);
   // Video
   fill(videoBackgroundColor);
-  rect(displayVideoXpos, displayVideoYpos, displayVideoWidth, displayVideoHeight);
-}
-
-function drawMovieBackground() {
-  fill(0); // draw black screen if movie is loaded in video display
-  stroke(0);
   rect(displayVideoXpos, displayVideoYpos, displayVideoWidth, displayVideoHeight);
 }
 

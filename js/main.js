@@ -92,6 +92,6 @@ function setDrawingScreen() {
 function setLoadDataScreen() {
   drawGUIWindows();
   if (floorPlanLoaded) drawFloorPlanBackground();
-  else if (movieLoaded) drawMovieBackground();
+  else if (movieLoaded) dataUpdate.updateMovie.drawCurFrame();
   if (showInfo) drawKeys();
 }

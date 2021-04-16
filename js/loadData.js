@@ -3,7 +3,7 @@ function handleIntroButton() {
   if (showInfo && floorPlanLoaded && movieLoaded) {
     dataUpdate.reDrawAllData();
     dataUpdate.updatePath.drawPath(curPath, curPathColor); // TO DO: combine functions??
-  } 
+  }
   showInfo = !showInfo;
 }
 
@@ -51,6 +51,9 @@ function handleVideoFile(input) {
   noLoop(); // resumed after video has been loaded
   if (movie !== undefined) movie.remove(); // remove exisiting movie element if not first video loaded
   movie = createVideo(fileLocation, setMovie);
+  movie.onload = function () {
+    URL.revokeObjectURL(this.src);
+  }
 }
 /**
  * Sets movie object and resumes program loop
@@ -60,17 +63,15 @@ function setMovie() {
   setInputMovieSize(); // set global movie size constants
   setDisplayMovieSize(displayVideoWidth, displayVideoHeight);
   movie.hide();
+  movie.stop(); // necessary to be able to draw starting frame before playing the video
   // Native P5 onended and duration methods don't seem to work, so use below 
   let mov = document.getElementById('moviePlayer');
   mov.onended = function () {
     recording = false;
   };
-  movie.onload = function () {
-    URL.revokeObjectURL(this.src);
-  }
   movieLoaded = true;
   loop(); // resume
-  drawMovieBackground(); // after loading video and restarting loop, draw background to indicate movie is loaded
+  dataUpdate.updateMovie.drawCurFrame(); // after loading video and restarting loop, draw starting frame to indicate movie is loaded
 }
 
 // sets global pixel width/height for movie file to scale size dynamically in program

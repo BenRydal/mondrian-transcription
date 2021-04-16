@@ -41,11 +41,11 @@ class UpdateData {
     /**
      * Reset recording for current path by redrawing data, clearing current path, stopping movie
      */
-    resetCurPath() {
+    resetCurRecording() {
         recording = false;
-        this.reDrawAllData();
-        this.updatePath.clearCurPath();
         this.updateMovie.stopMovie();
+        this.updatePath.clearCurPath();
+        this.reDrawAllData();
     }
 
     /**
@@ -219,10 +219,12 @@ class UpdateMovie {
 
     constructor() {}
     /**
-     * Draw current movie frame as an image and black background to GUI in video display
+     * Draw current movie frame as an image and white background to GUI in video display
      */
     drawCurFrame() {
-        drawMovieBackground();
+        fill(255);
+        stroke(255);
+        rect(displayVideoXpos, displayVideoYpos, displayVideoWidth, displayVideoHeight);
         image(movie, displayVideoXpos, displayVideoYpos, reScaledMovieWidth, reScaledMovieHeight);
     }
     /**
