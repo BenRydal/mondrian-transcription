@@ -30,7 +30,7 @@ let inputFloorPlanWidth, inputFloorPlanHeight; // width/height of user uploaded 
 let movie; // P5.js media element to display/interact with HTML5 video from file uploaded by user
 let movieDuration; // Duration of video set in loadData
 let recording = false; // controls synchronized path recording and video playing
-let videoJumpValue = 5; // value in seconds to ff or rewind
+const videoJumpValue = 5; // value in seconds to ff or rewind
 let inputMovieWidth, inputMovieHeight; // pixel width and height of inputted video file to scale size dynamically in program
 let reScaledMovieWidth, reScaledMovieHeight; // scaled movie width/height to display container from input video
 
@@ -40,16 +40,16 @@ let movieLoaded = false,
   floorPlanLoaded = false;
 let displayFloorplanWidth, displayFloorplanHeight, displayVideoWidth, displayVideoHeight;
 let displayFloorplanXpos, displayFloorplanYpos, displayVideoXpos, displayVideoYpos;
-let floorPlanBackgroundCol = 225,
+const floorPlanBackgroundCol = 225,
   videoBackgroundColor = 200;
-let colorShades = ['#6a3d9a', '#ff7f00', '#33a02c', '#1f78b4', '#e31a1c', '#ffff99', '#b15928', '#cab2d6', '#fdbf6f', '#b2df8a', '#a6cee3', '#fb9a99'];
-let spacing = 50; // general spacing variable
-let pathWeight = 5;
-let curPathColor = 0; // color for path while drawing
+const colorShades = ['#6a3d9a', '#ff7f00', '#33a02c', '#1f78b4', '#e31a1c', '#ffff99', '#b15928', '#cab2d6', '#fdbf6f', '#b2df8a', '#a6cee3', '#fb9a99'];
+const spacing = 50; // general spacing variable
+const pathWeight = 5;
+const curPathColor = 0; // color for path while drawing
 
 // TITLE
 let keyTextSize;
-let infoMsg = "MONDRIAN TRANSCRIPTION SOFTWARE\n\nby Ben Rydal Shapiro & contributers\nbuilt with p5.js\n\nHi there! This tool allows you to transcribe fine-grained positioning data from video. To get started, use the top buttons to upload a floor plan image file (PNG or JPG) and a video file (MP4). Then, use the key codes below to interact with the video and use your cursor to draw on the floor plan. As you interact with the video and simultaneously draw on the floor plan, positioning data is recorded as a CSV file organized by time in seconds and x/y pixel positions scaled to the pixel size of your floor plan image file. Use the top right button to save this file anytime and then record another movement path. For more information, see: https://www.benrydal.com/software/mondriantranscription\n\nKEY CODES:\nPlay/Pause (p), Fast-Forward (f), Rewind (b), Reset (r)"
+const infoMsg = "MONDRIAN TRANSCRIPTION SOFTWARE\n\nby Ben Rydal Shapiro & contributers\nbuilt with p5.js\n\nHi there! This tool allows you to transcribe fine-grained positioning data from video. To get started, use the top buttons to upload a floor plan image file (PNG or JPG) and a video file (MP4). Then, use the key codes below to interact with the video and use your cursor to draw on the floor plan. As you interact with the video and simultaneously draw on the floor plan, positioning data is recorded as a CSV file organized by time in seconds and x/y pixel positions scaled to the pixel size of your floor plan image file. Use the top right button to save this file anytime and then record another movement path. For more information, see: https://www.benrydal.com/software/mondriantranscription\n\nKEY CODES:\nPlay/Pause (p), Fast-Forward (f), Rewind (b), Reset (r)"
 let showInfo = true;
 
 /**
@@ -78,7 +78,7 @@ function draw() {
  */
 function setDrawingScreen() {
   if (recording) dataUpdate.setData(); // records data and updates visualization if in record mode
-  if (showInfo ) {
+  if (showInfo) {
     // redraw current screen first, then drawKeys
     dataUpdate.reDrawAllData();
     dataUpdate.updatePath.drawPath(curPath, curPathColor);
