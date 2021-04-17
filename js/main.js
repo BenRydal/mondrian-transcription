@@ -9,6 +9,13 @@ To reference or read more about this work please see: https://etd.library.vander
 */
 
 //*************** RECORDING VARS ***************
+let paths = []; // List to hold all path objects created
+let curPath; // Path to hold data from current recording
+let dataUpdate; // Instance of UpdateData class to control synchronized method calls for path recording and movie
+let curFileToOutput = 0; // Integer counter to mark current file number to write to output
+let recording = false; // Boolean to indicate when recording
+const frameAndSampleWhenStoppedRate = 30; // Integer controls both frameRate of program and sampling rate when mouse cursor is not moving
+const fileHeaders = ["time", "x", "y"]; // Column headers for outputted .CSV movement files
 /**
  * Represents the object being recorded such as person or thing
  * Holds decimal/number lists of x/y pixel positions and time values in seconds/fractions of seconds 
@@ -18,13 +25,6 @@ class Path {
   yPos = [];
   tPos = [];
 }
-let paths = []; // List to hold all path objects created
-let curPath; // Path to hold data from current recording
-let dataUpdate; // Instance of UpdateData class to control synchronized method calls for path recording and movie
-let curFileToOutput = 0; // Integer counter to mark current file number to write to output
-let recording = false; // Boolean to indicate when recording
-const frameAndSampleWhenStoppedRate = 30; // Integer controls both frameRate of program and sampling rate when mouse cursor is not moving
-const fileHeaders = ["time", "x", "y"]; // Column headers for outputted .CSV movement files
 
 //*************** FLOOR PLAN ***************
 let floorPlan; // P5.js image file that is created from user uploaded PNG/JPG image file
