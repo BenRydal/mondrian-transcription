@@ -32,10 +32,10 @@ function setGUIWindows() {
 function drawGUIWindows() {
   noStroke();
   // Floor Plan
-  fill(floorPlanBackgroundCol);
+  fill(225);
   rect(displayFloorplanXpos, displayFloorplanYpos, displayFloorplanWidth, displayFloorplanHeight);
   // Video
-  fill(videoBackgroundColor);
+  fill(200);
   rect(displayVideoXpos, displayVideoYpos, displayVideoWidth, displayVideoHeight);
 }
 
@@ -58,9 +58,4 @@ function drawKeys() {
   textFont(font_Lato, keyTextSize);
   text(infoMsg, width / 2, height / 2, width / 2, height / 2);
   rectMode(CORNER);
-}
-
-// Tests if over rectangle with x, y, and width/height
-function overRect(x, y, boxWidth, boxHeight) {
-  return mouseX >= x && mouseX <= x + boxWidth && mouseY >= y && mouseY <= y + boxHeight;
 }

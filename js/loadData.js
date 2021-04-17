@@ -1,5 +1,8 @@
+/**
+ * Controls showInfo boolean for showing/hiding info screen
+ * NOTE: redraws current screen if data is loaded
+ */
 function handleIntroButton() {
-  // re draw current screen 
   if (showInfo && floorPlanLoaded && movieLoaded) {
     dataUpdate.reDrawAllData();
     dataUpdate.updatePath.drawPath(curPath, curPathColor); // TO DO: combine functions??
@@ -74,7 +77,9 @@ function setMovie() {
   dataUpdate.updateMovie.drawCurFrame(); // after loading video and restarting loop, draw starting frame to indicate movie is loaded
 }
 
-// sets global pixel width/height for movie file to scale size dynamically in program
+/**
+ * Sets global pixel width/height for movie file to scale size dynamically in program
+ */
 function setInputMovieSize() {
   inputMovieWidth = movie.width;
   inputMovieHeight = movie.height;

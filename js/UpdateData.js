@@ -68,7 +68,10 @@ class UpdateData {
         this.resetAfterWriteFile();
     }
 
-    // Add path, stop movie & reset curPath
+    /**
+     * Organizes methods to update data and reset screen after file has been written
+     * Sets recording to false
+     */
     resetAfterWriteFile() {
         this.updatePath.addPath();
         this.updatePath.clearCurPath();
@@ -76,25 +79,28 @@ class UpdateData {
         dataUpdate.reDrawAllData();
         recording = false;
     }
-
-    // Rewind video and remove data from curPath equivalent to videoJumpValue, rewDraw all data and curPath
+    
+    /**
+     * Organize path and video rewind methods 
+     * Rewind video and remove data from curPath equivalent to videoJumpValue, rewDraw all data and curPath
+     */
     rewind() {
-        // record point before rewinding to make sure curEndTime is correct in case points were not recording if mouse was not moving
+        // Record point before rewinding to make sure curEndTime is correct in case points were not recording if mouse was not moving
         this.updatePath.drawCurLineSegment();
         this.updatePath.recordCurPoint();
-        // Only rewind if not at very beginning of video
-        let curEndTime = curPath.tPos[curPath.tPos.length - 1]; // get time value from last element in list
-        let newEndTime = curEndTime - videoJumpValue; // subtract videoJumpValue to set newEndTime 
-        this.updatePath.rewind(newEndTime);
-        this.updateMovie.rewind(newEndTime);
-        // reset
+        // TO DO: Add conditional test here based on movie time to clear path/reset video if less that jumpvalue
+        // Set time to rewind to base on last time value in list - videoJumpValue
+        let rewindToTime = curPath.tPos[curPath.tPos.length - 1] - videoJumpValue;
+        this.updatePath.rewind(rewindToTime);
+        this.updateMovie.rewind(rewindToTime);
+        // Stop recording and redraw data
         recording = false;
         this.reDrawAllData();
         this.updatePath.drawPath(curPath, curPathColor); // TO DO: combine functions??
     }
 
     /**
-     * Organize fast forwarding movie and path data.
+     * Organize fast forwarding movie and path data
      * NOTE: conditional tests to make sure not at end of video
      */
     fastForward() {
@@ -203,10 +209,10 @@ class UpdatePath {
      * Remove all points from curPath arraylists that are greater than time parameter
      * @param  {} newEndTime
      */
-    rewind(newEndTime) {
+    rewind(rewindToTime) {
         // Start at end of x or y list (NOT t) and delete up to newEndTime
         for (let i = curPath.xPos.length - 1; i >= 0; i--) {
-            if (curPath.tPos[i] > newEndTime) {
+            if (curPath.tPos[i] > rewindToTime) {
                 curPath.tPos.pop();
                 curPath.xPos.pop();
                 curPath.yPos.pop();
@@ -219,7 +225,7 @@ class UpdateMovie {
 
     constructor() {}
     /**
-     * Draw current movie frame as an image and white background to GUI in video display
+     * Draw current movie frame image and white background to GUI in video display
      */
     drawCurFrame() {
         fill(255);
@@ -228,7 +234,7 @@ class UpdateMovie {
         image(movie, displayVideoXpos, displayVideoYpos, reScaledMovieWidth, reScaledMovieHeight);
     }
     /**
-     * Controls play/pause of movie and sets global recording boolean variable
+     * Plays/pauses movie and starts/stops recording
      */
     playPauseRecording() {
         if (recording) {
@@ -252,12 +258,12 @@ class UpdateMovie {
     }
 
     /**
-     * Rewind movie to parameter newEndTime or 0 if it is too close to start of video
-     * Pause movie
-     * @param  {} newEndTime
+     * Rewind movie to parameter rewindToTime or 0 if it is too close to start of video
+     * Pauses movie
+     * @param  {} rewindToTime
      */
-    rewind(newEndTime) {
-        if (movie.time() > videoJumpValue) movie.time(newEndTime);
+    rewind(rewindToTime) {
+        if (movie.time() > videoJumpValue) movie.time(rewindToTime);
         else movie.time(0);
         movie.pause();
     }
