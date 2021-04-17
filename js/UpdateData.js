@@ -207,7 +207,7 @@ class UpdatePath {
     }
     /**
      * Remove all points from curPath arraylists that are greater than time parameter
-     * @param  {} newEndTime
+     * @param  {} rewindToTime
      */
     rewind(rewindToTime) {
         // Start at end of x or y list (NOT t) and delete up to newEndTime
