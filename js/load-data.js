@@ -10,8 +10,10 @@ function handleIntroButton() {
   showInfo = !showInfo;
 }
 
+/**
+ * If floor plan and video are loaded and if curPath has data method sends current path to be saved to output file
+ */
 function handleSaveFileButton() {
-  // TO DO: Add additional tests
   if (floorPlanLoaded && movieLoaded && curPath.xPos.length > 0) dataUpdate.writeFile();
 }
 
@@ -70,12 +72,13 @@ function setMovie() {
   }
   // Native P5 onended and duration methods don't seem to work, so use below 
   let mov = document.getElementById('moviePlayer');
+  // When movie ends, set recording false
   mov.onended = function () {
     recording = false;
   };
   movieLoaded = true;
-  loop(); // resume
   dataUpdate.updateMovie.drawCurFrame(); // after loading video and restarting loop, draw starting frame to indicate movie is loaded
+  loop(); // resume
 }
 
 /**
