@@ -44,7 +44,6 @@ class UpdateData {
      * Reset recording for current path by redrawing data, clearing current path, stopping movie
      */
     resetCurRecording() {
-        recording = false;
         this.updateMovie.stopMovie();
         this.updatePath.clearCurPath();
         this.reDrawAllData();
@@ -79,7 +78,6 @@ class UpdateData {
         this.updatePath.clearCurPath();
         this.updateMovie.stopMovie();
         dataUpdate.reDrawAllData();
-        recording = false;
     }
 
     /**
@@ -236,7 +234,7 @@ class UpdateMovie {
         image(movie, displayVideoXpos, displayVideoYpos, reScaledMovieWidth, reScaledMovieHeight);
     }
     /**
-     * Plays/pauses movie and starts/stops recording
+     * Plays/pauses movie and starts/stops recording variable
      */
     playPauseRecording() {
         if (recording) {
@@ -247,9 +245,13 @@ class UpdateMovie {
             recording = true;
         }
     }
-
+    /**
+     * Stops movie, which sets time to 0
+     * Sets recording to false
+     */
     stopMovie() {
         movie.stop();
+        recording = false;
     }
 
     /**
@@ -261,7 +263,6 @@ class UpdateMovie {
 
     /**
      * Rewind movie to parameter rewindToTime or 0 if it is too close to start of video
-     * Pauses movie
      * @param  {} rewindToTime
      */
     rewind(rewindToTime) {
