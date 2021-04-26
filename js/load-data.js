@@ -54,10 +54,8 @@ function handleVideoFile(input) {
   noLoop(); // resumed after video has been loaded
   if (movie !== undefined) movie.remove(); // remove exisiting movie element if not first video loaded
   movie = createVideo(fileLocation, setMovie);
-  movie.onload = function () {
-    URL.revokeObjectURL(this.src);
-  }
 }
+
 /**
  * Sets movie object and resumes program loop
  */
@@ -67,6 +65,9 @@ function setMovie() {
   setDisplayMovieSize(displayVideoWidth, displayVideoHeight);
   movie.hide();
   movie.stop(); // necessary to be able to draw starting frame before playing the video
+  movie.onload = function () {
+    URL.revokeObjectURL(this.src);
+  }
   // Native P5 onended and duration methods don't seem to work, so use below 
   let mov = document.getElementById('moviePlayer');
   mov.onended = function () {
