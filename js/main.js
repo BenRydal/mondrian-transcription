@@ -14,7 +14,6 @@ let curPath; // Path to hold data from current recording
 let dataUpdate; // Instance of UpdateData class to control synchronized method calls for path recording and movie
 let curFileToOutput = 0; // Integer counter to mark current file number to write to output
 let recording = false; // Boolean to indicate when recording
-const frameAndSampleWhenStoppedRate = 30; // Integer controls both frameRate of program and sampling rate when mouse cursor is not moving
 const fileHeaders = ["time", "x", "y"]; // Column headers for outputted .CSV movement files
 /**
  * Represents the object being recorded such as person or thing
@@ -57,7 +56,6 @@ const infoMsg = "MONDRIAN TRANSCRIPTION SOFTWARE\n\nby Ben Rydal Shapiro & contr
 function setup() {
   canvas = createCanvas(window.innerWidth, window.innerHeight, P2D);
   font_Lato = loadFont("data/fonts/Lato-Light.ttf");
-  frameRate(frameAndSampleWhenStoppedRate);
   setGUIWindows();
   curPath = new Path(); // set initial path and UpdateData 
   dataUpdate = new UpdateData();

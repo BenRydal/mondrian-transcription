@@ -10,28 +10,30 @@ class UpdateData {
     }
 
     /**
-     * Draws video image and begins recording using samplerate set globally if mouse has moved
-     * NOTE: Recording based on mouse movement and sample rate is simplest way to reduce data file size and 
-     * draw smoother curves from outputted positioning data file in visualization tools
-     * If mouse moves, always record
-     * If mouse hasn't moved, record at sample rate so you still get some points while not moving
+     * Calls update most recent video frame
+     * Decides whether to record data based on sampling rate method
+     * NOTE: Always record first data point because sampling rate method requires prior point for comparison
      */
     setData() {
         this.updateMovie.drawCurFrame();
-        if (mouseX != pmouseX || mouseY != pmouseY) {
+        if (curPath.tPos.length === 0 || this.testSampleRate()) {
             this.updatePath.drawCurLineSegment();
             this.updatePath.recordCurPoint();
-        } else {
-            if (frameCount % frameAndSampleWhenStoppedRate == 0) {
-                this.updatePath.drawCurLineSegment();
-                this.updatePath.recordCurPoint();
-            }
         }
     }
-
     /**
-     * Redraws movie background and image, floorplan display image, and all recorded paths
+     * Compares current movie time to last time point in curPath array
+     * NOTE: If mouse is moving, rate is set by comparing to 2 decimal places. 
+     * This samples enough data to draw smooth curves
+     * NOTE: If mouse is not moving, rate is set to compare whole numbers.
+     * This samples about every second and reduces data file size considerably
      */
+    testSampleRate() {
+        let rate = 0; // decimal value to compare, essentially the rate to sample. Set to 0 when mouse not moving.
+        if (mouseX !== pmouseX || mouseY !== pmouseY) rate = 2; // set to 1 when mouse is
+        return Number.parseFloat(curPath.tPos[curPath.tPos.length - 1]).toFixed(rate) < Number.parseFloat(movie.time()).toFixed(rate); // return true if movie time value is different last time index of prior recorded point
+    }
+
     reDrawAllData() {
         drawFloorPlanBackground();
         this.updateMovie.drawCurFrame();
@@ -79,7 +81,7 @@ class UpdateData {
         dataUpdate.reDrawAllData();
         recording = false;
     }
-    
+
     /**
      * Organize path and video rewind methods 
      * Rewind video and remove data from curPath equivalent to videoJumpValue, rewDraw all data and curPath
@@ -93,10 +95,10 @@ class UpdateData {
         let rewindToTime = curPath.tPos[curPath.tPos.length - 1] - videoJumpValue;
         this.updatePath.rewind(rewindToTime);
         this.updateMovie.rewind(rewindToTime);
-        // Stop recording and redraw data
-        recording = false;
+        // If first time recording is being rewound, pause recording and set to false
+        if (recording) this.updateMovie.playPauseRecording();
         this.reDrawAllData();
-        this.updatePath.drawPath(curPath, curPathColor); // TO DO: combine functions??
+        this.updatePath.drawPath(curPath, curPathColor);
     }
 
     /**
@@ -265,6 +267,5 @@ class UpdateMovie {
     rewind(rewindToTime) {
         if (movie.time() > videoJumpValue) movie.time(rewindToTime);
         else movie.time(0);
-        movie.pause();
     }
 }
