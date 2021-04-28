@@ -140,9 +140,15 @@ class UpdatePath {
         // Adjust floor plan x/y positions to record to 0, 0 origin/coordinate system
         let fpXPos = xPos - displayFloorplanXpos;
         let fpYPos = yPos - displayFloorplanYpos;
-        curPath.xPos.push(fpXPos * (inputFloorPlanWidth / displayFloorplanWidth)); // rescale x,y positions to input floor plan
-        curPath.yPos.push(fpYPos * (inputFloorPlanHeight / displayFloorplanHeight));
-        curPath.tPos.push(movie.time());
+        curPath.xPos.push(this.roundValue(fpXPos * (inputFloorPlanWidth / displayFloorplanWidth))); // rescale x,y positions to input floor plan
+        curPath.yPos.push(this.roundValue(fpYPos * (inputFloorPlanHeight / displayFloorplanHeight)));
+        curPath.tPos.push(this.roundValue(movie.time()));
+    }
+
+    roundValue(number) {
+        const decimalPlaces = 2;
+        const multiplier = Math.pow(10, decimalPlaces);
+        return Math.round(number * multiplier) / multiplier;
     }
 
     /**
