@@ -140,15 +140,9 @@ class UpdatePath {
         // Adjust floor plan x/y positions to record to 0, 0 origin/coordinate system
         let fpXPos = xPos - displayFloorplanXpos;
         let fpYPos = yPos - displayFloorplanYpos;
-        curPath.xPos.push(this.roundValue(fpXPos * (inputFloorPlanWidth / displayFloorplanWidth))); // rescale x,y positions to input floor plan
-        curPath.yPos.push(this.roundValue(fpYPos * (inputFloorPlanHeight / displayFloorplanHeight)));
-        curPath.tPos.push(this.roundValue(movie.time()));
-    }
-
-    roundValue(number) {
-        const decimalPlaces = 2;
-        const multiplier = Math.pow(10, decimalPlaces);
-        return Math.round(number * multiplier) / multiplier;
+        curPath.xPos.push(+(fpXPos * (inputFloorPlanWidth / displayFloorplanWidth)).toFixed(2)); // rescale x,y positions to input floor plan
+        curPath.yPos.push(+(fpYPos * (inputFloorPlanHeight / displayFloorplanHeight)).toFixed(2));
+        curPath.tPos.push(+movie.time().toFixed(2));
     }
 
     /**
@@ -201,14 +195,15 @@ class UpdatePath {
      */
     fastForward() {
         // IMPORTANT: get last values from cur lists first before loop
-        let xPos = curPath.xPos[curPath.tPos.length - 1];
-        let yPos = curPath.yPos[curPath.tPos.length - 1];
-        let tPos = curPath.tPos[curPath.tPos.length - 1];
-        // add values for each second jumped by VideoJumpvalue, xPos and yPos are same but add i to tPos as time is increasing
-        for (let i = 0; i < videoJumpValue; i++) {
+        const xPos = curPath.xPos[curPath.tPos.length - 1];
+        const yPos = curPath.yPos[curPath.tPos.length - 1];
+        const tPos = curPath.tPos[curPath.tPos.length - 1];
+        // Add values for each second jumped by VideoJumpvalue, xPos and yPos are same but add i to tPos as time is increasing
+        // Start at 1 to record tPos properly
+        for (let i = 1; i <= videoJumpValue; i++) {
             curPath.xPos.push(xPos);
             curPath.yPos.push(yPos);
-            curPath.tPos.push(tPos + i);
+            curPath.tPos.push(+(tPos + i).toFixed(2));
         }
     }
     /**
