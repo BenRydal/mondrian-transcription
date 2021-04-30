@@ -22,16 +22,14 @@ class UpdateData {
         }
     }
     /**
-     * Compares current movie time to last time point in curPath array
-     * NOTE: If mouse is moving, rate is set by comparing to 2 decimal places. 
-     * This samples enough data to draw smooth curves
-     * NOTE: If mouse is not moving, rate is set to compare whole numbers.
-     * This samples about every second and reduces data file size considerably
+     * Method to sample data in 2 ways
+     * (1) if mouse moves sample at rate of 2 decimal points
+     * (2) if stopped sample at rate of 0 decimal points, approximately every 1 second in movie
      */
     testSampleRate() {
-        let rate = 0; // decimal value to compare, essentially the rate to sample. Set to 0 when mouse not moving.
-        if (mouseX !== pmouseX || mouseY !== pmouseY) rate = 2; // set to 1 when mouse is
-        return Number.parseFloat(curPath.tPos[curPath.tPos.length - 1]).toFixed(rate) < Number.parseFloat(movie.time()).toFixed(rate); // return true if movie time value is different last time index of prior recorded point
+        let rate = 0;
+        if (mouseX !== pmouseX || mouseY !== pmouseY) rate = 2;
+        return +(curPath.tPos[curPath.tPos.length - 1].toFixed(rate)) < +(movie.time().toFixed(rate));
     }
 
     reDrawAllData() {
