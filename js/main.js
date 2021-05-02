@@ -1,11 +1,12 @@
 /*
-CREDITS/LICENSE INFORMATION: This software is licensed under the GNU General Public License Version 2.0. 
+CREDITS/LICENSE INFORMATION: 
+This software is written in JavaScript and p5.js and is licensed under the GNU General Public License Version 2.0. 
 See the GNU General Public License included with this software for more details. 
-This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the 
-implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details. 
-Mondrian Transcription Software originally developed by Ben Rydal Shapiro at Vanderbilt University as part of his 
-dissertation titled Interaction Geography & the Learning Sciences. Copyright (C) 2018 Ben Rydal Shapiro, and contributors. 
-To reference or read more about this work please see: https://etd.library.vanderbilt.edu/available/etd-03212018-140140/unrestricted/Shapiro_Dissertation.pdf
+Mondrian Transcription software was originally developed by Ben Rydal Shapiro at Vanderbilt University
+as part of his dissertation titled Interaction Geography & the Learning Sciences. 
+Copyright (C) 2018 Ben Rydal Shapiro, and contributors. 
+To reference or read more about this work please see: 
+https://etd.library.vanderbilt.edu/available/etd-03212018-140140/unrestricted/Shapiro_Dissertation.pdf
 */
 
 //*************** RECORDING VARS ***************
@@ -48,7 +49,7 @@ const curPathColor = 0; // Color of currently recording path
 let keyTextSize; // Number indicating size of text, set in setGuiWindows
 let showInfo = true; // Boolean to show/hide intro message
 // String intro message text
-const infoMsg = "MONDRIAN TRANSCRIPTION SOFTWARE\n\nby Ben Rydal Shapiro & contributors\nbuilt with p5.js & JavaScript\n\nHi there! This tool allows you to transcribe fine-grained positioning data from video. To get started, use the top buttons to upload a floor plan image file (PNG or JPG) and a video file (MP4). Then, use the key codes below to interact with the video and use your cursor to draw on the floor plan. As you interact with the video and simultaneously draw on the floor plan, positioning data is recorded as a CSV file organized by time in seconds and x/y pixel positions scaled to the pixel size of your floor plan image file. Use the top right button to save this file anytime and then record another movement path. For more information, see: https://www.benrydal.com/software/mondriantranscription\n\nKEY CODES:  Play/Pause (p), Fast-Forward (f), Rewind (b), Reset (r)";
+const infoMsg = "MONDRIAN TRANSCRIPTION SOFTWARE\n\nby Ben Rydal Shapiro & contributors\nbuilt with p5.js & JavaScript\n\nHi there! This tool allows you to transcribe fine-grained movement data from video. To get started, use the top buttons to upload a floor plan image file (PNG or JPG) and a video file (MP4). Then, use the key codes below to interact with the video and use your cursor to draw on the floor plan. As you interact with the video and simultaneously draw on the floor plan, positioning data is recorded as a CSV file organized by time in seconds and x/y pixel positions scaled to the pixel size of your floor plan image file. Use the top right button to save this file anytime and then record another movement path. For more information, see: https://www.benrydal.com/software/mondriantranscription\n\nKEY CODES:  Play/Pause (p), Fast-Forward (f), Rewind (b), Reset (r)";
 
 /**
  * Required p5.js method, sets canvas, GUI and initial drawing requirements
