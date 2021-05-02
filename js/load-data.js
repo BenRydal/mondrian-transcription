@@ -57,7 +57,7 @@ function handleVideoFile(input) {
   input.value = ''; // reset input value so you can load same file again in browser
   let fileLocation = URL.createObjectURL(file);
   noLoop(); // resumed after video has been loaded
-  if (movie !== undefined) movie.remove(); // remove exisiting movie element if not first video loaded
+  if (movie != null) movie.remove(); // remove exisiting movie element if not first video loaded
   movie = createVideo(fileLocation, setMovie);
 }
 
