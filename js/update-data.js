@@ -10,26 +10,24 @@ class UpdateData {
     }
 
     /**
-     * Calls update most recent video frame
-     * Decides whether to record data based on sampling rate method
-     * NOTE: Always record first data point because sampling rate method requires prior point for comparison
+     * Updates video frame and line segment for drawing paths in interface
+     * Decides whether to record data point based on sampling rate method
      */
     setData() {
         this.updateMovie.drawCurFrame();
-        if (curPath.tPos.length === 0 || this.testSampleRate()) {
-            this.updatePath.drawCurLineSegment();
-            this.updatePath.recordCurPoint();
-        }
+        this.updatePath.drawCurLineSegment(); // Apparantly, this should not be called within testSampleRate block
+        if (this.testSampleRate()) this.updatePath.recordCurPoint();
     }
     /**
      * Method to sample data in 2 ways
      * (1) if mouse moves sample at rate of 2 decimal points
      * (2) if stopped sample at rate of 0 decimal points, approximately every 1 second in movie
+     * NOTE: Always return true if first point of path
      */
     testSampleRate() {
-        let rate = 0;
-        if (mouseX !== pmouseX || mouseY !== pmouseY) rate = 2;
-        return +(curPath.tPos[curPath.tPos.length - 1].toFixed(rate)) < +(movie.time().toFixed(rate));
+        if (curPath.tPos.length === 0) return true;
+        else if (mouseX !== pmouseX || mouseY !== pmouseY) return +(curPath.tPos[curPath.tPos.length - 1].toFixed(2)) < +(movie.time().toFixed(2));
+        else return +(curPath.tPos[curPath.tPos.length - 1].toFixed(0)) < +(movie.time().toFixed(0));
     }
 
     reDrawAllData() {
