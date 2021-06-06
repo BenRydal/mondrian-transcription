@@ -5,16 +5,16 @@
 function handleIntroButton() {
   if (showInfo && floorPlanLoaded && movieLoaded) {
     dataUpdate.reDrawAllData();
-    dataUpdate.updatePath.drawPath(curPath, curPathColor); // TO DO: combine functions??
+    dataUpdate.updatePath.drawPath(core.curPath, curPathColor); // TO DO: combine functions??
   }
   showInfo = !showInfo;
 }
 
 /**
- * If floor plan and video are loaded and if curPath has data method sends current path to be saved to output file
+ * If floor plan and video are loaded and if core.curPath has data method sends current path to be saved to output file
  */
 function handleSaveFileButton() {
-  if (floorPlanLoaded && movieLoaded && curPath.xPos.length > 0) dataUpdate.writeFile();
+  if (floorPlanLoaded && movieLoaded && core.curPath.xPos.length > 0) dataUpdate.writeFile();
 }
 
 /**
@@ -42,9 +42,9 @@ function handleFloorPlanFile(input) {
  * @param  {PNG or JPG PImage} img
  */
 function processFloorPlan(img) {
-  floorPlan = img;
-  inputFloorPlanWidth = floorPlan.width; // set values based on pixel size of original img before resizing
-  inputFloorPlanHeight = floorPlan.height;
+  core.floorPlan = img;
+  core.inputFloorPlanWidth = core.floorPlan.width; // set values based on pixel size of original img before resizing
+  core.inputFloorPlanHeight = core.floorPlan.height;
   floorPlanLoaded = true;
 }
 
@@ -77,7 +77,7 @@ function setMovie() {
   let mov = document.getElementById('moviePlayer');
   // When movie ends, set recording false
   mov.onended = function () {
-    recording = false;
+    core.recording = false;
   };
   movieLoaded = true;
   dataUpdate.updateMovie.drawCurFrame(); // after loading video and restarting loop, draw starting frame to indicate movie is loaded

@@ -25,9 +25,9 @@ class UpdateData {
      * NOTE: Always return true if first point of path
      */
     testSampleRate() {
-        if (curPath.tPos.length === 0) return true;
-        else if (mouseX !== pmouseX || mouseY !== pmouseY) return +(curPath.tPos[curPath.tPos.length - 1].toFixed(2)) < +(movie.time().toFixed(2));
-        else return +(curPath.tPos[curPath.tPos.length - 1].toFixed(0)) < +(movie.time().toFixed(0));
+        if (core.curPath.tPos.length === 0) return true;
+        else if (mouseX !== pmouseX || mouseY !== pmouseY) return +(core.curPath.tPos[core.curPath.tPos.length - 1].toFixed(2)) < +(movie.time().toFixed(2));
+        else return +(core.curPath.tPos[core.curPath.tPos.length - 1].toFixed(0)) < +(movie.time().toFixed(0));
     }
 
     reDrawAllData() {
@@ -54,14 +54,14 @@ class UpdateData {
         table.addColumn(fileHeaders[0]);
         table.addColumn(fileHeaders[1]);
         table.addColumn(fileHeaders[2]);
-        for (let i = 0; i < curPath.xPos.length; i++) {
+        for (let i = 0; i < core.curPath.xPos.length; i++) {
             let newRow = table.addRow();
-            newRow.setNum(fileHeaders[0], curPath.tPos[i]);
-            newRow.setNum(fileHeaders[1], curPath.xPos[i]);
-            newRow.setNum(fileHeaders[2], curPath.yPos[i]);
+            newRow.setNum(fileHeaders[0], core.curPath.tPos[i]);
+            newRow.setNum(fileHeaders[1], core.curPath.xPos[i]);
+            newRow.setNum(fileHeaders[2], core.curPath.yPos[i]);
         }
-        saveTable(table, "Path_" + curFileToOutput + ".csv");
-        curFileToOutput++;
+        saveTable(table, "Path_" + core.curFileToOutput + ".csv");
+        core.curFileToOutput++;
         this.resetAfterWriteFile();
     }
 
@@ -78,7 +78,7 @@ class UpdateData {
 
     /**
      * Organize path and video rewind methods 
-     * Rewind video and remove data from curPath equivalent to videoJumpValue, rewDraw all data and curPath
+     * Rewind video and remove data from core.curPath equivalent to videoJumpValue, rewDraw all data and core.curPath
      */
     rewind() {
         // Record point before rewinding to make sure curEndTime is correct in case points were not recording if mouse was not moving
@@ -86,13 +86,13 @@ class UpdateData {
         this.updatePath.recordCurPoint();
         // TO DO: Add conditional test here based on movie time to clear path/reset video if less that jumpvalue
         // Set time to rewind to base on last time value in list - videoJumpValue
-        let rewindToTime = curPath.tPos[curPath.tPos.length - 1] - videoJumpValue;
+        let rewindToTime = core.curPath.tPos[core.curPath.tPos.length - 1] - videoJumpValue;
         this.updatePath.rewind(rewindToTime);
         this.updateMovie.rewind(rewindToTime);
         // If first time recording is being rewound, pause recording and set to false
-        if (recording) this.updateMovie.playPauseRecording();
+        if (core.recording) this.updateMovie.playPauseRecording();
         this.reDrawAllData();
-        this.updatePath.drawPath(curPath, curPathColor);
+        this.updatePath.drawPath(core.curPath, curPathColor);
     }
 
     /**
@@ -127,7 +127,7 @@ class UpdatePath {
 
     /**
      * Calculates correctly scaled x/y positions to actual image file of floor plan uploaded by user
-     * and pushes positions and movie time in seconds to curPath arraylists
+     * and pushes positions and movie time in seconds to core.curPath arraylists
      */
     recordCurPoint() {
         // Constrain mouse to floor plan display
@@ -136,16 +136,16 @@ class UpdatePath {
         // Adjust floor plan x/y positions to record to 0, 0 origin/coordinate system
         let fpXPos = xPos - displayFloorplanXpos;
         let fpYPos = yPos - displayFloorplanYpos;
-        curPath.xPos.push(+(fpXPos * (inputFloorPlanWidth / displayFloorplanWidth)).toFixed(2)); // rescale x,y positions to input floor plan
-        curPath.yPos.push(+(fpYPos * (inputFloorPlanHeight / displayFloorplanHeight)).toFixed(2));
-        curPath.tPos.push(+movie.time().toFixed(2));
+        core.curPath.xPos.push(+(fpXPos * (core.inputFloorPlanWidth / displayFloorplanWidth)).toFixed(2)); // rescale x,y positions to input floor plan
+        core.curPath.yPos.push(+(fpYPos * (core.inputFloorPlanHeight / displayFloorplanHeight)).toFixed(2));
+        core.curPath.tPos.push(+movie.time().toFixed(2));
     }
 
     /**
-     * Draw all recorded paths from global paths array
+     * Draw all recorded paths from core paths array
      */
     reDrawAllPaths() {
-        for (let i = 0; i < paths.length; i++) this.drawPath(paths[i], colorShades[i % colorShades.length]);
+        for (let i = 0; i < core.paths.length; i++) this.drawPath(core.paths[i], colorShades[i % colorShades.length]);
     }
 
     /**
@@ -158,10 +158,10 @@ class UpdatePath {
         strokeWeight(pathWeight);
         // Must add back in floor plan display x/y pos to scale to display floor plan correctly
         for (let i = 1; i < p.xPos.length; i++) {
-            let x = displayFloorplanXpos + (p.xPos[i] / (inputFloorPlanWidth / displayFloorplanWidth));
-            let y = displayFloorplanYpos + (p.yPos[i] / (inputFloorPlanHeight / displayFloorplanHeight));
-            let px = displayFloorplanXpos + (p.xPos[i - 1] / (inputFloorPlanWidth / displayFloorplanWidth));
-            let py = displayFloorplanYpos + (p.yPos[i - 1] / (inputFloorPlanHeight / displayFloorplanHeight));
+            let x = displayFloorplanXpos + (p.xPos[i] / (core.inputFloorPlanWidth / displayFloorplanWidth));
+            let y = displayFloorplanYpos + (p.yPos[i] / (core.inputFloorPlanHeight / displayFloorplanHeight));
+            let px = displayFloorplanXpos + (p.xPos[i - 1] / (core.inputFloorPlanWidth / displayFloorplanWidth));
+            let py = displayFloorplanYpos + (p.yPos[i - 1] / (core.inputFloorPlanHeight / displayFloorplanHeight));
             line(x, y, px, py); // draw line segment
         }
     }
@@ -171,48 +171,48 @@ class UpdatePath {
      */
     addPath() {
         let path = new Path();
-        path.tPos = Object.assign([], curPath.tPos);
-        path.xPos = Object.assign([], curPath.xPos);
-        path.yPos = Object.assign([], curPath.yPos);
-        paths.push(path);
+        path.tPos = Object.assign([], core.curPath.tPos);
+        path.xPos = Object.assign([], core.curPath.xPos);
+        path.yPos = Object.assign([], core.curPath.yPos);
+        core.paths.push(path);
     }
 
     /**
-     * Clear data in curPath
+     * Clear data in core.curPath
      */
     clearCurPath() {
-        curPath.xPos = [];
-        curPath.yPos = [];
-        curPath.tPos = [];
+        core.curPath.xPos = [];
+        core.curPath.yPos = [];
+        core.curPath.tPos = [];
     }
 
     /**
-     * Add to points to global curPath arraylits for each second being fast forwarded
+     * Add to points to global core.curPath arraylits for each second being fast forwarded
      */
     fastForward() {
         // IMPORTANT: get last values from cur lists first before loop
-        const xPos = curPath.xPos[curPath.tPos.length - 1];
-        const yPos = curPath.yPos[curPath.tPos.length - 1];
-        const tPos = curPath.tPos[curPath.tPos.length - 1];
+        const xPos = core.curPath.xPos[core.curPath.tPos.length - 1];
+        const yPos = core.curPath.yPos[core.curPath.tPos.length - 1];
+        const tPos = core.curPath.tPos[core.curPath.tPos.length - 1];
         // Add values for each second jumped by VideoJumpvalue, xPos and yPos are same but add i to tPos as time is increasing
         // Start at 1 to record tPos properly
         for (let i = 1; i <= videoJumpValue; i++) {
-            curPath.xPos.push(xPos);
-            curPath.yPos.push(yPos);
-            curPath.tPos.push(+(tPos + i).toFixed(2));
+            core.curPath.xPos.push(xPos);
+            core.curPath.yPos.push(yPos);
+            core.curPath.tPos.push(+(tPos + i).toFixed(2));
         }
     }
     /**
-     * Remove all points from curPath arraylists that are greater than time parameter
+     * Remove all points from core.curPath arraylists that are greater than time parameter
      * @param  {} rewindToTime
      */
     rewind(rewindToTime) {
         // Start at end of x or y list (NOT t) and delete up to newEndTime
-        for (let i = curPath.xPos.length - 1; i >= 0; i--) {
-            if (curPath.tPos[i] > rewindToTime) {
-                curPath.tPos.pop();
-                curPath.xPos.pop();
-                curPath.yPos.pop();
+        for (let i = core.curPath.xPos.length - 1; i >= 0; i--) {
+            if (core.curPath.tPos[i] > rewindToTime) {
+                core.curPath.tPos.pop();
+                core.curPath.xPos.pop();
+                core.curPath.yPos.pop();
             } else break;
         }
     }
@@ -234,12 +234,12 @@ class UpdateMovie {
      * Plays/pauses movie and starts/stops recording variable
      */
     playPauseRecording() {
-        if (recording) {
+        if (core.recording) {
             movie.pause();
-            recording = false;
+            core.recording = false;
         } else {
             movie.play();
-            recording = true;
+            core.recording = true;
         }
     }
     /**
@@ -248,7 +248,7 @@ class UpdateMovie {
      */
     stopMovie() {
         movie.stop();
-        recording = false;
+        core.recording = false;
     }
 
     /**
