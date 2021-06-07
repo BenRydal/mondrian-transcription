@@ -9,22 +9,26 @@ To reference or read more about this work please see:
 https://etd.library.vanderbilt.edu/available/etd-03212018-140140/unrestricted/Shapiro_Dissertation.pdf
 */
 
-/*
-TODO: 
-4) dataUpdate as official mediator?
-5) create movie class/facade?
-  */
-
-let dataUpdate; // Instance of UpdateData class to control synchronized method calls for path recording and movie
+/**
+ * CLASSES/MODULES
+ * Each class is currently treated as a singleton with respective .js file/module
+ * updateData follows Mediator pattern to control synchronized method calls for path recording and movie
+ */
 let core;
 let keys;
 let handlers;
+let updateData;
+
+/**
+ * videoPlayer is instantiated/updated when a video file is loaded
+ * movie holds the "Div" created/destroyed when videoPlayer is instantiated
+ */
 let videoPlayer;
+let movie = null; // Div to hold VideoPlayer
 
-// P5.js media element to display/interact with HTML5 video from file uploaded by user
-let movie = null;
-
-// CONSTANTS
+/**
+ * CONSTANTS
+ */
 const FILEHEADERS = ["time", "x", "y"]; // Column headers for outputted .CSV movement files
 const INFOMSG = "MONDRIAN TRANSCRIPTION SOFTWARE\n\nby Ben Rydal Shapiro & contributors\nbuilt with p5.js & JavaScript\n\nHi there! This tool allows you to transcribe fine-grained movement data from video. To get started, use the top buttons to upload a floor plan image file (PNG or JPG) and a video file (MP4). Then, use the key codes below to interact with the video and use your cursor to draw on the floor plan. As you interact with the video and simultaneously draw on the floor plan, positioning data is recorded as a CSV file organized by time in seconds and x/y pixel positions scaled to the pixel size of your floor plan image file. Use the top right button to save this file anytime and then record another movement path. For more information, see: https://www.benrydal.com/software/mondrian-transcription\n\nKEY CODES:  Play/Pause (p), Fast-Forward (f), Rewind (b), Reset (r)";
 const COLORLIST = ['#6a3d9a', '#ff7f00', '#33a02c', '#1f78b4', '#e31a1c', '#ffff99', '#b15928', '#cab2d6', '#fdbf6f', '#b2df8a', '#a6cee3', '#fb9a99'];
@@ -40,8 +44,7 @@ function setup() {
   core = new Core();
   keys = new Keys();
   handlers = new Handlers();
-  dataUpdate = new UpdateData();
-  //videoPlayer = new VideoPlayer();
+  updateData = new UpdateData();
 }
 
 /**
@@ -56,11 +59,11 @@ function draw() {
  * Organizes methods for recording once all data is loaded
  */
 function setDrawingScreen() {
-  if (core.recording) dataUpdate.setData(); // records data and updates visualization if in record mode
+  if (core.recording) updateData.setData(); // records data and updates visualization if in record mode
   // If info screen showing, redraw current screen first, then drawKeys
   if (core.showInfo) {
-    dataUpdate.reDrawAllData();
-    dataUpdate.updatePath.drawPath(core.curPath, CURPATHCOLOR);
+    updateData.reDrawAllData();
+    updateData.updatePath.drawPath(core.curPath, CURPATHCOLOR);
     keys.drawIntroScreen();
   }
 }
@@ -71,7 +74,7 @@ function setDrawingScreen() {
 function setLoadDataScreen() {
   keys.drawLoadDataGUI();
   if (core.floorPlanLoaded) keys.drawFloorPlanBackground();
-  else if (core.movieLoaded) dataUpdate.updateMovie.drawCurFrame();
+  else if (core.movieLoaded) updateData.updateMovie.drawCurFrame();
   if (core.showInfo) keys.drawIntroScreen();
 }
 

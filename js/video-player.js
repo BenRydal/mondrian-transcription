@@ -31,8 +31,7 @@ class VideoPlayer {
                 core.recording = false;
             };
             core.movieLoaded = true;
-            dataUpdate.updateMovie.drawCurFrame(); // after loading video and restarting loop, draw starting frame to indicate movie is loaded
-            loop(); // resume
+            updateData.updateMovie.drawCurFrame(); // after loading video and restarting loop, draw starting frame to indicate movie is loaded
         });
     }
 

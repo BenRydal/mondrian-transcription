@@ -73,7 +73,7 @@ class UpdateData {
         this.updatePath.addPath();
         this.updatePath.clearCurPath();
         this.updateMovie.stopMovie();
-        dataUpdate.reDrawAllData();
+        updateData.reDrawAllData();
     }
 
     /**

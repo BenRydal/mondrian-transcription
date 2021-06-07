@@ -4,8 +4,8 @@
  */
 function handleIntroButton() {
   if (core.showInfo && core.floorPlanLoaded && core.movieLoaded) {
-    dataUpdate.reDrawAllData();
-    dataUpdate.updatePath.drawPath(core.curPath, CURPATHCOLOR); // TO DO: combine functions??
+    updateData.reDrawAllData();
+    updateData.updatePath.drawPath(core.curPath, CURPATHCOLOR); // TO DO: combine functions??
   }
   core.showInfo = !core.showInfo;
 }
@@ -14,7 +14,7 @@ function handleIntroButton() {
  * If floor plan and video are loaded and if core.curPath has data method sends current path to be saved to output file
  */
 function handleSaveFileButton() {
-  if (core.floorPlanLoaded && core.movieLoaded && core.curPath.xPos.length > 0) dataUpdate.writeFile();
+  if (core.floorPlanLoaded && core.movieLoaded && core.curPath.xPos.length > 0) updateData.writeFile();
 }
 
 /**
@@ -56,6 +56,6 @@ function handleVideoFile(input) {
   let file = input.files[0];
   input.value = ''; // reset input value so you can load same file again in browser
   let fileLocation = URL.createObjectURL(file);
-  if (dataIsLoaded(videoPlayer)) videoPlayer.destroy();
-  videoPlayer = new VideoPlayer(fileLocation);
+  if (dataIsLoaded(videoPlayer)) videoPlayer.destroy(); // if a video exisits, destroy it
+  videoPlayer = new VideoPlayer(fileLocation); // create new videoPlayer
 }
