@@ -11,7 +11,6 @@ https://etd.library.vanderbilt.edu/available/etd-03212018-140140/unrestricted/Sh
 
 /*
 TODO: 
-2) create gui class
 3) core.curPath as singleton in core class?
   let/const core.curPath = {xPos: [], yPos: [], tPos: []}; // this object is added to and cleared/reset
 4) dataUpdate as official mediator?
@@ -20,10 +19,14 @@ TODO:
 
 let dataUpdate; // Instance of UpdateData class to control synchronized method calls for path recording and movie
 let core;
+let keys;
+let handlers;
 
 const fileHeaders = ["time", "x", "y"]; // Column headers for outputted .CSV movement files
 const infoMsg = "MONDRIAN TRANSCRIPTION SOFTWARE\n\nby Ben Rydal Shapiro & contributors\nbuilt with p5.js & JavaScript\n\nHi there! This tool allows you to transcribe fine-grained movement data from video. To get started, use the top buttons to upload a floor plan image file (PNG or JPG) and a video file (MP4). Then, use the key codes below to interact with the video and use your cursor to draw on the floor plan. As you interact with the video and simultaneously draw on the floor plan, positioning data is recorded as a CSV file organized by time in seconds and x/y pixel positions scaled to the pixel size of your floor plan image file. Use the top right button to save this file anytime and then record another movement path. For more information, see: https://www.benrydal.com/software/mondrian-transcription\n\nKEY CODES:  Play/Pause (p), Fast-Forward (f), Rewind (b), Reset (r)";
-
+const colorShades = ['#6a3d9a', '#ff7f00', '#33a02c', '#1f78b4', '#e31a1c', '#ffff99', '#b15928', '#cab2d6', '#fdbf6f', '#b2df8a', '#a6cee3', '#fb9a99'];
+const pathWeight = 5; // Integer size of drawn paths
+const curPathColor = 0; // Color of currently recording path
 
 //*************** VIDEO ***************
 let movie; // P5.js media element to display/interact with HTML5 video from file uploaded by user
@@ -31,28 +34,14 @@ const videoJumpValue = 5; // Integer value in seconds to ff or rewind
 let inputMovieWidth, inputMovieHeight; // Decimal pixel width/ height of inputted video file
 let reScaledMovieWidth, reScaledMovieHeight; // Decimal scaled width/height of input video file to fit display container
 
-//*************** GUI ***************
-let font_Lato; // Included font file, see data/fonts 
-let movieLoaded = false,
-  floorPlanLoaded = false; // Boolean variables to indicated when input data has been loaded
-let displayFloorplanWidth, displayFloorplanHeight, displayVideoWidth, displayVideoHeight; // Decimal values that represent floor plan and video containers
-let displayFloorplanXpos, displayFloorplanYpos, displayVideoXpos, displayVideoYpos; // Decimal values that represent x/y positions of floor plan and video containers
-const colorShades = ['#6a3d9a', '#ff7f00', '#33a02c', '#1f78b4', '#e31a1c', '#ffff99', '#b15928', '#cab2d6', '#fdbf6f', '#b2df8a', '#a6cee3', '#fb9a99'];
-const spacing = 50; // Integer spacing variable
-const pathWeight = 5; // Integer size of drawn paths
-const curPathColor = 0; // Color of currently recording path
-let keyTextSize; // Number indicating size of text, set in setGuiWindows
-let showInfo = true; // Boolean to show/hide intro message
-
-
 /**
  * Required p5.js method, sets canvas, GUI and initial drawing requirements
  */
 function setup() {
   canvas = createCanvas(window.innerWidth, window.innerHeight, P2D);
   core = new Core();
-  font_Lato = loadFont("data/fonts/Lato-Light.ttf");
-  setGUIWindows();
+  keys = new Keys();
+  handlers = new Handlers();
   core.curPath = new Path(); // set initial path and UpdateData 
   dataUpdate = new UpdateData();
 }
@@ -61,7 +50,7 @@ function setup() {
  * Required p5.js looping method, here it organizes two drawing modes for when data is and is not loaded
  */
 function draw() {
-  if (floorPlanLoaded && movieLoaded) setDrawingScreen();
+  if (core.floorPlanLoaded && core.movieLoaded) setDrawingScreen();
   else setLoadDataScreen();
 }
 
@@ -71,10 +60,10 @@ function draw() {
 function setDrawingScreen() {
   if (core.recording) dataUpdate.setData(); // records data and updates visualization if in record mode
   // If info screen showing, redraw current screen first, then drawKeys
-  if (showInfo) {
+  if (core.showInfo) {
     dataUpdate.reDrawAllData();
     dataUpdate.updatePath.drawPath(core.curPath, curPathColor);
-    drawKeys();
+    keys.drawIntroScreen();
   }
 }
 
@@ -82,8 +71,12 @@ function setDrawingScreen() {
  * Displays image or blank screen indicating movie is loaded
  */
 function setLoadDataScreen() {
-  drawGUIWindows();
-  if (floorPlanLoaded) drawFloorPlanBackground();
-  else if (movieLoaded) dataUpdate.updateMovie.drawCurFrame();
-  if (showInfo) drawKeys();
+  keys.drawLoadDataGUI();
+  if (core.floorPlanLoaded) keys.drawFloorPlanBackground();
+  else if (core.movieLoaded) dataUpdate.updateMovie.drawCurFrame();
+  if (core.showInfo) keys.drawIntroScreen();
+}
+
+function keyPressed() {
+  handlers.handleKeyPressed();
 }

@@ -31,7 +31,7 @@ class UpdateData {
     }
 
     reDrawAllData() {
-        drawFloorPlanBackground();
+        keys.drawFloorPlanBackground();
         this.updateMovie.drawCurFrame();
         this.updatePath.reDrawAllPaths();
     }
@@ -109,17 +109,15 @@ class UpdateData {
 
 class UpdatePath {
 
-    constructor() {}
-
     /**
      * Calculates correctly scaled x/y positions from mouse cursor and drawns line segment for current point
      */
     drawCurLineSegment() {
         // Constrain mouse to floor plan display
-        let xPos = constrain(mouseX, displayFloorplanXpos, displayFloorplanXpos + displayFloorplanWidth);
-        let yPos = constrain(mouseY, displayFloorplanYpos, displayFloorplanYpos + displayFloorplanHeight);
-        let pXPos = constrain(pmouseX, displayFloorplanXpos, displayFloorplanXpos + displayFloorplanWidth);
-        let pYPos = constrain(pmouseY, displayFloorplanYpos, displayFloorplanYpos + displayFloorplanHeight);
+        let xPos = constrain(mouseX, keys.displayFloorplanXpos, keys.displayFloorplanXpos + keys.displayFloorplanWidth);
+        let yPos = constrain(mouseY, keys.displayFloorplanYpos, keys.displayFloorplanYpos + keys.displayFloorplanHeight);
+        let pXPos = constrain(pmouseX, keys.displayFloorplanXpos, keys.displayFloorplanXpos + keys.displayFloorplanWidth);
+        let pYPos = constrain(pmouseY, keys.displayFloorplanYpos, keys.displayFloorplanYpos + keys.displayFloorplanHeight);
         strokeWeight(pathWeight);
         stroke(curPathColor);
         line(xPos, yPos, pXPos, pYPos);
@@ -131,13 +129,13 @@ class UpdatePath {
      */
     recordCurPoint() {
         // Constrain mouse to floor plan display
-        let xPos = constrain(mouseX, displayFloorplanXpos, displayFloorplanXpos + displayFloorplanWidth);
-        let yPos = constrain(mouseY, displayFloorplanYpos, displayFloorplanYpos + displayFloorplanHeight);
+        let xPos = constrain(mouseX, keys.displayFloorplanXpos, keys.displayFloorplanXpos + keys.displayFloorplanWidth);
+        let yPos = constrain(mouseY, keys.displayFloorplanYpos, keys.displayFloorplanYpos + keys.displayFloorplanHeight);
         // Adjust floor plan x/y positions to record to 0, 0 origin/coordinate system
-        let fpXPos = xPos - displayFloorplanXpos;
-        let fpYPos = yPos - displayFloorplanYpos;
-        core.curPath.xPos.push(+(fpXPos * (core.inputFloorPlanWidth / displayFloorplanWidth)).toFixed(2)); // rescale x,y positions to input floor plan
-        core.curPath.yPos.push(+(fpYPos * (core.inputFloorPlanHeight / displayFloorplanHeight)).toFixed(2));
+        let fpXPos = xPos - keys.displayFloorplanXpos;
+        let fpYPos = yPos - keys.displayFloorplanYpos;
+        core.curPath.xPos.push(+(fpXPos * (core.inputFloorPlanWidth / keys.displayFloorplanWidth)).toFixed(2)); // rescale x,y positions to input floor plan
+        core.curPath.yPos.push(+(fpYPos * (core.inputFloorPlanHeight / keys.displayFloorplanHeight)).toFixed(2));
         core.curPath.tPos.push(+movie.time().toFixed(2));
     }
 
@@ -158,10 +156,10 @@ class UpdatePath {
         strokeWeight(pathWeight);
         // Must add back in floor plan display x/y pos to scale to display floor plan correctly
         for (let i = 1; i < p.xPos.length; i++) {
-            let x = displayFloorplanXpos + (p.xPos[i] / (core.inputFloorPlanWidth / displayFloorplanWidth));
-            let y = displayFloorplanYpos + (p.yPos[i] / (core.inputFloorPlanHeight / displayFloorplanHeight));
-            let px = displayFloorplanXpos + (p.xPos[i - 1] / (core.inputFloorPlanWidth / displayFloorplanWidth));
-            let py = displayFloorplanYpos + (p.yPos[i - 1] / (core.inputFloorPlanHeight / displayFloorplanHeight));
+            let x = keys.displayFloorplanXpos + (p.xPos[i] / (core.inputFloorPlanWidth / keys.displayFloorplanWidth));
+            let y = keys.displayFloorplanYpos + (p.yPos[i] / (core.inputFloorPlanHeight / keys.displayFloorplanHeight));
+            let px = keys.displayFloorplanXpos + (p.xPos[i - 1] / (core.inputFloorPlanWidth / keys.displayFloorplanWidth));
+            let py = keys.displayFloorplanYpos + (p.yPos[i - 1] / (core.inputFloorPlanHeight / keys.displayFloorplanHeight));
             line(x, y, px, py); // draw line segment
         }
     }
@@ -220,15 +218,14 @@ class UpdatePath {
 
 class UpdateMovie {
 
-    constructor() {}
     /**
      * Draw current movie frame image and white background to GUI in video display
      */
     drawCurFrame() {
         fill(255);
         stroke(255);
-        rect(displayVideoXpos, displayVideoYpos, displayVideoWidth, displayVideoHeight);
-        image(movie, displayVideoXpos, displayVideoYpos, reScaledMovieWidth, reScaledMovieHeight);
+        rect(keys.displayVideoXpos, keys.displayVideoYpos, keys.displayVideoWidth, keys.displayVideoHeight);
+        image(movie, keys.displayVideoXpos, keys.displayVideoYpos, reScaledMovieWidth, reScaledMovieHeight);
     }
     /**
      * Plays/pauses movie and starts/stops recording variable

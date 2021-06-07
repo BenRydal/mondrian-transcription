@@ -1,20 +1,20 @@
 /**
- * Controls showInfo boolean for showing/hiding info screen
+ * Controls core.showInfo boolean for showing/hiding info screen
  * NOTE: redraws current screen if data is loaded
  */
 function handleIntroButton() {
-  if (showInfo && floorPlanLoaded && movieLoaded) {
+  if (core.showInfo && core.floorPlanLoaded && core.movieLoaded) {
     dataUpdate.reDrawAllData();
     dataUpdate.updatePath.drawPath(core.curPath, curPathColor); // TO DO: combine functions??
   }
-  showInfo = !showInfo;
+  core.showInfo = !core.showInfo;
 }
 
 /**
  * If floor plan and video are loaded and if core.curPath has data method sends current path to be saved to output file
  */
 function handleSaveFileButton() {
-  if (floorPlanLoaded && movieLoaded && core.curPath.xPos.length > 0) dataUpdate.writeFile();
+  if (core.floorPlanLoaded && core.movieLoaded && core.curPath.xPos.length > 0) dataUpdate.writeFile();
 }
 
 /**
@@ -45,7 +45,7 @@ function processFloorPlan(img) {
   core.floorPlan = img;
   core.inputFloorPlanWidth = core.floorPlan.width; // set values based on pixel size of original img before resizing
   core.inputFloorPlanHeight = core.floorPlan.height;
-  floorPlanLoaded = true;
+  core.floorPlanLoaded = true;
 }
 
 /**
@@ -67,7 +67,7 @@ function handleVideoFile(input) {
 function setMovie() {
   movie.id('moviePlayer');
   setInputMovieSize(); // set global movie size constants
-  setDisplayMovieSize(displayVideoWidth, displayVideoHeight);
+  setDisplayMovieSize(keys.displayVideoWidth, keys.displayVideoHeight);
   movie.hide();
   movie.stop(); // necessary to be able to draw starting frame before playing the video
   movie.onload = function () {
@@ -79,7 +79,7 @@ function setMovie() {
   mov.onended = function () {
     core.recording = false;
   };
-  movieLoaded = true;
+  core.movieLoaded = true;
   dataUpdate.updateMovie.drawCurFrame(); // after loading video and restarting loop, draw starting frame to indicate movie is loaded
   loop(); // resume
 }
