@@ -12,6 +12,7 @@ class Keys {
         this.displayVideoHeight = height;
         this.displayVideoXpos = 0;
         this.displayVideoYpos = 0;
+        this.infoMsg = "MONDRIAN TRANSCRIPTION SOFTWARE\n\nby Ben Rydal Shapiro & contributors\nbuilt with p5.js & JavaScript\n\nHi there! This tool allows you to transcribe fine-grained movement data from video. To get started, use the top buttons to upload a floor plan image file (PNG or JPG) and a video file (MP4). Then, use the key codes below to interact with the video and use your cursor to draw on the floor plan. As you interact with the video and simultaneously draw on the floor plan, positioning data is recorded as a CSV file organized by time in seconds and x/y pixel positions scaled to the pixel size of your floor plan image file. Use the top right button to save this file anytime and then record another movement path. For more information, see: https://www.benrydal.com/software/mondrian-transcription\n\nKEY CODES:  Play/Pause (p), Fast-Forward (f), Rewind (b), Reset (r)";
     }
 
     /**
@@ -42,7 +43,7 @@ class Keys {
         rect(width / 2, height / 2, width / 2 + this.keySpacing, height / 2 + this.keySpacing);
         fill(0);
         textFont(this.font_Lato, this.keyTextSize);
-        text(INFOMSG, width / 2, height / 2, width / 2, height / 2);
+        text(this.infoMsg, width / 2, height / 2, width / 2, height / 2);
         rectMode(CORNER);
     }
 }

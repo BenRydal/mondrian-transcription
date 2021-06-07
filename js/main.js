@@ -10,10 +10,9 @@ https://etd.library.vanderbilt.edu/available/etd-03212018-140140/unrestricted/Sh
 */
 
 /**
- * CLASSES/MODULES
- * Each class is currently treated as a singleton with respective .js file/module
+ * CLASSES/MODULES each is treated as a singleton with respective .js file/module
  */
-let core; // holds primary data and factory functions 
+let core; // holds primary data and factory functions
 let keys; // holds data and methods controlling GUI display
 let handlers; // holds methods controlling user event handling
 let updateData; // Mediator Class to control synchronized method calls for path recording and movie
@@ -21,7 +20,7 @@ let loadData; // holds data loading methods
 let videoPlayer; // videoPlayer is instantiated/updated when a video file is loaded
 
 /**
- * PROGRAM OBJECTS
+ * OBJECTS
  */
 let movie = null; // movie holds the "Div" created/destroyed when videoPlayer is instantiated
 let floorPlan; // P5 image object to control display and interaction with floor plan image file
@@ -30,7 +29,6 @@ let floorPlan; // P5 image object to control display and interaction with floor 
  * CONSTANTS
  */
 const FILEHEADERS = ["time", "x", "y"]; // Column headers for outputted .CSV movement files
-const INFOMSG = "MONDRIAN TRANSCRIPTION SOFTWARE\n\nby Ben Rydal Shapiro & contributors\nbuilt with p5.js & JavaScript\n\nHi there! This tool allows you to transcribe fine-grained movement data from video. To get started, use the top buttons to upload a floor plan image file (PNG or JPG) and a video file (MP4). Then, use the key codes below to interact with the video and use your cursor to draw on the floor plan. As you interact with the video and simultaneously draw on the floor plan, positioning data is recorded as a CSV file organized by time in seconds and x/y pixel positions scaled to the pixel size of your floor plan image file. Use the top right button to save this file anytime and then record another movement path. For more information, see: https://www.benrydal.com/software/mondrian-transcription\n\nKEY CODES:  Play/Pause (p), Fast-Forward (f), Rewind (b), Reset (r)";
 const COLORLIST = ['#6a3d9a', '#ff7f00', '#33a02c', '#1f78b4', '#e31a1c', '#ffff99', '#b15928', '#cab2d6', '#fdbf6f', '#b2df8a', '#a6cee3', '#fb9a99'];
 const PATHWEIGHT = 5; // Integer size of drawn paths
 const CURPATHCOLOR = 0; // Color of currently recording path
