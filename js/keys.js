@@ -29,7 +29,7 @@ class Keys {
         fill(255); // draw white screen in case floor plan image has any transparancy
         stroke(255);
         rect(this.displayFloorplanXpos, this.displayFloorplanYpos, this.displayFloorplanWidth, this.displayFloorplanHeight);
-        image(core.floorPlan, this.displayFloorplanXpos, this.displayFloorplanYpos, this.displayFloorplanWidth, this.displayFloorplanHeight);
+        image(floorPlan, this.displayFloorplanXpos, this.displayFloorplanYpos, this.displayFloorplanWidth, this.displayFloorplanHeight);
     }
     /**
      * Draws key text

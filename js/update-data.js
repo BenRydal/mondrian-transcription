@@ -134,8 +134,8 @@ class UpdatePath {
         // Adjust floor plan x/y positions to record to 0, 0 origin/coordinate system
         let fpXPos = xPos - keys.displayFloorplanXpos;
         let fpYPos = yPos - keys.displayFloorplanYpos;
-        core.curPath.xPos.push(+(fpXPos * (core.inputFloorPlanWidth / keys.displayFloorplanWidth)).toFixed(2)); // rescale x,y positions to input floor plan
-        core.curPath.yPos.push(+(fpYPos * (core.inputFloorPlanHeight / keys.displayFloorplanHeight)).toFixed(2));
+        core.curPath.xPos.push(+(fpXPos * (floorPlan.width / keys.displayFloorplanWidth)).toFixed(2)); // rescale x,y positions to input floor plan
+        core.curPath.yPos.push(+(fpYPos * (floorPlan.height / keys.displayFloorplanHeight)).toFixed(2));
         core.curPath.tPos.push(+movie.time().toFixed(2));
     }
 
@@ -156,10 +156,10 @@ class UpdatePath {
         strokeWeight(PATHWEIGHT);
         // Must add back in floor plan display x/y pos to scale to display floor plan correctly
         for (let i = 1; i < p.xPos.length; i++) {
-            let x = keys.displayFloorplanXpos + (p.xPos[i] / (core.inputFloorPlanWidth / keys.displayFloorplanWidth));
-            let y = keys.displayFloorplanYpos + (p.yPos[i] / (core.inputFloorPlanHeight / keys.displayFloorplanHeight));
-            let px = keys.displayFloorplanXpos + (p.xPos[i - 1] / (core.inputFloorPlanWidth / keys.displayFloorplanWidth));
-            let py = keys.displayFloorplanYpos + (p.yPos[i - 1] / (core.inputFloorPlanHeight / keys.displayFloorplanHeight));
+            let x = keys.displayFloorplanXpos + (p.xPos[i] / (floorPlan.width / keys.displayFloorplanWidth));
+            let y = keys.displayFloorplanYpos + (p.yPos[i] / (floorPlan.height / keys.displayFloorplanHeight));
+            let px = keys.displayFloorplanXpos + (p.xPos[i - 1] / (floorPlan.width / keys.displayFloorplanWidth));
+            let py = keys.displayFloorplanYpos + (p.yPos[i - 1] / (floorPlan.height / keys.displayFloorplanHeight));
             line(x, y, px, py); // draw line segment
         }
     }

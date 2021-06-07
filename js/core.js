@@ -5,10 +5,6 @@
          this.curPath = this.createPath([], [], []);
          this.curFileToOutput = 0; // Integer counter to mark current file number to write to output
          this.recording = false; // Boolean to indicate when recording
-         this.floorPlan = undefined; // P5 image file that is created from user uploaded PNG/JPG image file
-         this.inputFloorPlanWidth = undefined;
-         this.inputFloorPlanHeight = undefined; // Decimal values of width/height of user uploaded image file
-         // MODES
          this.movieLoaded = false;
          this.floorPlanLoaded = false; // Boolean variables to indicated when input data has been loaded
          this.showInfo = true; // Boolean to show/hide intro message

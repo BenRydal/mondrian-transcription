@@ -12,20 +12,19 @@ https://etd.library.vanderbilt.edu/available/etd-03212018-140140/unrestricted/Sh
 /**
  * CLASSES/MODULES
  * Each class is currently treated as a singleton with respective .js file/module
- * updateData follows Mediator pattern to control synchronized method calls for path recording and movie
  */
-let core;
-let keys;
-let handlers;
-let updateData;
-let loadData;
+let core; // holds primary data and factory functions 
+let keys; // holds data and methods controlling GUI display
+let handlers; // holds methods controlling user event handling
+let updateData; // Mediator Class to control synchronized method calls for path recording and movie
+let loadData; // holds data loading methods
+let videoPlayer; // videoPlayer is instantiated/updated when a video file is loaded
 
 /**
- * videoPlayer is instantiated/updated when a video file is loaded
- * movie holds the "Div" created/destroyed when videoPlayer is instantiated
+ * PROGRAM OBJECTS
  */
-let videoPlayer;
-let movie = null; // Div to hold VideoPlayer
+let movie = null; // movie holds the "Div" created/destroyed when videoPlayer is instantiated
+let floorPlan; // P5 image object to control display and interaction with floor plan image file
 
 /**
  * CONSTANTS
@@ -35,7 +34,6 @@ const INFOMSG = "MONDRIAN TRANSCRIPTION SOFTWARE\n\nby Ben Rydal Shapiro & contr
 const COLORLIST = ['#6a3d9a', '#ff7f00', '#33a02c', '#1f78b4', '#e31a1c', '#ffff99', '#b15928', '#cab2d6', '#fdbf6f', '#b2df8a', '#a6cee3', '#fb9a99'];
 const PATHWEIGHT = 5; // Integer size of drawn paths
 const CURPATHCOLOR = 0; // Color of currently recording path
-
 
 /**
  * Required p5.js method, sets canvas, GUI and initial drawing requirements

@@ -10,9 +10,7 @@ class LoadData {
     let fileLocation = URL.createObjectURL(file);
     loadImage(fileLocation, (img) => {
       URL.revokeObjectURL(img.src);
-      core.floorPlan = img;
-      core.inputFloorPlanWidth = core.floorPlan.width; // set values based on pixel size of original img before resizing
-      core.inputFloorPlanHeight = core.floorPlan.height;
+      floorPlan = img;
       core.floorPlanLoaded = true;
       console.log("Floor Plan Loaded");
     }, e => {

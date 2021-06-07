@@ -5,10 +5,10 @@ class VideoPlayer {
      */
     constructor(fileLocation) {
         this.videoJumpValue = 5; // Integer value in seconds to ff or rewind
-        this.inputMovieWidth;
-        this.inputMovieHeight; // Decimal pixel width/ height of inputted video file
-        this.reScaledMovieWidth; // Decimal scaled width/height of input video file to fit display container
-        this.reScaledMovieHeight;
+        this.inputMovieWidth = undefined;
+        this.inputMovieHeight = undefined; // Decimal pixel width/ height of inputted video file
+        this.reScaledMovieWidth = undefined; // Decimal scaled width/height of input video file to fit display container
+        this.reScaledMovieHeight = undefined;
         this.initializeDiv(fileLocation);
     }
 
