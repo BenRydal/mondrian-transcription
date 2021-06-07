@@ -16,21 +16,21 @@ class VideoPlayer {
      * @param  {String} fileLocation
      */
     initializeDiv(fileLocation) {
-        movie = createVideo(fileLocation, function () {
+        movie = createVideo(fileLocation, () => {
+            // ADD VIDEO DURATION TEST HERE? console.log(movie.duration());
             movie.id('moviePlayer');
             videoPlayer.setInputMovieSize(); // set global movie size constants
             videoPlayer.setDisplayMovieSize(keys.displayVideoWidth, keys.displayVideoHeight);
             movie.hide();
             movie.stop(); // necessary to be able to draw starting frame before playing the video
-            movie.onload = function () {
-                URL.revokeObjectURL(this.src);
-            }
+            URL.revokeObjectURL(movie.src);
             // Native P5 onended and duration methods don't seem to work, so use below 
             const mov = document.getElementById('moviePlayer');
             mov.onended = function () { // When movie ends, set recording false
                 core.recording = false;
             };
             core.movieLoaded = true;
+            console.log("New Video Loaded");
             updateData.updateMovie.drawCurFrame(); // after loading video and restarting loop, draw starting frame to indicate movie is loaded
         });
     }

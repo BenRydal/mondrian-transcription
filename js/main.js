@@ -18,6 +18,7 @@ let core;
 let keys;
 let handlers;
 let updateData;
+let loadData;
 
 /**
  * videoPlayer is instantiated/updated when a video file is loaded
@@ -45,6 +46,7 @@ function setup() {
   keys = new Keys();
   handlers = new Handlers();
   updateData = new UpdateData();
+  loadData = new LoadData();
 }
 
 /**
@@ -79,7 +81,7 @@ function setLoadDataScreen() {
 }
 
 function keyPressed() {
-  handlers.handleKeyPressed();
+  if (core.floorPlanLoaded && core.movieLoaded) handlers.handleKeyPressed();
 }
 
 /**
