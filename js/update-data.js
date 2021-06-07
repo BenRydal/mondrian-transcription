@@ -78,15 +78,15 @@ class UpdateData {
 
     /**
      * Organize path and video rewind methods 
-     * Rewind video and remove data from core.curPath equivalent to videoJumpValue, rewDraw all data and core.curPath
+     * Rewind video and remove data from core.curPath equivalent to videoPlayer.videoJumpValue, rewDraw all data and core.curPath
      */
     rewind() {
         // Record point before rewinding to make sure curEndTime is correct in case points were not recording if mouse was not moving
         this.updatePath.drawCurLineSegment();
         this.updatePath.recordCurPoint();
         // TO DO: Add conditional test here based on movie time to clear path/reset video if less that jumpvalue
-        // Set time to rewind to base on last time value in list - videoJumpValue
-        let rewindToTime = core.curPath.tPos[core.curPath.tPos.length - 1] - videoJumpValue;
+        // Set time to rewind to base on last time value in list - videoPlayer.videoJumpValue
+        let rewindToTime = core.curPath.tPos[core.curPath.tPos.length - 1] - videoPlayer.videoJumpValue;
         this.updatePath.rewind(rewindToTime);
         this.updateMovie.rewind(rewindToTime);
         // If first time recording is being rewound, pause recording and set to false
@@ -100,7 +100,7 @@ class UpdateData {
      * NOTE: conditional tests to make sure not at end of video
      */
     fastForward() {
-        if (movie.time() < movie.duration() - videoJumpValue) {
+        if (movie.time() < movie.duration() - videoPlayer.videoJumpValue) {
             this.updateMovie.fastForward();
             this.updatePath.fastForward();
         }
@@ -191,7 +191,7 @@ class UpdatePath {
         const tPos = core.curPath.tPos[core.curPath.tPos.length - 1];
         // Add values for each second jumped by VideoJumpvalue, xPos and yPos are same but add i to tPos as time is increasing
         // Start at 1 to record tPos properly
-        for (let i = 1; i <= videoJumpValue; i++) {
+        for (let i = 1; i <= videoPlayer.videoJumpValue; i++) {
             core.curPath.xPos.push(xPos);
             core.curPath.yPos.push(yPos);
             core.curPath.tPos.push(+(tPos + i).toFixed(2));
@@ -222,7 +222,7 @@ class UpdateMovie {
         fill(255);
         stroke(255);
         rect(keys.displayVideoXpos, keys.displayVideoYpos, keys.displayVideoWidth, keys.displayVideoHeight);
-        image(movie, keys.displayVideoXpos, keys.displayVideoYpos, reScaledMovieWidth, reScaledMovieHeight);
+        image(movie, keys.displayVideoXpos, keys.displayVideoYpos, videoPlayer.reScaledMovieWidth, videoPlayer.reScaledMovieHeight);
     }
     /**
      * Plays/pauses movie and starts/stops recording variable
@@ -246,10 +246,10 @@ class UpdateMovie {
     }
 
     /**
-     * Fast forward video by videoJumpValue in seconds
+     * Fast forward video by videoPlayer.videoJumpValue in seconds
      */
     fastForward() {
-        movie.time(movie.time() + videoJumpValue);
+        movie.time(movie.time() + videoPlayer.videoJumpValue);
     }
 
     /**
@@ -257,7 +257,7 @@ class UpdateMovie {
      * @param  {} rewindToTime
      */
     rewind(rewindToTime) {
-        if (movie.time() > videoJumpValue) movie.time(rewindToTime);
+        if (movie.time() > videoPlayer.videoJumpValue) movie.time(rewindToTime);
         else movie.time(0);
     }
 }

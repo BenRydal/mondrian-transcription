@@ -19,6 +19,10 @@ let dataUpdate; // Instance of UpdateData class to control synchronized method c
 let core;
 let keys;
 let handlers;
+let videoPlayer;
+
+// P5.js media element to display/interact with HTML5 video from file uploaded by user
+let movie = null;
 
 // CONSTANTS
 const FILEHEADERS = ["time", "x", "y"]; // Column headers for outputted .CSV movement files
@@ -27,11 +31,6 @@ const COLORLIST = ['#6a3d9a', '#ff7f00', '#33a02c', '#1f78b4', '#e31a1c', '#ffff
 const PATHWEIGHT = 5; // Integer size of drawn paths
 const CURPATHCOLOR = 0; // Color of currently recording path
 
-//*************** VIDEO ***************
-let movie; // P5.js media element to display/interact with HTML5 video from file uploaded by user
-const videoJumpValue = 5; // Integer value in seconds to ff or rewind
-let inputMovieWidth, inputMovieHeight; // Decimal pixel width/ height of inputted video file
-let reScaledMovieWidth, reScaledMovieHeight; // Decimal scaled width/height of input video file to fit display container
 
 /**
  * Required p5.js method, sets canvas, GUI and initial drawing requirements
@@ -42,6 +41,7 @@ function setup() {
   keys = new Keys();
   handlers = new Handlers();
   dataUpdate = new UpdateData();
+  //videoPlayer = new VideoPlayer();
 }
 
 /**
@@ -77,4 +77,12 @@ function setLoadDataScreen() {
 
 function keyPressed() {
   handlers.handleKeyPressed();
+}
+
+/**
+ * Returns false if parameter is undefined or null
+ * @param  {Any Type} data
+ */
+function dataIsLoaded(data) {
+  return data != null; // in javascript this tests for both undefined and null values
 }
