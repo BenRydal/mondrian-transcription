@@ -42,7 +42,7 @@ class Keys {
         rect(width / 2, height / 2, width / 2 + this.keySpacing, height / 2 + this.keySpacing);
         fill(0);
         textFont(this.font_Lato, this.keyTextSize);
-        text(infoMsg, width / 2, height / 2, width / 2, height / 2);
+        text(INFOMSG, width / 2, height / 2, width / 2, height / 2);
         rectMode(CORNER);
     }
 }

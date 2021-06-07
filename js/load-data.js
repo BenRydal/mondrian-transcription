@@ -5,7 +5,7 @@
 function handleIntroButton() {
   if (core.showInfo && core.floorPlanLoaded && core.movieLoaded) {
     dataUpdate.reDrawAllData();
-    dataUpdate.updatePath.drawPath(core.curPath, curPathColor); // TO DO: combine functions??
+    dataUpdate.updatePath.drawPath(core.curPath, CURPATHCOLOR); // TO DO: combine functions??
   }
   core.showInfo = !core.showInfo;
 }

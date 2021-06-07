@@ -51,14 +51,14 @@ class UpdateData {
      */
     writeFile() {
         let table = new p5.Table();
-        table.addColumn(fileHeaders[0]);
-        table.addColumn(fileHeaders[1]);
-        table.addColumn(fileHeaders[2]);
+        table.addColumn(FILEHEADERS[0]);
+        table.addColumn(FILEHEADERS[1]);
+        table.addColumn(FILEHEADERS[2]);
         for (let i = 0; i < core.curPath.xPos.length; i++) {
             let newRow = table.addRow();
-            newRow.setNum(fileHeaders[0], core.curPath.tPos[i]);
-            newRow.setNum(fileHeaders[1], core.curPath.xPos[i]);
-            newRow.setNum(fileHeaders[2], core.curPath.yPos[i]);
+            newRow.setNum(FILEHEADERS[0], core.curPath.tPos[i]);
+            newRow.setNum(FILEHEADERS[1], core.curPath.xPos[i]);
+            newRow.setNum(FILEHEADERS[2], core.curPath.yPos[i]);
         }
         saveTable(table, "Path_" + core.curFileToOutput + ".csv");
         core.curFileToOutput++;
@@ -92,7 +92,7 @@ class UpdateData {
         // If first time recording is being rewound, pause recording and set to false
         if (core.recording) this.updateMovie.playPauseRecording();
         this.reDrawAllData();
-        this.updatePath.drawPath(core.curPath, curPathColor);
+        this.updatePath.drawPath(core.curPath, CURPATHCOLOR);
     }
 
     /**
@@ -118,8 +118,8 @@ class UpdatePath {
         let yPos = constrain(mouseY, keys.displayFloorplanYpos, keys.displayFloorplanYpos + keys.displayFloorplanHeight);
         let pXPos = constrain(pmouseX, keys.displayFloorplanXpos, keys.displayFloorplanXpos + keys.displayFloorplanWidth);
         let pYPos = constrain(pmouseY, keys.displayFloorplanYpos, keys.displayFloorplanYpos + keys.displayFloorplanHeight);
-        strokeWeight(pathWeight);
-        stroke(curPathColor);
+        strokeWeight(PATHWEIGHT);
+        stroke(CURPATHCOLOR);
         line(xPos, yPos, pXPos, pYPos);
     }
 
@@ -143,7 +143,7 @@ class UpdatePath {
      * Draw all recorded paths from core paths array
      */
     reDrawAllPaths() {
-        for (let i = 0; i < core.paths.length; i++) this.drawPath(core.paths[i], colorShades[i % colorShades.length]);
+        for (let i = 0; i < core.paths.length; i++) this.drawPath(core.paths[i], COLORLIST[i % COLORLIST.length]);
     }
 
     /**
@@ -153,7 +153,7 @@ class UpdatePath {
      */
     drawPath(p, pathColor) {
         stroke(pathColor);
-        strokeWeight(pathWeight);
+        strokeWeight(PATHWEIGHT);
         // Must add back in floor plan display x/y pos to scale to display floor plan correctly
         for (let i = 1; i < p.xPos.length; i++) {
             let x = keys.displayFloorplanXpos + (p.xPos[i] / (core.inputFloorPlanWidth / keys.displayFloorplanWidth));

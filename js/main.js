@@ -20,11 +20,12 @@ let core;
 let keys;
 let handlers;
 
-const fileHeaders = ["time", "x", "y"]; // Column headers for outputted .CSV movement files
-const infoMsg = "MONDRIAN TRANSCRIPTION SOFTWARE\n\nby Ben Rydal Shapiro & contributors\nbuilt with p5.js & JavaScript\n\nHi there! This tool allows you to transcribe fine-grained movement data from video. To get started, use the top buttons to upload a floor plan image file (PNG or JPG) and a video file (MP4). Then, use the key codes below to interact with the video and use your cursor to draw on the floor plan. As you interact with the video and simultaneously draw on the floor plan, positioning data is recorded as a CSV file organized by time in seconds and x/y pixel positions scaled to the pixel size of your floor plan image file. Use the top right button to save this file anytime and then record another movement path. For more information, see: https://www.benrydal.com/software/mondrian-transcription\n\nKEY CODES:  Play/Pause (p), Fast-Forward (f), Rewind (b), Reset (r)";
-const colorShades = ['#6a3d9a', '#ff7f00', '#33a02c', '#1f78b4', '#e31a1c', '#ffff99', '#b15928', '#cab2d6', '#fdbf6f', '#b2df8a', '#a6cee3', '#fb9a99'];
-const pathWeight = 5; // Integer size of drawn paths
-const curPathColor = 0; // Color of currently recording path
+// CONSTANTS
+const FILEHEADERS = ["time", "x", "y"]; // Column headers for outputted .CSV movement files
+const INFOMSG = "MONDRIAN TRANSCRIPTION SOFTWARE\n\nby Ben Rydal Shapiro & contributors\nbuilt with p5.js & JavaScript\n\nHi there! This tool allows you to transcribe fine-grained movement data from video. To get started, use the top buttons to upload a floor plan image file (PNG or JPG) and a video file (MP4). Then, use the key codes below to interact with the video and use your cursor to draw on the floor plan. As you interact with the video and simultaneously draw on the floor plan, positioning data is recorded as a CSV file organized by time in seconds and x/y pixel positions scaled to the pixel size of your floor plan image file. Use the top right button to save this file anytime and then record another movement path. For more information, see: https://www.benrydal.com/software/mondrian-transcription\n\nKEY CODES:  Play/Pause (p), Fast-Forward (f), Rewind (b), Reset (r)";
+const COLORLIST = ['#6a3d9a', '#ff7f00', '#33a02c', '#1f78b4', '#e31a1c', '#ffff99', '#b15928', '#cab2d6', '#fdbf6f', '#b2df8a', '#a6cee3', '#fb9a99'];
+const PATHWEIGHT = 5; // Integer size of drawn paths
+const CURPATHCOLOR = 0; // Color of currently recording path
 
 //*************** VIDEO ***************
 let movie; // P5.js media element to display/interact with HTML5 video from file uploaded by user
@@ -59,7 +60,7 @@ function setDrawingScreen() {
   // If info screen showing, redraw current screen first, then drawKeys
   if (core.showInfo) {
     dataUpdate.reDrawAllData();
-    dataUpdate.updatePath.drawPath(core.curPath, curPathColor);
+    dataUpdate.updatePath.drawPath(core.curPath, CURPATHCOLOR);
     keys.drawIntroScreen();
   }
 }
