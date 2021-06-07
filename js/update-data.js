@@ -165,14 +165,11 @@ class UpdatePath {
     }
 
     /**
-     * Clone current path into new Path object and add new Path to paths ArrayList holder
+     * Clone curPath and add it to core paths []
      */
     addPath() {
-        let path = new Path();
-        path.tPos = Object.assign([], core.curPath.tPos);
-        path.xPos = Object.assign([], core.curPath.xPos);
-        path.yPos = Object.assign([], core.curPath.yPos);
-        core.paths.push(path);
+        const p = core.createPath(core.curPath.xPos, core.curPath.yPos, core.curPath.tPos);
+        core.paths.push(p);
     }
 
     /**

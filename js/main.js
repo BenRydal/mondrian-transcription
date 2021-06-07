@@ -11,8 +11,6 @@ https://etd.library.vanderbilt.edu/available/etd-03212018-140140/unrestricted/Sh
 
 /*
 TODO: 
-3) core.curPath as singleton in core class?
-  let/const core.curPath = {xPos: [], yPos: [], tPos: []}; // this object is added to and cleared/reset
 4) dataUpdate as official mediator?
 5) create movie class/facade?
   */
@@ -42,7 +40,6 @@ function setup() {
   core = new Core();
   keys = new Keys();
   handlers = new Handlers();
-  core.curPath = new Path(); // set initial path and UpdateData 
   dataUpdate = new UpdateData();
 }
 
