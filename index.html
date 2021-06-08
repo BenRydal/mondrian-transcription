@@ -8,6 +8,7 @@
     <script src="js/core.js"></script>
     <script src="js/handlers.js"></script>
     <script src="js/load-data.js"></script>
+    <script src="js/set-data.js"></script>
     <script src="js/update-data.js"></script>
     <script src="js/keys.js"></script>
     <script src="js/video-player.js"></script>
@@ -24,7 +25,8 @@
 <body>
     <div class="introBar">
         <form action="/action_page.php">
-            <button type="button" id="introButton" class="inputfile" onclick="handlers.handleIntroButton(this)"></button>
+            <button type="button" id="introButton" class="inputfile"
+                onclick="handlers.handleIntroButton(this)"></button>
             <label for="introButton">INFORMATION</label>
             <input type="file" name="file" id="inputFloorPlan" name="file" class="inputfile" accept=".png, .jpg, .jpeg"
                 onchange="loadData.loadFloorPlan(this)">

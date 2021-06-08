@@ -16,6 +16,7 @@ let core; // holds primary data and factory functions
 let keys; // holds data and methods controlling GUI display
 let handlers; // holds methods controlling user event handling
 let updateData; // Mediator Class to control synchronized method calls for path recording and movie
+let setData; // holds methods to control interface display and recording/updating data
 let loadData; // holds data loading methods
 let videoPlayer; // videoPlayer is instantiated/updated when a video file is loaded
 
@@ -43,37 +44,15 @@ function setup() {
   handlers = new Handlers();
   updateData = new UpdateData();
   loadData = new LoadData();
+  setData = new SetData();
 }
 
 /**
  * Required p5.js looping method, here it organizes two drawing modes for when data is and is not loaded
  */
 function draw() {
-  if (core.floorPlanLoaded && core.movieLoaded) setDrawingScreen();
-  else setLoadDataScreen();
-}
-
-/**
- * Organizes methods for recording once all data is loaded
- */
-function setDrawingScreen() {
-  if (core.recording) updateData.setData(); // records data and updates visualization if in record mode
-  // If info screen showing, redraw current screen first, then drawKeys
-  if (core.showInfo) {
-    updateData.reDrawAllData();
-    updateData.updatePath.drawPath(core.curPath, CURPATHCOLOR);
-    keys.drawIntroScreen();
-  }
-}
-
-/**
- * Displays image or blank screen indicating movie is loaded
- */
-function setLoadDataScreen() {
-  keys.drawLoadDataGUI();
-  if (core.floorPlanLoaded) keys.drawFloorPlanBackground();
-  else if (core.movieLoaded) updateData.updateMovie.drawCurFrame();
-  if (core.showInfo) keys.drawIntroScreen();
+  if (core.floorPlanLoaded && core.movieLoaded) setData.setDrawingScreen();
+  else setData.setLoadDataScreen();
 }
 
 function keyPressed() {
