@@ -8,7 +8,7 @@ class LoadData {
     let file = input.files[0];
     input.value = ''; // reset input value so you can load same file again in browser
     let fileLocation = URL.createObjectURL(file);
-    loadImage(fileLocation, (img) => {
+    mondrian.loadImage(fileLocation, (img) => {
       URL.revokeObjectURL(img.src);
       floorPlan = img;
       core.floorPlanLoaded = true;
@@ -27,7 +27,7 @@ class LoadData {
     let file = input.files[0];
     input.value = ''; // reset input value so you can load same file again in browser
     let fileLocation = URL.createObjectURL(file);
-    if (dataIsLoaded(videoPlayer)) videoPlayer.destroy(); // if a video exists, destroy it
+    if (core.dataIsLoaded(videoPlayer)) videoPlayer.destroy(); // if a video exists, destroy it
     videoPlayer = new VideoPlayer(fileLocation); // create new videoPlayer
   }
 }

@@ -21,10 +21,10 @@ let loadData; // holds data loading methods
 let videoPlayer; // videoPlayer is instantiated/updated when a video file is loaded
 
 /**
- * OBJECTS
+ * ADDITIONAL DATA OBJECTS
  */
-let movie = null; // movie holds the "Div" created/destroyed when videoPlayer is instantiated
-let floorPlan; // P5 image object to control display and interaction with floor plan image file
+let movieDiv = null; // movie holds the "Div" created/destroyed when videoPlayer is instantiated
+let floorPlan = undefined; // P5 image object to control display and interaction with floor plan image file
 
 /**
  * CONSTANTS
@@ -35,34 +35,31 @@ const PATHWEIGHT = 5; // Integer size of drawn paths
 const CURPATHCOLOR = 0; // Color of currently recording path
 
 /**
- * Required p5.js method, sets canvas, GUI and initial drawing requirements
+ * P5 INSTANCE FOR DRAWING
  */
-function setup() {
-  canvas = createCanvas(window.innerWidth, window.innerHeight, P2D);
-  core = new Core();
-  keys = new Keys();
-  handlers = new Handlers();
-  updateData = new UpdateData();
-  loadData = new LoadData();
-  setData = new SetData();
-}
+let mondrian = new p5((sketch) => {
 
-/**
- * Required p5.js looping method, here it organizes two drawing modes for when data is and is not loaded
- */
-function draw() {
-  if (core.floorPlanLoaded && core.movieLoaded) setData.setDrawingScreen();
-  else setData.setLoadDataScreen();
-}
+  sketch.setup = function () {
+    sketch.canvas = sketch.createCanvas(window.innerWidth, window.innerHeight);
+    core = new Core();
+    keys = new Keys();
+    handlers = new Handlers();
+    updateData = new UpdateData();
+    loadData = new LoadData();
+    setData = new SetData();
+  }
 
-function keyPressed() {
-  if (core.floorPlanLoaded && core.movieLoaded) handlers.handleKeyPressed();
-}
+  /**
+   * Program loop. Organizes two drawing modes for when data is and is not loaded
+   */
+  sketch.draw = function () {
+    if (core.floorPlanLoaded && core.movieLoaded) setData.setDrawingScreen();
+    else setData.setLoadDataScreen();
+  }
 
-/**
- * Returns false if parameter is undefined or null
- * @param  {Any Type} data
- */
-function dataIsLoaded(data) {
-  return data != null; // in javascript this tests for both undefined and null values
-}
+  sketch.keyPressed = function () {
+    console.log("KEY");
+    if (core.floorPlanLoaded && core.movieLoaded) handlers.handleKeyPressed();
+  }
+
+});

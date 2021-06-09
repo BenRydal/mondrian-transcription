@@ -26,8 +26,8 @@ class UpdateData {
      */
     testSampleRate() {
         if (core.curPath.tPos.length === 0) return true;
-        else if (mouseX !== pmouseX || mouseY !== pmouseY) return +(core.curPath.tPos[core.curPath.tPos.length - 1].toFixed(2)) < +(movie.time().toFixed(2));
-        else return +(core.curPath.tPos[core.curPath.tPos.length - 1].toFixed(0)) < +(movie.time().toFixed(0));
+        else if (mondrian.mouseX !== mondrian.pmouseX || mondrian.mouseY !== mondrian.pmouseY) return +(core.curPath.tPos[core.curPath.tPos.length - 1].toFixed(2)) < +(movieDiv.time().toFixed(2));
+        else return +(core.curPath.tPos[core.curPath.tPos.length - 1].toFixed(0)) < +(movieDiv.time().toFixed(0));
     }
 
     reDrawAllData() {
@@ -60,7 +60,7 @@ class UpdateData {
             newRow.setNum(FILEHEADERS[1], core.curPath.xPos[i]);
             newRow.setNum(FILEHEADERS[2], core.curPath.yPos[i]);
         }
-        saveTable(table, "Path_" + core.curFileToOutput + ".csv");
+        mondrian.saveTable(table, "Path_" + core.curFileToOutput + ".csv");
         core.curFileToOutput++;
         this.resetAfterWriteFile();
     }
@@ -100,7 +100,7 @@ class UpdateData {
      * NOTE: conditional tests to make sure not at end of video
      */
     fastForward() {
-        if (movie.time() < movie.duration() - videoPlayer.videoJumpValue) {
+        if (movieDiv.time() < movieDiv.duration() - videoPlayer.videoJumpValue) {
             this.updateMovie.fastForward();
             this.updatePath.fastForward();
         }
@@ -114,13 +114,13 @@ class UpdatePath {
      */
     drawCurLineSegment() {
         // Constrain mouse to floor plan display
-        let xPos = constrain(mouseX, keys.displayFloorplanXpos, keys.displayFloorplanXpos + keys.displayFloorplanWidth);
-        let yPos = constrain(mouseY, keys.displayFloorplanYpos, keys.displayFloorplanYpos + keys.displayFloorplanHeight);
-        let pXPos = constrain(pmouseX, keys.displayFloorplanXpos, keys.displayFloorplanXpos + keys.displayFloorplanWidth);
-        let pYPos = constrain(pmouseY, keys.displayFloorplanYpos, keys.displayFloorplanYpos + keys.displayFloorplanHeight);
-        strokeWeight(PATHWEIGHT);
-        stroke(CURPATHCOLOR);
-        line(xPos, yPos, pXPos, pYPos);
+        let xPos = mondrian.constrain(mondrian.mouseX, keys.displayFloorplanXpos, keys.displayFloorplanXpos + keys.displayFloorplanWidth);
+        let yPos = mondrian.constrain(mondrian.mouseY, keys.displayFloorplanYpos, keys.displayFloorplanYpos + keys.displayFloorplanHeight);
+        let pXPos = mondrian.constrain(mondrian.pmouseX, keys.displayFloorplanXpos, keys.displayFloorplanXpos + keys.displayFloorplanWidth);
+        let pYPos = mondrian.constrain(mondrian.pmouseY, keys.displayFloorplanYpos, keys.displayFloorplanYpos + keys.displayFloorplanHeight);
+        mondrian.strokeWeight(PATHWEIGHT);
+        mondrian.stroke(CURPATHCOLOR);
+        mondrian.line(xPos, yPos, pXPos, pYPos);
     }
 
     /**
@@ -129,14 +129,14 @@ class UpdatePath {
      */
     recordCurPoint() {
         // Constrain mouse to floor plan display
-        let xPos = constrain(mouseX, keys.displayFloorplanXpos, keys.displayFloorplanXpos + keys.displayFloorplanWidth);
-        let yPos = constrain(mouseY, keys.displayFloorplanYpos, keys.displayFloorplanYpos + keys.displayFloorplanHeight);
+        let xPos = mondrian.constrain(mondrian.mouseX, keys.displayFloorplanXpos, keys.displayFloorplanXpos + keys.displayFloorplanWidth);
+        let yPos = mondrian.constrain(mondrian.mouseY, keys.displayFloorplanYpos, keys.displayFloorplanYpos + keys.displayFloorplanHeight);
         // Adjust floor plan x/y positions to record to 0, 0 origin/coordinate system
         let fpXPos = xPos - keys.displayFloorplanXpos;
         let fpYPos = yPos - keys.displayFloorplanYpos;
         core.curPath.xPos.push(+(fpXPos * (floorPlan.width / keys.displayFloorplanWidth)).toFixed(2)); // rescale x,y positions to input floor plan
         core.curPath.yPos.push(+(fpYPos * (floorPlan.height / keys.displayFloorplanHeight)).toFixed(2));
-        core.curPath.tPos.push(+movie.time().toFixed(2));
+        core.curPath.tPos.push(+movieDiv.time().toFixed(2));
     }
 
     /**
@@ -152,15 +152,15 @@ class UpdatePath {
      * @param  {color} pathColor
      */
     drawPath(p, pathColor) {
-        stroke(pathColor);
-        strokeWeight(PATHWEIGHT);
+        mondrian.stroke(pathColor);
+        mondrian.strokeWeight(PATHWEIGHT);
         // Must add back in floor plan display x/y pos to scale to display floor plan correctly
         for (let i = 1; i < p.xPos.length; i++) {
             let x = keys.displayFloorplanXpos + (p.xPos[i] / (floorPlan.width / keys.displayFloorplanWidth));
             let y = keys.displayFloorplanYpos + (p.yPos[i] / (floorPlan.height / keys.displayFloorplanHeight));
             let px = keys.displayFloorplanXpos + (p.xPos[i - 1] / (floorPlan.width / keys.displayFloorplanWidth));
             let py = keys.displayFloorplanYpos + (p.yPos[i - 1] / (floorPlan.height / keys.displayFloorplanHeight));
-            line(x, y, px, py); // draw line segment
+            mondrian.line(x, y, px, py); // draw line segment
         }
     }
 
@@ -219,20 +219,20 @@ class UpdateMovie {
      * Draw current movie frame image and white background to GUI in video display
      */
     drawCurFrame() {
-        fill(255);
-        stroke(255);
-        rect(keys.displayVideoXpos, keys.displayVideoYpos, keys.displayVideoWidth, keys.displayVideoHeight);
-        image(movie, keys.displayVideoXpos, keys.displayVideoYpos, videoPlayer.reScaledMovieWidth, videoPlayer.reScaledMovieHeight);
+        mondrian.fill(255);
+        mondrian.stroke(255);
+        mondrian.rect(keys.displayVideoXpos, keys.displayVideoYpos, keys.displayVideoWidth, keys.displayVideoHeight);
+        mondrian.image(movieDiv, keys.displayVideoXpos, keys.displayVideoYpos, videoPlayer.reScaledMovieWidth, videoPlayer.reScaledMovieHeight);
     }
     /**
      * Plays/pauses movie and starts/stops recording variable
      */
     playPauseRecording() {
         if (core.recording) {
-            movie.pause();
+            movieDiv.pause();
             core.recording = false;
         } else {
-            movie.play();
+            movieDiv.play();
             core.recording = true;
         }
     }
@@ -241,7 +241,7 @@ class UpdateMovie {
      * Sets recording to false
      */
     stopMovie() {
-        movie.stop();
+        movieDiv.stop();
         core.recording = false;
     }
 
@@ -249,7 +249,7 @@ class UpdateMovie {
      * Fast forward video by videoPlayer.videoJumpValue in seconds
      */
     fastForward() {
-        movie.time(movie.time() + videoPlayer.videoJumpValue);
+        movieDiv.time(movieDiv.time() + videoPlayer.videoJumpValue);
     }
 
     /**
@@ -257,7 +257,7 @@ class UpdateMovie {
      * @param  {} rewindToTime
      */
     rewind(rewindToTime) {
-        if (movie.time() > videoPlayer.videoJumpValue) movie.time(rewindToTime);
-        else movie.time(0);
+        if (movieDiv.time() > videoPlayer.videoJumpValue) movieDiv.time(rewindToTime);
+        else movieDiv.time(0);
     }
 }

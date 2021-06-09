@@ -24,4 +24,11 @@
              tPos
          };
      }
+     /**
+      * Returns false if parameter is undefined or null
+      * @param  {Any Type} data
+      */
+     dataIsLoaded = function (data) {
+         return data != null; // in javascript this tests for both undefined and null values
+     }
  }

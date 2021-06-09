@@ -16,17 +16,17 @@ class VideoPlayer {
      * @param  {String} fileLocation
      */
     initializeDiv(fileLocation) {
-        movie = createVideo(fileLocation, () => {
-            // ADD VIDEO DURATION TEST HERE? console.log(movie.duration());
-            movie.id('moviePlayer');
-            movie.hide();
-            movie.stop(); // necessary to be able to draw starting frame before playing the video
+        movieDiv = mondrian.createVideo(fileLocation, () => {
+            // ADD VIDEO DURATION TEST HERE? console.log(movieDiv.duration());
+            movieDiv.id('moviePlayer');
+            movieDiv.hide();
+            movieDiv.stop(); // necessary to be able to draw starting frame before playing the video
             // Native P5 onended and duration methods don't seem to work, so use below 
             const mov = document.getElementById('moviePlayer');
             mov.onended = () => core.recording = false;
             videoPlayer.setInputMovieSize(); // set global movie size constants
             videoPlayer.setDisplayMovieSize(keys.displayVideoWidth, keys.displayVideoHeight);
-            movie.onload = () => URL.revokeObjectURL(this.src);
+            movieDiv.onload = () => URL.revokeObjectURL(this.src);
             core.movieLoaded = true;
             console.log("New Video Loaded");
             updateData.updateMovie.drawCurFrame(); // after loading video and restarting loop, draw starting frame to indicate movie is loaded
@@ -37,8 +37,8 @@ class VideoPlayer {
      * Sets global pixel width/height for movie file to scale size dynamically in program
      */
     setInputMovieSize() {
-        this.inputMovieWidth = movie.width;
-        this.inputMovieHeight = movie.height;
+        this.inputMovieWidth = movieDiv.width;
+        this.inputMovieHeight = movieDiv.height;
     }
 
     /**
@@ -63,10 +63,10 @@ class VideoPlayer {
             this.reScaledMovieHeight = this.reScaledMovieHeight * ratio; // Reset height to match scaled image
             this.reScaledMovieWidth = this.reScaledMovieWidth * ratio; // Reset width to match scaled image
         }
-        movie.size(this.reScaledMovieWidth, this.reScaledMovieHeight); // set the element to the new width and height
+        movieDiv.size(this.reScaledMovieWidth, this.reScaledMovieHeight); // set the element to the new width and height
     }
 
     destroy() {
-        movie.remove(); // remove div element
+        movieDiv.remove(); // remove div element
     }
 }

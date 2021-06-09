@@ -1,12 +1,13 @@
 class Handlers {
 
     handleKeyPressed() {
-        if (key == 'p' || key == 'P') {
+        if (mondrian.key == 'p' || mondrian.key == 'P') {
+            console.log("P");
             updateData.updateMovie.playPauseRecording();
             if (core.showInfo) this.handleIntroButton(); // prevent info screen from showing while recording for smooth user interaction
-        } else if (key == 'r' || key == 'R') updateData.resetCurRecording();
-        else if (key == 'b' || key == 'B') updateData.rewind();
-        else if (key == 'f' || key == 'F') updateData.fastForward();
+        } else if (mondrian.key == 'r' || mondrian.key == 'R') updateData.resetCurRecording();
+        else if (mondrian.key == 'b' || mondrian.key == 'B') updateData.rewind();
+        else if (mondrian.key == 'f' || mondrian.key == 'F') updateData.fastForward();
     }
 
     /**
