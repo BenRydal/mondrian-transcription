@@ -56,10 +56,11 @@ let mondrian = new p5((sketch) => {
     if (core.floorPlanLoaded && core.movieLoaded) setData.setDrawingScreen();
     else setData.setLoadDataScreen();
   }
-
+  /**
+   * P5 method to handle key presses
+   * NOTE: While wrapped in a P5 instance, this method operates globally on the window (there can't be two of these methods)
+   */
   sketch.keyPressed = function () {
-    console.log("KEY");
     if (core.floorPlanLoaded && core.movieLoaded) handlers.handleKeyPressed();
   }
-
 });

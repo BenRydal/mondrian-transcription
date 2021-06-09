@@ -2,7 +2,6 @@ class Handlers {
 
     handleKeyPressed() {
         if (mondrian.key == 'p' || mondrian.key == 'P') {
-            console.log("P");
             updateData.updateMovie.playPauseRecording();
             if (core.showInfo) this.handleIntroButton(); // prevent info screen from showing while recording for smooth user interaction
         } else if (mondrian.key == 'r' || mondrian.key == 'R') updateData.resetCurRecording();
