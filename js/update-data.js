@@ -169,13 +169,15 @@ class UpdatePath {
         core.paths.push(core.createPath(core.curPath.xPos, core.curPath.yPos, core.curPath.tPos, core.colorList[core.paths.length % core.colorList.length]));
     }
 
-    /**
-     * Clear data in core.curPath, does not need to reset path color
-     */
     clearCurPath() {
         core.curPath.xPos = [];
         core.curPath.yPos = [];
         core.curPath.tPos = [];
+    }
+
+    clearAllPaths() {
+        this.clearCurPath();
+        core.paths = [];
     }
 
     /**

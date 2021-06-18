@@ -28,8 +28,10 @@ class VideoPlayer {
             videoPlayer.setDisplayMovieSize(keys.displayVideoWidth, keys.displayVideoHeight);
             movieDiv.onload = () => URL.revokeObjectURL(this.src);
             loadData.movieLoaded = true;
-            console.log("New Video Loaded");
+            updateData.updatePath.clearAllPaths();
+            keys.drawFloorPlanBackground();
             updateData.updateMovie.drawCurFrame(); // after loading video and restarting loop, draw starting frame to indicate movie is loaded
+            console.log("New Video Loaded");
         });
     }
 

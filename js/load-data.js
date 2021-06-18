@@ -17,6 +17,8 @@ class LoadData {
       URL.revokeObjectURL(img.src);
       floorPlan = img;
       this.floorPlanLoaded = true;
+      updateData.updatePath.clearAllPaths();
+      keys.drawFloorPlanBackground();
       console.log("Floor Plan Loaded");
     }, e => {
       alert("Error loading floor plan image file. Please make sure it is correctly formatted as a PNG or JPG image file.")
