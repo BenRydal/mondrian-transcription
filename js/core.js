@@ -2,7 +2,9 @@
 
      constructor() {
          this.paths = []; // List to hold all path objects created
-         this.curPath = this.createPath([], [], []);
+         this.colorList = ['#6a3d9a', '#ff7f00', '#33a02c', '#1f78b4', '#e31a1c', '#ffff99', '#b15928', '#cab2d6', '#fdbf6f', '#b2df8a', '#a6cee3', '#fb9a99'];
+         this.pathWeight = 5; // Integer size of drawn paths
+         this.curPath = this.createPath([], [], [], 0); // initialize with empty arrays and color black (0)
          this.curFileToOutput = 0; // Integer counter to mark current file number to write to output
          this.recording = false; // Boolean to indicate when recording
          this.movieLoaded = false;
@@ -17,11 +19,12 @@
       * @param  {Array} yPos
       * @param  {Array} tPos
       */
-     createPath(xPos, yPos, tPos) {
+     createPath(xPos, yPos, tPos, pColor) {
          return {
              xPos,
              yPos,
-             tPos
+             tPos,
+             pColor
          };
      }
      /**

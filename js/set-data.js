@@ -7,7 +7,7 @@ class SetData {
         // If info screen showing, redraw current screen first, then drawKeys
         if (core.showInfo) {
             updateData.reDrawAllData();
-            updateData.updatePath.drawPath(core.curPath, CURPATHCOLOR);
+            updateData.updatePath.drawPath(core.curPath);
             keys.drawIntroScreen();
         }
     }

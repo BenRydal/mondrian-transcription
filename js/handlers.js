@@ -15,7 +15,7 @@ class Handlers {
     handleIntroButton() {
         if (core.showInfo && core.floorPlanLoaded && core.movieLoaded) {
             updateData.reDrawAllData();
-            updateData.updatePath.drawPath(core.curPath, CURPATHCOLOR); // TO DO: combine functions??
+            updateData.updatePath.drawPath(core.curPath);
         }
         core.showInfo = !core.showInfo;
     }

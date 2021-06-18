@@ -93,7 +93,7 @@ class UpdateData {
         // If first time recording is being rewound, pause recording and set to false
         if (core.recording) this.updateMovie.playPauseRecording();
         this.reDrawAllData();
-        this.updatePath.drawPath(core.curPath, CURPATHCOLOR);
+        this.updatePath.drawPath(core.curPath);
     }
 
     /**
@@ -119,8 +119,8 @@ class UpdatePath {
         let yPos = mondrian.constrain(mondrian.mouseY, keys.displayFloorplanYpos, keys.displayFloorplanYpos + keys.displayFloorplanHeight);
         let pXPos = mondrian.constrain(mondrian.pmouseX, keys.displayFloorplanXpos, keys.displayFloorplanXpos + keys.displayFloorplanWidth);
         let pYPos = mondrian.constrain(mondrian.pmouseY, keys.displayFloorplanYpos, keys.displayFloorplanYpos + keys.displayFloorplanHeight);
-        mondrian.strokeWeight(PATHWEIGHT);
-        mondrian.stroke(CURPATHCOLOR);
+        mondrian.strokeWeight(core.pathWeight);
+        mondrian.stroke(core.curPath.pColor);
         mondrian.line(xPos, yPos, pXPos, pYPos);
     }
 
@@ -144,7 +144,7 @@ class UpdatePath {
      * Draw all recorded paths from core paths array
      */
     reDrawAllPaths() {
-        for (let i = 0; i < core.paths.length; i++) this.drawPath(core.paths[i], COLORLIST[i % COLORLIST.length]);
+        for (let i = 0; i < core.paths.length; i++) this.drawPath(core.paths[i]);
     }
 
     /**
@@ -152,9 +152,9 @@ class UpdatePath {
      * @param  {Path} p
      * @param  {color} pathColor
      */
-    drawPath(p, pathColor) {
-        mondrian.stroke(pathColor);
-        mondrian.strokeWeight(PATHWEIGHT);
+    drawPath(p) {
+        mondrian.stroke(p.pColor);
+        mondrian.strokeWeight(core.pathWeight);
         // Must add back in floor plan display x/y pos to scale to display floor plan correctly
         for (let i = 1; i < p.xPos.length; i++) {
             let x = keys.displayFloorplanXpos + (p.xPos[i] / (floorPlan.width / keys.displayFloorplanWidth));
@@ -169,8 +169,7 @@ class UpdatePath {
      * Clone curPath and add it to core paths []
      */
     addPath() {
-        const p = core.createPath(core.curPath.xPos, core.curPath.yPos, core.curPath.tPos);
-        core.paths.push(p);
+        core.paths.push(core.createPath(core.curPath.xPos, core.curPath.yPos, core.curPath.tPos, core.colorList[core.paths.length % core.colorList.length]));
     }
 
     /**
@@ -180,6 +179,7 @@ class UpdatePath {
         core.curPath.xPos = [];
         core.curPath.yPos = [];
         core.curPath.tPos = [];
+        // do not need to reset path color
     }
 
     /**
