@@ -50,6 +50,7 @@ class UpdateData {
      * Increment curFileToOutput for next recording when finished and reset paths for next path recording
      */
     writeFile() {
+        const FILEHEADERS = ["time", "x", "y"]; // Column headers for outputted .CSV movement files
         let table = new p5.Table();
         table.addColumn(FILEHEADERS[0]);
         table.addColumn(FILEHEADERS[1]);

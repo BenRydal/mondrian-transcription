@@ -29,7 +29,6 @@ let floorPlan = undefined; // P5 image object to control display and interaction
 /**
  * CONSTANTS
  */
-const FILEHEADERS = ["time", "x", "y"]; // Column headers for outputted .CSV movement files
 const COLORLIST = ['#6a3d9a', '#ff7f00', '#33a02c', '#1f78b4', '#e31a1c', '#ffff99', '#b15928', '#cab2d6', '#fdbf6f', '#b2df8a', '#a6cee3', '#fb9a99'];
 const PATHWEIGHT = 5; // Integer size of drawn paths
 const CURPATHCOLOR = 0; // Color of currently recording path
