@@ -78,14 +78,12 @@ class UpdateData {
     }
 
     /**
-     * Organize path and video rewind methods 
-     * Rewind video and remove data from core.curPath equivalent to videoPlayer.videoJumpValue, rewDraw all data and core.curPath
+     * Organize rewind video and remove data from core.curPath equivalent to videoPlayer.videoJumpValue, rewDraw all data and core.curPath
      */
     rewind() {
         // Record point before rewinding to make sure curEndTime is correct in case points were not recording if mouse was not moving
         this.updatePath.drawCurLineSegment();
         this.updatePath.recordCurPoint();
-        // TO DO: Add conditional test here based on movie time to clear path/reset video if less that jumpvalue
         // Set time to rewind to base on last time value in list - videoPlayer.videoJumpValue
         let rewindToTime = core.curPath.tPos[core.curPath.tPos.length - 1] - videoPlayer.videoJumpValue;
         this.updatePath.rewind(rewindToTime);
@@ -97,11 +95,10 @@ class UpdateData {
     }
 
     /**
-     * Organize fast forwarding movie and path data
-     * NOTE: conditional tests to make sure not at end of video
+     * Organize fast forwarding movie and path data, if movie not right at start or near end
      */
     fastForward() {
-        if (movieDiv.time() < movieDiv.duration() - videoPlayer.videoJumpValue) {
+        if (movieDiv.time() > 0 && (movieDiv.time() < movieDiv.duration() - videoPlayer.videoJumpValue)) {
             this.updateMovie.fastForward();
             this.updatePath.fastForward();
         }
@@ -173,13 +170,12 @@ class UpdatePath {
     }
 
     /**
-     * Clear data in core.curPath
+     * Clear data in core.curPath, does not need to reset path color
      */
     clearCurPath() {
         core.curPath.xPos = [];
         core.curPath.yPos = [];
         core.curPath.tPos = [];
-        // do not need to reset path color
     }
 
     /**
