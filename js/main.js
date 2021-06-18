@@ -45,7 +45,7 @@ let mondrian = new p5((sketch) => {
    * Program loop. Organizes two drawing modes for when data is and is not loaded
    */
   sketch.draw = function () {
-    if (core.floorPlanLoaded && core.movieLoaded) setData.setDrawingScreen();
+    if (loadData.floorPlanLoaded && loadData.movieLoaded) setData.setDrawingScreen();
     else setData.setLoadDataScreen();
   }
   /**
@@ -53,6 +53,6 @@ let mondrian = new p5((sketch) => {
    * NOTE: While wrapped in a P5 instance, this method operates globally on the window (there can't be two of these methods)
    */
   sketch.keyPressed = function () {
-    if (core.floorPlanLoaded && core.movieLoaded) handlers.handleKeyPressed();
+    if (loadData.floorPlanLoaded && loadData.movieLoaded) handlers.handleKeyPressed();
   }
 });

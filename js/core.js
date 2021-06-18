@@ -7,8 +7,6 @@
          this.curPath = this.createPath([], [], [], 0); // initialize with empty arrays and color black (0)
          this.curFileToOutput = 0; // Integer counter to mark current file number to write to output
          this.recording = false; // Boolean to indicate when recording
-         this.movieLoaded = false;
-         this.floorPlanLoaded = false; // Boolean variables to indicated when input data has been loaded
          this.showInfo = true; // Boolean to show/hide intro message
      }
 

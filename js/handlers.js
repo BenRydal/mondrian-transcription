@@ -13,7 +13,7 @@ class Handlers {
      * Shows/hides info screen and redraws data if needed
      */
     handleIntroButton() {
-        if (core.showInfo && core.floorPlanLoaded && core.movieLoaded) {
+        if (core.showInfo && loadData.floorPlanLoaded && loadData.movieLoaded) {
             updateData.reDrawAllData();
             updateData.updatePath.drawPath(core.curPath);
         }
@@ -21,6 +21,6 @@ class Handlers {
     }
 
     handleSaveButton() {
-        if (core.floorPlanLoaded && core.movieLoaded && core.curPath.xPos.length > 0) updateData.writeFile();
+        if (loadData.floorPlanLoaded && loadData.movieLoaded && core.curPath.xPos.length > 0) updateData.writeFile();
     }
 }

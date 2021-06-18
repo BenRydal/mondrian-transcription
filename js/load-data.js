@@ -1,5 +1,10 @@
 class LoadData {
 
+  constructor() {
+    this.movieLoaded = false;
+    this.floorPlanLoaded = false;
+  }
+
   /**
    * Handles asynchronous loading and error handling of floor plan image file
    * @param  {File} input
@@ -11,7 +16,7 @@ class LoadData {
     mondrian.loadImage(fileLocation, (img) => {
       URL.revokeObjectURL(img.src);
       floorPlan = img;
-      core.floorPlanLoaded = true;
+      this.floorPlanLoaded = true;
       console.log("Floor Plan Loaded");
     }, e => {
       alert("Error loading floor plan image file. Please make sure it is correctly formatted as a PNG or JPG image file.")
