@@ -1,12 +1,22 @@
 // TODO: mousemoved?
 // ? updateData.reDrawAllData();
 
-// updateData.updateView.drawPath(core.curPath);
+
 // updateData.updateView.drawCurVideoFrame();
 
 // updateData.updatePath.clearAllPaths();
 
 // updateData.updateMovie.playPauseRecording();
+
+// playPauseRecording() {
+//     if (core.recording) {
+//         this.updateMovie.pause();
+//         core.recording = false;
+//     } else {
+//         this.updateMovie.play();
+//         core.recording = true;
+//     }
+// }
 
 class UpdateData {
 
@@ -80,7 +90,6 @@ class UpdateData {
         // If first time recording is being rewound, pause recording and set to false
         if (core.recording) this.updateMovie.playPauseRecording();
         this.reDrawAllData();
-        this.updateView.drawPath(core.curPath);
     }
 
     /**
@@ -204,12 +213,6 @@ class UpdateMovie {
 
 class UpdateView {
 
-    reDrawAllData() {
-        keys.drawFloorPlanBackground();
-        this.drawCurVideoFrame();
-        this.reDrawAllPaths();
-    }
-
     drawCurLineSegment() {
         // Constrain mouse to floor plan display
         let xPos = mondrian.constrain(mondrian.mouseX, keys.displayFloorplanXpos, keys.displayFloorplanXpos + keys.displayFloorplanWidth);
@@ -223,11 +226,13 @@ class UpdateView {
 
     reDrawAllPaths() {
         for (let i = 0; i < core.paths.length; i++) this.drawPath(core.paths[i]);
+        this.drawPath(core.curPath); // draw current path last
     }
 
     drawPath(p) {
         mondrian.stroke(p.pColor);
         mondrian.strokeWeight(core.pathWeight);
+        // Path won't be processed if empty 
         // Must add back in floor plan display x/y pos to scale to display floor plan correctly
         for (let i = 1; i < p.xPos.length; i++) {
             let x = keys.displayFloorplanXpos + (p.xPos[i] / (floorPlan.width / keys.displayFloorplanWidth));
