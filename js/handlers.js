@@ -2,7 +2,7 @@ class Handlers {
 
     handleKeyPressed() {
         if (mondrian.key == 'p' || mondrian.key == 'P') {
-            updateData.updateMovie.playPauseRecording();
+            updateData.playPauseRecording();
             if (core.showInfo) this.handleIntroButton(); // prevent info screen from showing while recording for smooth user interaction
         } else if (mondrian.key == 'r' || mondrian.key == 'R') updateData.resetCurRecording();
         else if (mondrian.key == 'b' || mondrian.key == 'B') updateData.rewind();
@@ -14,7 +14,7 @@ class Handlers {
      */
     handleIntroButton() {
         if (core.showInfo && core.dataIsLoaded(floorPlan) && core.dataIsLoaded(videoPlayer)) {
-            updateData.reDrawAllData();
+            updateData.drawAllData();
         }
         core.showInfo = !core.showInfo;
     }

@@ -1,27 +1,8 @@
-// TODO: mousemoved?
-// ? updateData.reDrawAllData();
-
-
-// updateData.updateView.drawCurVideoFrame();
-
-// updateData.updatePath.clearAllPaths();
-
-// updateData.updateMovie.playPauseRecording();
-
-// playPauseRecording() {
-//     if (core.recording) {
-//         this.updateMovie.pause();
-//         core.recording = false;
-//     } else {
-//         this.updateMovie.play();
-//         core.recording = true;
-//     }
-// }
-
 class UpdateData {
 
     /**
-     * Mediator class creates UpdatePath and UpdateMovie classes for synchronous coordination on both
+     * Mediator class creates UpdatePath and UpdateMovie classes for data coordination
+     * and UpdateView class to also update views/drawing methods
      */
     constructor() {
         this.updatePath = new UpdatePath();
@@ -34,15 +15,14 @@ class UpdateData {
      * Decides whether to record data point based on sampling rate method
      */
     setData() {
-        this.updateView.drawCurVideoFrame();
-        this.updateView.drawCurLineSegment(); // Apparently, this should not be called within testSampleRate block
-        if (this.testSampleRate()) this.updatePath.recordCurPoint();
+        this.updateView.drawVideoFrame();
+        this.updateView.drawLineSegment(); // Apparently, this should not be called within testSampleRate block
+        if (this.testSampleRate()) this.updatePath.addPoint();
     }
     /**
      * Method to sample data in 2 ways
      * (1) if mouse moves sample at rate of 2 decimal points
      * (2) if stopped sample at rate of 0 decimal points, approximately every 1 second in movie
-     * NOTE: Always return true if first point of path
      */
     testSampleRate() {
         if (core.curPath.tPos.length === 0) return true;
@@ -50,19 +30,42 @@ class UpdateData {
         else return +(core.curPath.tPos[core.curPath.tPos.length - 1].toFixed(0)) < +(movieDiv.time().toFixed(0));
     }
 
-    reDrawAllData() {
+    drawAllData() {
         keys.drawFloorPlanBackground();
-        this.updateView.drawCurVideoFrame();
-        this.updateView.reDrawAllPaths();
+        this.updateView.drawVideoFrame();
+        this.updateView.drawAllPaths();
+    }
+
+    clearPaths() {
+        this.updatePath.clearAllPaths();
+    }
+
+    reDrawCurVideoFrame() {
+        this.updateView.drawVideoFrame();
+    }
+
+    newVideoLoaded() {
+        this.clearPaths();
+        this.reDrawCurVideoFrame(); // after video loaded, draw first frame to display it
+        if (core.dataIsLoaded(floorPlan)) keys.drawFloorPlanBackground();
+    }
+
+    newFloorPlanLoaded() {
+        this.clearPaths();
+        keys.drawFloorPlanBackground();
+        if (core.dataIsLoaded(videoPlayer)) {
+            this.updateMovie.stop();
+            this.reDrawCurVideoFrame();
+        }
     }
 
     /**
      * Reset recording for current path by redrawing data, clearing current path, stopping movie
      */
     resetCurRecording() {
-        this.updateMovie.stopMovie();
+        this.updateMovie.stop();
         this.updatePath.clearCurPath();
-        this.reDrawAllData();
+        this.drawAllData();
     }
 
     /**
@@ -72,8 +75,8 @@ class UpdateData {
     resetAfterWriteFile() {
         this.updatePath.addPath();
         this.updatePath.clearCurPath();
-        this.updateMovie.stopMovie();
-        updateData.reDrawAllData();
+        this.updateMovie.stop();
+        this.drawAllData();
     }
 
     /**
@@ -81,15 +84,14 @@ class UpdateData {
      */
     rewind() {
         // Record point before rewinding to make sure curEndTime is correct in case points were not recording if mouse was not moving
-        this.updateView.drawCurLineSegment();
-        this.updatePath.recordCurPoint();
+        this.updateView.drawLineSegment();
+        this.updatePath.addPoint();
         // Set time to rewind to base on last time value in list - videoPlayer.videoJumpValue
         let rewindToTime = core.curPath.tPos[core.curPath.tPos.length - 1] - videoPlayer.videoJumpValue;
         this.updatePath.rewind(rewindToTime);
         this.updateMovie.rewind(rewindToTime);
-        // If first time recording is being rewound, pause recording and set to false
-        if (core.recording) this.updateMovie.playPauseRecording();
-        this.reDrawAllData();
+        if (core.recording) this.playPauseRecording(); // pause recording and video if currently recording
+        this.drawAllData();
     }
 
     /**
@@ -101,15 +103,24 @@ class UpdateData {
             this.updatePath.fastForward();
         }
     }
+
+    playPauseRecording() {
+        if (core.recording) {
+            this.updateMovie.pause();
+            core.recording = false;
+        } else {
+            this.updateMovie.play();
+            core.recording = true;
+        }
+    }
 }
 
 class UpdatePath {
 
     /**
      * Calculates correctly scaled x/y positions to actual image file of floor plan uploaded by user
-     * and pushes positions and movie time in seconds to core.curPath arraylists
      */
-    recordCurPoint() {
+    addPoint() {
         // Constrain mouse to floor plan display
         let xPos = mondrian.constrain(mondrian.mouseX, keys.displayFloorplanXpos, keys.displayFloorplanXpos + keys.displayFloorplanWidth);
         let yPos = mondrian.constrain(mondrian.mouseY, keys.displayFloorplanYpos, keys.displayFloorplanYpos + keys.displayFloorplanHeight);
@@ -121,26 +132,12 @@ class UpdatePath {
         core.curPath.tPos.push(+movieDiv.time().toFixed(2));
     }
 
-    /**
-     * Clone curPath and add it to core paths []
-     */
     addPath() {
         core.paths.push(core.createPath(core.curPath.xPos, core.curPath.yPos, core.curPath.tPos, core.colorList[core.paths.length % core.colorList.length]));
     }
 
-    clearCurPath() {
-        core.curPath.xPos = [];
-        core.curPath.yPos = [];
-        core.curPath.tPos = [];
-    }
-
-    clearAllPaths() {
-        this.clearCurPath();
-        core.paths = [];
-    }
-
     /**
-     * Add to points to global core.curPath arraylits for each second being fast forwarded
+     * Add to points to global core.curPath arraylists for each second being fast forwarded
      */
     fastForward() {
         // IMPORTANT: get last values from cur lists first before loop
@@ -157,7 +154,7 @@ class UpdatePath {
     }
     /**
      * Remove all points from core.curPath arraylists that are greater than time parameter
-     * @param  {} rewindToTime
+     * @param  {Float/Number} rewindToTime
      */
     rewind(rewindToTime) {
         // Start at end of x or y list (NOT t) and delete up to newEndTime
@@ -169,41 +166,41 @@ class UpdatePath {
             } else break;
         }
     }
+
+    clearCurPath() {
+        core.curPath.xPos = [];
+        core.curPath.yPos = [];
+        core.curPath.tPos = [];
+    }
+
+    clearAllPaths() {
+        this.clearCurPath();
+        core.paths = [];
+    }
 }
 
 class UpdateMovie {
 
-    /**
-     * Plays/pauses movie and starts/stops recording variable
-     */
-    playPauseRecording() {
-        if (core.recording) {
-            movieDiv.pause();
-            core.recording = false;
-        } else {
-            movieDiv.play();
-            core.recording = true;
-        }
-    }
-    /**
-     * Stops movie, which sets time to 0
-     * Sets recording to false
-     */
-    stopMovie() {
-        movieDiv.stop();
+    stop() {
+        movieDiv.stop(); // sets movie time to 0
         core.recording = false;
     }
 
-    /**
-     * Fast forward video by videoPlayer.videoJumpValue in seconds
-     */
+    play() {
+        movieDiv.play();
+    }
+
+    pause() {
+        movieDiv.pause();
+    }
+
     fastForward() {
-        movieDiv.time(movieDiv.time() + videoPlayer.videoJumpValue);
+        movieDiv.time(movieDiv.time() + videoPlayer.videoJumpValue); // ff by videoJumpValue
     }
 
     /**
      * Rewind movie to parameter rewindToTime or 0 if it is too close to start of video
-     * @param  {} rewindToTime
+     * @param  {Float/Number} rewindToTime
      */
     rewind(rewindToTime) {
         if (movieDiv.time() > videoPlayer.videoJumpValue) movieDiv.time(rewindToTime);
@@ -213,7 +210,7 @@ class UpdateMovie {
 
 class UpdateView {
 
-    drawCurLineSegment() {
+    drawLineSegment() {
         // Constrain mouse to floor plan display
         let xPos = mondrian.constrain(mondrian.mouseX, keys.displayFloorplanXpos, keys.displayFloorplanXpos + keys.displayFloorplanWidth);
         let yPos = mondrian.constrain(mondrian.mouseY, keys.displayFloorplanYpos, keys.displayFloorplanYpos + keys.displayFloorplanHeight);
@@ -224,7 +221,7 @@ class UpdateView {
         mondrian.line(xPos, yPos, pXPos, pYPos);
     }
 
-    reDrawAllPaths() {
+    drawAllPaths() {
         for (let i = 0; i < core.paths.length; i++) this.drawPath(core.paths[i]);
         this.drawPath(core.curPath); // draw current path last
     }
@@ -246,7 +243,7 @@ class UpdateView {
     /**
      * Draw current movie frame image and white background to GUI in video display
      */
-    drawCurVideoFrame() {
+    drawVideoFrame() {
         mondrian.fill(255);
         mondrian.stroke(255);
         mondrian.rect(keys.displayVideoXpos, keys.displayVideoYpos, keys.displayVideoWidth, keys.displayVideoHeight);

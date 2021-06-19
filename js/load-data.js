@@ -11,8 +11,7 @@ class LoadData {
     mondrian.loadImage(fileLocation, (img) => {
       URL.revokeObjectURL(img.src);
       floorPlan = img;
-      updateData.updatePath.clearAllPaths();
-      keys.drawFloorPlanBackground();
+      updateData.newFloorPlanLoaded();
       console.log("Floor Plan Loaded");
     }, e => {
       alert("Error loading floor plan image file. Please make sure it is correctly formatted as a PNG or JPG image file.")
