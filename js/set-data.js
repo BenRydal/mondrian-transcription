@@ -7,7 +7,7 @@ class SetData {
         // If info screen showing, redraw current screen first, then drawKeys
         if (core.showInfo) {
             updateData.reDrawAllData();
-            updateData.updatePath.drawPath(core.curPath);
+            updateData.updateView.drawPath(core.curPath);
             keys.drawIntroScreen();
         }
     }
@@ -18,7 +18,7 @@ class SetData {
     setLoadDataScreen() {
         keys.drawLoadDataGUI();
         if (core.dataIsLoaded(floorPlan)) keys.drawFloorPlanBackground();
-        else if (core.dataIsLoaded(videoPlayer)) updateData.updateMovie.drawCurFrame();
+        else if (core.dataIsLoaded(videoPlayer)) updateData.updateView.drawCurVideoFrame();
         if (core.showInfo) keys.drawIntroScreen();
     }
 }

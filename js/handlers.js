@@ -15,7 +15,7 @@ class Handlers {
     handleIntroButton() {
         if (core.showInfo && core.dataIsLoaded(floorPlan) && core.dataIsLoaded(videoPlayer)) {
             updateData.reDrawAllData();
-            updateData.updatePath.drawPath(core.curPath);
+            updateData.updateView.drawPath(core.curPath);
         }
         core.showInfo = !core.showInfo;
     }

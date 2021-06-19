@@ -1,3 +1,13 @@
+// TODO: mousemoved?
+// ? updateData.reDrawAllData();
+
+// updateData.updateView.drawPath(core.curPath);
+// updateData.updateView.drawCurVideoFrame();
+
+// updateData.updatePath.clearAllPaths();
+
+// updateData.updateMovie.playPauseRecording();
+
 class UpdateData {
 
     /**
@@ -6,6 +16,7 @@ class UpdateData {
     constructor() {
         this.updatePath = new UpdatePath();
         this.updateMovie = new UpdateMovie();
+        this.updateView = new UpdateView();
     }
 
     /**
@@ -13,8 +24,8 @@ class UpdateData {
      * Decides whether to record data point based on sampling rate method
      */
     setData() {
-        this.updateMovie.drawCurFrame();
-        this.updatePath.drawCurLineSegment(); // Apparantly, this should not be called within testSampleRate block
+        this.updateView.drawCurVideoFrame();
+        this.updateView.drawCurLineSegment(); // Apparently, this should not be called within testSampleRate block
         if (this.testSampleRate()) this.updatePath.recordCurPoint();
     }
     /**
@@ -31,8 +42,8 @@ class UpdateData {
 
     reDrawAllData() {
         keys.drawFloorPlanBackground();
-        this.updateMovie.drawCurFrame();
-        this.updatePath.reDrawAllPaths();
+        this.updateView.drawCurVideoFrame();
+        this.updateView.reDrawAllPaths();
     }
 
     /**
@@ -60,7 +71,7 @@ class UpdateData {
      */
     rewind() {
         // Record point before rewinding to make sure curEndTime is correct in case points were not recording if mouse was not moving
-        this.updatePath.drawCurLineSegment();
+        this.updateView.drawCurLineSegment();
         this.updatePath.recordCurPoint();
         // Set time to rewind to base on last time value in list - videoPlayer.videoJumpValue
         let rewindToTime = core.curPath.tPos[core.curPath.tPos.length - 1] - videoPlayer.videoJumpValue;
@@ -69,7 +80,7 @@ class UpdateData {
         // If first time recording is being rewound, pause recording and set to false
         if (core.recording) this.updateMovie.playPauseRecording();
         this.reDrawAllData();
-        this.updatePath.drawPath(core.curPath);
+        this.updateView.drawPath(core.curPath);
     }
 
     /**
@@ -86,20 +97,6 @@ class UpdateData {
 class UpdatePath {
 
     /**
-     * Calculates correctly scaled x/y positions from mouse cursor and drawns line segment for current point
-     */
-    drawCurLineSegment() {
-        // Constrain mouse to floor plan display
-        let xPos = mondrian.constrain(mondrian.mouseX, keys.displayFloorplanXpos, keys.displayFloorplanXpos + keys.displayFloorplanWidth);
-        let yPos = mondrian.constrain(mondrian.mouseY, keys.displayFloorplanYpos, keys.displayFloorplanYpos + keys.displayFloorplanHeight);
-        let pXPos = mondrian.constrain(mondrian.pmouseX, keys.displayFloorplanXpos, keys.displayFloorplanXpos + keys.displayFloorplanWidth);
-        let pYPos = mondrian.constrain(mondrian.pmouseY, keys.displayFloorplanYpos, keys.displayFloorplanYpos + keys.displayFloorplanHeight);
-        mondrian.strokeWeight(core.pathWeight);
-        mondrian.stroke(core.curPath.pColor);
-        mondrian.line(xPos, yPos, pXPos, pYPos);
-    }
-
-    /**
      * Calculates correctly scaled x/y positions to actual image file of floor plan uploaded by user
      * and pushes positions and movie time in seconds to core.curPath arraylists
      */
@@ -113,31 +110,6 @@ class UpdatePath {
         core.curPath.xPos.push(+(fpXPos * (floorPlan.width / keys.displayFloorplanWidth)).toFixed(2)); // rescale x,y positions to input floor plan
         core.curPath.yPos.push(+(fpYPos * (floorPlan.height / keys.displayFloorplanHeight)).toFixed(2));
         core.curPath.tPos.push(+movieDiv.time().toFixed(2));
-    }
-
-    /**
-     * Draw all recorded paths from core paths array
-     */
-    reDrawAllPaths() {
-        for (let i = 0; i < core.paths.length; i++) this.drawPath(core.paths[i]);
-    }
-
-    /**
-     * Draws complete and correctly scaled path to floor plan display image
-     * @param  {Path} p
-     * @param  {color} pathColor
-     */
-    drawPath(p) {
-        mondrian.stroke(p.pColor);
-        mondrian.strokeWeight(core.pathWeight);
-        // Must add back in floor plan display x/y pos to scale to display floor plan correctly
-        for (let i = 1; i < p.xPos.length; i++) {
-            let x = keys.displayFloorplanXpos + (p.xPos[i] / (floorPlan.width / keys.displayFloorplanWidth));
-            let y = keys.displayFloorplanYpos + (p.yPos[i] / (floorPlan.height / keys.displayFloorplanHeight));
-            let px = keys.displayFloorplanXpos + (p.xPos[i - 1] / (floorPlan.width / keys.displayFloorplanWidth));
-            let py = keys.displayFloorplanYpos + (p.yPos[i - 1] / (floorPlan.height / keys.displayFloorplanHeight));
-            mondrian.line(x, y, px, py); // draw line segment
-        }
     }
 
     /**
@@ -193,15 +165,6 @@ class UpdatePath {
 class UpdateMovie {
 
     /**
-     * Draw current movie frame image and white background to GUI in video display
-     */
-    drawCurFrame() {
-        mondrian.fill(255);
-        mondrian.stroke(255);
-        mondrian.rect(keys.displayVideoXpos, keys.displayVideoYpos, keys.displayVideoWidth, keys.displayVideoHeight);
-        mondrian.image(movieDiv, keys.displayVideoXpos, keys.displayVideoYpos, videoPlayer.reScaledMovieWidth, videoPlayer.reScaledMovieHeight);
-    }
-    /**
      * Plays/pauses movie and starts/stops recording variable
      */
     playPauseRecording() {
@@ -236,5 +199,52 @@ class UpdateMovie {
     rewind(rewindToTime) {
         if (movieDiv.time() > videoPlayer.videoJumpValue) movieDiv.time(rewindToTime);
         else movieDiv.time(0);
+    }
+}
+
+class UpdateView {
+
+    reDrawAllData() {
+        keys.drawFloorPlanBackground();
+        this.drawCurVideoFrame();
+        this.reDrawAllPaths();
+    }
+
+    drawCurLineSegment() {
+        // Constrain mouse to floor plan display
+        let xPos = mondrian.constrain(mondrian.mouseX, keys.displayFloorplanXpos, keys.displayFloorplanXpos + keys.displayFloorplanWidth);
+        let yPos = mondrian.constrain(mondrian.mouseY, keys.displayFloorplanYpos, keys.displayFloorplanYpos + keys.displayFloorplanHeight);
+        let pXPos = mondrian.constrain(mondrian.pmouseX, keys.displayFloorplanXpos, keys.displayFloorplanXpos + keys.displayFloorplanWidth);
+        let pYPos = mondrian.constrain(mondrian.pmouseY, keys.displayFloorplanYpos, keys.displayFloorplanYpos + keys.displayFloorplanHeight);
+        mondrian.strokeWeight(core.pathWeight);
+        mondrian.stroke(core.curPath.pColor);
+        mondrian.line(xPos, yPos, pXPos, pYPos);
+    }
+
+    reDrawAllPaths() {
+        for (let i = 0; i < core.paths.length; i++) this.drawPath(core.paths[i]);
+    }
+
+    drawPath(p) {
+        mondrian.stroke(p.pColor);
+        mondrian.strokeWeight(core.pathWeight);
+        // Must add back in floor plan display x/y pos to scale to display floor plan correctly
+        for (let i = 1; i < p.xPos.length; i++) {
+            let x = keys.displayFloorplanXpos + (p.xPos[i] / (floorPlan.width / keys.displayFloorplanWidth));
+            let y = keys.displayFloorplanYpos + (p.yPos[i] / (floorPlan.height / keys.displayFloorplanHeight));
+            let px = keys.displayFloorplanXpos + (p.xPos[i - 1] / (floorPlan.width / keys.displayFloorplanWidth));
+            let py = keys.displayFloorplanYpos + (p.yPos[i - 1] / (floorPlan.height / keys.displayFloorplanHeight));
+            mondrian.line(x, y, px, py); // draw line segment
+        }
+    }
+
+    /**
+     * Draw current movie frame image and white background to GUI in video display
+     */
+    drawCurVideoFrame() {
+        mondrian.fill(255);
+        mondrian.stroke(255);
+        mondrian.rect(keys.displayVideoXpos, keys.displayVideoYpos, keys.displayVideoWidth, keys.displayVideoHeight);
+        mondrian.image(movieDiv, keys.displayVideoXpos, keys.displayVideoYpos, videoPlayer.reScaledMovieWidth, videoPlayer.reScaledMovieHeight);
     }
 }

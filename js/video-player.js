@@ -29,7 +29,7 @@ class VideoPlayer {
             movieDiv.onload = () => URL.revokeObjectURL(this.src);
             updateData.updatePath.clearAllPaths();
             if (core.dataIsLoaded(floorPlan)) keys.drawFloorPlanBackground();
-            updateData.updateMovie.drawCurFrame(); // after loading video and restarting loop, draw starting frame to indicate movie is loaded
+            updateData.updateView.drawCurVideoFrame(); // after loading video and restarting loop, draw starting frame to indicate movie is loaded
             console.log("New Video Loaded");
         });
     }
