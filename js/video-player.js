@@ -20,7 +20,6 @@ class VideoPlayer {
             // ADD VIDEO DURATION TEST HERE? console.log(movieDiv.duration());
             movieDiv.id('moviePlayer');
             movieDiv.hide();
-            movieDiv.stop(); // necessary to be able to draw starting frame before playing the video
             // Native P5 onended and duration methods don't seem to work, so use below 
             const mov = document.getElementById('moviePlayer');
             mov.onended = () => core.recording = false;

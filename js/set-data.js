@@ -16,8 +16,8 @@ class SetData {
      */
     setLoadDataScreen() {
         keys.drawLoadDataGUI();
-        if (core.dataIsLoaded(floorPlan)) keys.drawFloorPlanBackground();
-        else if (core.dataIsLoaded(videoPlayer)) updateData.reDrawCurVideoFrame();
+        if (core.dataIsLoaded(floorPlan)) updateData.drawFloorPlan();
+        else if (core.dataIsLoaded(videoPlayer)) updateData.drawVideoFrame();
         if (core.showInfo) keys.drawIntroScreen();
     }
 }

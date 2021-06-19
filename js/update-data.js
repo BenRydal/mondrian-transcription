@@ -31,31 +31,32 @@ class UpdateData {
     }
 
     drawAllData() {
-        keys.drawFloorPlanBackground();
+        this.updateView.drawFloorPlan();
         this.updateView.drawVideoFrame();
         this.updateView.drawAllPaths();
     }
 
-    clearPaths() {
-        this.updatePath.clearAllPaths();
+    drawFloorPlan() {
+        this.updateView.drawFloorPlan();
     }
 
-    reDrawCurVideoFrame() {
+    drawVideoFrame() {
         this.updateView.drawVideoFrame();
     }
 
     newVideoLoaded() {
-        this.clearPaths();
-        this.reDrawCurVideoFrame(); // after video loaded, draw first frame to display it
-        if (core.dataIsLoaded(floorPlan)) keys.drawFloorPlanBackground();
+        this.updatePath.clearAllPaths();
+        this.updateMovie.stop(); // necessary to be able to draw starting frame before playing the video
+        this.updateView.drawVideoFrame(); // after video loaded, draw first frame to display it
+        if (core.dataIsLoaded(floorPlan)) this.updateView.drawFloorPlan();
     }
 
     newFloorPlanLoaded() {
-        this.clearPaths();
-        keys.drawFloorPlanBackground();
+        this.updatePath.clearAllPaths();
+        this.updateView.drawFloorPlan();
         if (core.dataIsLoaded(videoPlayer)) {
             this.updateMovie.stop();
-            this.reDrawCurVideoFrame();
+            this.updateView.drawVideoFrame();
         }
     }
 
@@ -248,5 +249,12 @@ class UpdateView {
         mondrian.stroke(255);
         mondrian.rect(keys.displayVideoXpos, keys.displayVideoYpos, keys.displayVideoWidth, keys.displayVideoHeight);
         mondrian.image(movieDiv, keys.displayVideoXpos, keys.displayVideoYpos, videoPlayer.reScaledMovieWidth, videoPlayer.reScaledMovieHeight);
+    }
+
+    drawFloorPlan() {
+        mondrian.fill(255); // draw white screen in case floor plan image has any transparency
+        mondrian.stroke(255);
+        mondrian.rect(keys.displayFloorplanXpos, keys.displayFloorplanYpos, keys.displayFloorplanWidth, keys.displayFloorplanHeight);
+        mondrian.image(floorPlan, keys.displayFloorplanXpos, keys.displayFloorplanYpos, keys.displayFloorplanWidth, keys.displayFloorplanHeight);
     }
 }
