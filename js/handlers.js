@@ -21,6 +21,9 @@ class Handlers {
     }
 
     handleSaveButton() {
-        if (core.dataIsLoaded(floorPlan) && core.dataIsLoaded(videoPlayer) && core.curPath.xPos.length > 0) updateData.writeFile();
+        if (core.dataIsLoaded(floorPlan) && core.dataIsLoaded(videoPlayer) && core.curPath.xPos.length > 0) {
+            core.writeFile();
+            updateData.resetAfterWriteFile();
+        }
     }
 }

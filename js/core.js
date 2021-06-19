@@ -29,7 +29,27 @@
       * Returns false if parameter is undefined or null
       * @param  {Any Type} data
       */
-     dataIsLoaded = function (data) {
+     dataIsLoaded(data) {
          return data != null; // in javascript this tests for both undefined and null values
+     }
+
+     /**
+      * Create and write coordinates to output file
+      * Increment curFileToOutput for next recording when finished and reset paths for next path recording
+      */
+     writeFile() {
+         const FILEHEADERS = ["time", "x", "y"]; // Column headers for outputted .CSV movement files
+         let table = new p5.Table();
+         table.addColumn(FILEHEADERS[0]);
+         table.addColumn(FILEHEADERS[1]);
+         table.addColumn(FILEHEADERS[2]);
+         for (let i = 0; i < core.curPath.xPos.length; i++) {
+             let newRow = table.addRow();
+             newRow.setNum(FILEHEADERS[0], core.curPath.tPos[i]);
+             newRow.setNum(FILEHEADERS[1], core.curPath.xPos[i]);
+             newRow.setNum(FILEHEADERS[2], core.curPath.yPos[i]);
+         }
+         mondrian.saveTable(table, "Path_" + core.curFileToOutput + ".csv");
+         core.curFileToOutput++;
      }
  }
