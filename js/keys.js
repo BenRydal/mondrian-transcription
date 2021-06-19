@@ -27,14 +27,12 @@ class Keys {
     }
 
     drawFloorPlanBackground() {
-        mondrian.fill(255); // draw white screen in case floor plan image has any transparancy
+        mondrian.fill(255); // draw white screen in case floor plan image has any transparency
         mondrian.stroke(255);
         mondrian.rect(this.displayFloorplanXpos, this.displayFloorplanYpos, this.displayFloorplanWidth, this.displayFloorplanHeight);
         mondrian.image(floorPlan, this.displayFloorplanXpos, this.displayFloorplanYpos, this.displayFloorplanWidth, this.displayFloorplanHeight);
     }
-    /**
-     * Draws key text
-     */
+
     drawIntroScreen() {
         mondrian.rectMode(mondrian.CENTER);
         mondrian.stroke(0);

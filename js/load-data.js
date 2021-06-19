@@ -1,10 +1,5 @@
 class LoadData {
 
-  constructor() {
-    this.movieLoaded = false;
-    this.floorPlanLoaded = false;
-  }
-
   /**
    * Handles asynchronous loading and error handling of floor plan image file
    * @param  {File} input
@@ -16,7 +11,6 @@ class LoadData {
     mondrian.loadImage(fileLocation, (img) => {
       URL.revokeObjectURL(img.src);
       floorPlan = img;
-      this.floorPlanLoaded = true;
       updateData.updatePath.clearAllPaths();
       keys.drawFloorPlanBackground();
       console.log("Floor Plan Loaded");

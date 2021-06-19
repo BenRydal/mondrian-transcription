@@ -24,7 +24,7 @@ let videoPlayer; // videoPlayer is instantiated/updated when a video file is loa
  * ADDITIONAL DATA OBJECTS
  */
 let movieDiv = null; // movie holds the "Div" created/destroyed when videoPlayer is instantiated
-let floorPlan = undefined; // P5 image object to control display and interaction with floor plan image file
+let floorPlan = null; // P5 image object to control display and interaction with floor plan image file
 
 /**
  * P5 INSTANCE FOR DRAWING
@@ -42,17 +42,16 @@ let mondrian = new p5((sketch) => {
   }
 
   /**
-   * Program loop. Organizes two drawing modes for when data is and is not loaded
+   * Program loop organizes two drawing modes for when data is and is not loaded
    */
   sketch.draw = function () {
-    if (loadData.floorPlanLoaded && loadData.movieLoaded) setData.setDrawingScreen();
+    if (core.dataIsLoaded(floorPlan) && core.dataIsLoaded(videoPlayer)) setData.setDrawingScreen();
     else setData.setLoadDataScreen();
   }
   /**
-   * P5 method to handle key presses
-   * NOTE: While wrapped in a P5 instance, this method operates globally on the window (there can't be two of these methods)
+   * While wrapped in a P5 instance, this P5 method operates globally on the window (there can't be two of these methods)
    */
   sketch.keyPressed = function () {
-    if (loadData.floorPlanLoaded && loadData.movieLoaded) handlers.handleKeyPressed();
+    if (core.dataIsLoaded(floorPlan) && core.dataIsLoaded(videoPlayer)) handlers.handleKeyPressed();
   }
 });
