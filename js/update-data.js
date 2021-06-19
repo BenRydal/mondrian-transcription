@@ -14,7 +14,7 @@ class UpdateData {
      * Updates video frame and line segment for drawing paths in interface
      * Decides whether to record data point based on sampling rate method
      */
-    setData() {
+    updateRecording() {
         this.updateView.drawVideoFrame();
         this.updateView.drawLineSegment(); // Apparently, this should not be called within testSampleRate block
         if (this.testSampleRate()) this.updatePath.addPoint();
@@ -46,7 +46,7 @@ class UpdateData {
 
     newVideoLoaded() {
         this.updatePath.clearAllPaths();
-        this.updateMovie.stop(); // necessary to be able to draw starting frame before playing the video
+        this.stopRecording(); // necessary to be able to draw starting frame before playing the video
         this.updateView.drawVideoFrame(); // after video loaded, draw first frame to display it
         if (core.dataIsLoaded(floorPlan)) this.updateView.drawFloorPlan();
     }
@@ -55,7 +55,7 @@ class UpdateData {
         this.updatePath.clearAllPaths();
         this.updateView.drawFloorPlan();
         if (core.dataIsLoaded(videoPlayer)) {
-            this.updateMovie.stop();
+            this.stopRecording();
             this.updateView.drawVideoFrame();
         }
     }
@@ -64,7 +64,7 @@ class UpdateData {
      * Reset recording for current path by redrawing data, clearing current path, stopping movie
      */
     resetCurRecording() {
-        this.updateMovie.stop();
+        this.stopRecording();
         this.updatePath.clearCurPath();
         this.drawAllData();
     }
@@ -76,7 +76,7 @@ class UpdateData {
     resetAfterWriteFile() {
         this.updatePath.addPath();
         this.updatePath.clearCurPath();
-        this.updateMovie.stop();
+        this.stopRecording();
         this.drawAllData();
     }
 
@@ -85,10 +85,10 @@ class UpdateData {
      */
     rewind() {
         // Record point before rewinding to make sure curEndTime is correct in case points were not recording if mouse was not moving
-        this.updateView.drawLineSegment();
-        this.updatePath.addPoint();
+        //this.updateView.drawLineSegment();
+        //this.updatePath.addPoint();
         // Set time to rewind to base on last time value in list - videoPlayer.videoJumpValue
-        let rewindToTime = core.curPath.tPos[core.curPath.tPos.length - 1] - videoPlayer.videoJumpValue;
+        const rewindToTime = core.curPath.tPos[core.curPath.tPos.length - 1] - videoPlayer.videoJumpValue;
         this.updatePath.rewind(rewindToTime);
         this.updateMovie.rewind(rewindToTime);
         if (core.recording) this.playPauseRecording(); // pause recording and video if currently recording
@@ -103,6 +103,11 @@ class UpdateData {
             this.updateMovie.fastForward();
             this.updatePath.fastForward();
         }
+    }
+
+    stopRecording() {
+        this.updateMovie.stop();
+        core.recording = false;
     }
 
     playPauseRecording() {
@@ -184,7 +189,6 @@ class UpdateMovie {
 
     stop() {
         movieDiv.stop(); // sets movie time to 0
-        core.recording = false;
     }
 
     play() {
