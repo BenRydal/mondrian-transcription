@@ -19,10 +19,6 @@ let updateData; // Mediator Class to control synchronized method calls for path 
 let loadData; // holds data loading methods
 let videoPlayer; // videoPlayer is instantiated/updated when a video file is loaded
 
-/**
- * ADDITIONAL DATA OBJECTS
- */
-let movieDiv = null; // movie holds the "Div" created/destroyed when videoPlayer is instantiated
 let floorPlan = null; // P5 image object to control display and interaction with floor plan image file
 
 /**

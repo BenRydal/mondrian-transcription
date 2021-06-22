@@ -26,8 +26,8 @@ class UpdateData {
      */
     testSampleRate() {
         if (core.curPath.tPos.length === 0) return true;
-        else if (mondrian.mouseX !== mondrian.pmouseX || mondrian.mouseY !== mondrian.pmouseY) return +(core.curPath.tPos[core.curPath.tPos.length - 1].toFixed(2)) < +(movieDiv.time().toFixed(2));
-        else return +(core.curPath.tPos[core.curPath.tPos.length - 1].toFixed(0)) < +(movieDiv.time().toFixed(0));
+        else if (mondrian.mouseX !== mondrian.pmouseX || mondrian.mouseY !== mondrian.pmouseY) return +(core.curPath.tPos[core.curPath.tPos.length - 1].toFixed(2)) < +(videoPlayer.movieDiv.time().toFixed(2));
+        else return +(core.curPath.tPos[core.curPath.tPos.length - 1].toFixed(0)) < +(videoPlayer.movieDiv.time().toFixed(0));
     }
 
     drawAllData() {
@@ -99,7 +99,7 @@ class UpdateData {
      * Organize fast forwarding movie and path data, if movie not right at start or near end
      */
     fastForward() {
-        if (movieDiv.time() > 0 && (movieDiv.time() < movieDiv.duration() - videoPlayer.videoJumpValue)) {
+        if (videoPlayer.movieDiv.time() > 0 && (videoPlayer.movieDiv.time() < videoPlayer.movieDiv.duration() - videoPlayer.videoJumpValue)) {
             this.updateMovie.fastForward();
             this.updatePath.fastForward();
         }
@@ -135,7 +135,7 @@ class UpdatePath {
         let fpYPos = yPos - keys.displayFloorplanYpos;
         core.curPath.xPos.push(+(fpXPos * (floorPlan.width / keys.displayFloorplanWidth)).toFixed(2)); // rescale x,y positions to input floor plan
         core.curPath.yPos.push(+(fpYPos * (floorPlan.height / keys.displayFloorplanHeight)).toFixed(2));
-        core.curPath.tPos.push(+movieDiv.time().toFixed(2));
+        core.curPath.tPos.push(+videoPlayer.movieDiv.time().toFixed(2));
     }
 
     addPath() {
@@ -188,19 +188,19 @@ class UpdatePath {
 class UpdateMovie {
 
     stop() {
-        movieDiv.stop(); // sets movie time to 0
+        videoPlayer.movieDiv.stop(); // sets movie time to 0
     }
 
     play() {
-        movieDiv.play();
+        videoPlayer.movieDiv.play();
     }
 
     pause() {
-        movieDiv.pause();
+        videoPlayer.movieDiv.pause();
     }
 
     fastForward() {
-        movieDiv.time(movieDiv.time() + videoPlayer.videoJumpValue); // ff by videoJumpValue
+        videoPlayer.movieDiv.time(videoPlayer.movieDiv.time() + videoPlayer.videoJumpValue); // ff by videoJumpValue
     }
 
     /**
@@ -208,8 +208,8 @@ class UpdateMovie {
      * @param  {Float/Number} rewindToTime
      */
     rewind(rewindToTime) {
-        if (movieDiv.time() > videoPlayer.videoJumpValue) movieDiv.time(rewindToTime);
-        else movieDiv.time(0);
+        if (videoPlayer.movieDiv.time() > videoPlayer.videoJumpValue) videoPlayer.movieDiv.time(rewindToTime);
+        else videoPlayer.movieDiv.time(0);
     }
 }
 
@@ -252,7 +252,7 @@ class UpdateView {
         mondrian.fill(255);
         mondrian.stroke(255);
         mondrian.rect(keys.displayVideoXpos, keys.displayVideoYpos, keys.displayVideoWidth, keys.displayVideoHeight);
-        mondrian.image(movieDiv, keys.displayVideoXpos, keys.displayVideoYpos, videoPlayer.reScaledMovieWidth, videoPlayer.reScaledMovieHeight);
+        mondrian.image(videoPlayer.movieDiv, keys.displayVideoXpos, keys.displayVideoYpos, videoPlayer.reScaledMovieWidth, videoPlayer.reScaledMovieHeight);
     }
 
     drawFloorPlan() {

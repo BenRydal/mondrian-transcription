@@ -9,23 +9,16 @@ class VideoPlayer {
         this.inputMovieHeight = undefined; // Decimal pixel width/ height of inputted video file
         this.reScaledMovieWidth = undefined; // Decimal scaled width/height of input video file to fit display container
         this.reScaledMovieHeight = undefined;
-        this.initializeDiv(fileLocation);
-    }
-
-    /**
-     * @param  {String} fileLocation
-     */
-    initializeDiv(fileLocation) {
-        movieDiv = mondrian.createVideo(fileLocation, () => {
+        this.movieDiv = mondrian.createVideo(fileLocation, () => {
             // ADD VIDEO DURATION TEST HERE? console.log(movieDiv.duration());
-            movieDiv.id('moviePlayer');
-            movieDiv.hide();
+            this.movieDiv.id('moviePlayer');
+            this.movieDiv.hide();
             // Native P5 onended and duration methods don't seem to work, so use below 
             const mov = document.getElementById('moviePlayer');
             mov.onended = () => core.recording = false;
             videoPlayer.setInputMovieSize(); // set global movie size constants
             videoPlayer.setDisplayMovieSize(keys.displayVideoWidth, keys.displayVideoHeight);
-            movieDiv.onload = () => URL.revokeObjectURL(this.src);
+            this.movieDiv.onload = () => URL.revokeObjectURL(this.src);
             updateData.newVideoLoaded();
             console.log("New Video Loaded");
         });
@@ -35,8 +28,8 @@ class VideoPlayer {
      * Sets global pixel width/height for movie file to scale size dynamically in program
      */
     setInputMovieSize() {
-        this.inputMovieWidth = movieDiv.width;
-        this.inputMovieHeight = movieDiv.height;
+        this.inputMovieWidth = this.movieDiv.width;
+        this.inputMovieHeight = this.movieDiv.height;
     }
 
     /**
@@ -61,10 +54,10 @@ class VideoPlayer {
             this.reScaledMovieHeight = this.reScaledMovieHeight * ratio; // Reset height to match scaled image
             this.reScaledMovieWidth = this.reScaledMovieWidth * ratio; // Reset width to match scaled image
         }
-        movieDiv.size(this.reScaledMovieWidth, this.reScaledMovieHeight); // set the element to the new width and height
+        this.movieDiv.size(this.reScaledMovieWidth, this.reScaledMovieHeight); // set the element to the new width and height
     }
 
     destroy() {
-        movieDiv.remove(); // remove div element
+        this.movieDiv.remove(); // remove div element
     }
 }
