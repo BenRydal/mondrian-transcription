@@ -1,15 +1,33 @@
 class Sketch {
+
     constructor() {
         this.mondrian = this.initializeSketch(); // creates drawing surface and keys
     }
+
+    /*
+Could move updatePath to "core" and updateVideo to VideoPlayer
+Then... updateData mediates between core (path data) and videoPlayer (video data) 
+both of which depend on the P5 sketch
+videoPlayer and floorPlan in core? 
+
+P5 Sketch (program flow/move core recording stuff here)
+    has core vars (videoPlayer object, floorPlan object)
+    has keys
+    has updateCore (updatePath)
+    has updateView (these are like drawing methods)
+    has updateVideo (updateMovie)
+
+Update data (has reference to sketch)
+
+*/
 
     initializeSketch() {
         return new p5((sketch) => {
             sketch.setup = function () {
                 sketch.canvas = sketch.createCanvas(window.innerWidth, window.innerHeight);
-                this.core = new Core();
-                this.keys = new Keys(sketch);
-                this.updateData = new UpdateData();
+                this.core = new Core(); // data/misc methods
+                this.keys = new Keys(sketch); // UI/containers
+                this.updateData = new UpdateData(); // mediator between canvas, data, video
                 this.videoPlayer = null;
                 this.floorPlan = null;
             }

@@ -11,11 +11,6 @@ https://etd.library.vanderbilt.edu/available/etd-03212018-140140/unrestricted/Sh
 
 const app = new Controller(new Sketch());
 
-/*
-Could move updatePath to "core" and updateVideo to VideoPlayer
-Then... updateData mediates between core (path data) and videoPlayer (video data) 
-both of which depend on the P5 sketch
-*/
 
 // GLOBAL:
 // Controller (loadData, handlers)

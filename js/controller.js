@@ -4,6 +4,7 @@ class Controller {
         this.pSketch = pSketch;
     }
 
+    // TODO: change to ===
     handleKeyPressed() {
         if (this.pSketch.key == 'p' || this.pSketch.key == 'P') {
             this.pSketch.updateData.playPauseRecording();
