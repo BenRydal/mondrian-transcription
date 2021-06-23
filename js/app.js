@@ -10,14 +10,12 @@ https://etd.library.vanderbilt.edu/available/etd-03212018-140140/unrestricted/Sh
 */
 
 const app = new Controller(new Sketch());
+//const app = new Controller(new Mediator(new Sketch(), new Path(), null, null));
 
 
-// GLOBAL:
-// Controller (loadData, handlers)
-
-// P5 RELATED:
-// UPDATE DATA is mediator for updateView and updatePath
-// CORE is like the model
-// - UpdatePath and Update Movie are like model for path/video data
-// KEYS specific to p5 canvas
-// VideoPlayer is a helper class for loading video
+// Controller--handles communication between user input in DOM and P5
+// Path--holds Path data and methods 
+// VideoPlayer--holds Video data and methods
+// Mediator--mediates between P5 sketch and other classes
+// Sketch
+// UNKNOWN: write file, test data?

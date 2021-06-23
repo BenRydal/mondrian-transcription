@@ -3,23 +3,24 @@ class VideoPlayer {
     /**
      * @param  {String} fileLocation
      */
-    constructor(fileLocation) {
+    constructor(fileLocation, sketch) {
         this.videoJumpValue = 5; // Integer value in seconds to ff or rewind
         this.inputMovieWidth = undefined;
         this.inputMovieHeight = undefined; // Decimal pixel width/ height of inputted video file
         this.reScaledMovieWidth = undefined; // Decimal scaled width/height of input video file to fit display container
         this.reScaledMovieHeight = undefined;
-        this.movieDiv = mondrian.createVideo(fileLocation, () => {
+        this.movieDiv = sketch.createVideo(fileLocation, () => {
             // ADD VIDEO DURATION TEST HERE? console.log(movieDiv.duration());
             this.movieDiv.id('moviePlayer');
             this.movieDiv.hide();
             // Native P5 onended and duration methods don't seem to work, so use below 
             const mov = document.getElementById('moviePlayer');
             mov.onended = () => core.recording = false;
-            videoPlayer.setInputMovieSize(); // set global movie size constants
+            // TODO: remove videoPlayer reference? app.mediator.videoPlayer?
+            sketch.mediator.videoPlayer.setInputMovieSize(); // set global movie size constants
             videoPlayer.setDisplayMovieSize(keys.displayVideoWidth, keys.displayVideoHeight);
             this.movieDiv.onload = () => URL.revokeObjectURL(this.src);
-            updateData.newVideoLoaded();
+            sketch.mediator.newVideoLoaded();
             console.log("New Video Loaded");
         });
     }
@@ -57,7 +58,33 @@ class VideoPlayer {
         this.movieDiv.size(this.reScaledMovieWidth, this.reScaledMovieHeight); // set the element to the new width and height
     }
 
+    stop() {
+        this.movieDiv.stop(); // sets movie time to 0
+    }
+
+    play() {
+        this.movieDiv.play();
+    }
+
+    pause() {
+        this.movieDiv.pause();
+    }
+
+    fastForward() {
+        this.movieDiv.time(this.movieDiv.time() + this.videoJumpValue); // ff by videoJumpValue
+    }
+
+    /**
+     * Rewind movie to parameter rewindToTime or 0 if it is too close to start of video
+     * @param  {Float/Number} rewindToTime
+     */
+    rewind(rewindToTime) {
+        if (this.movieDiv.time() > this.videoJumpValue) this.movieDiv.time(rewindToTime);
+        else this.movieDiv.time(0);
+    }
+
     destroy() {
         this.movieDiv.remove(); // remove div element
+        // TODO: this.videoPlayer = null;
     }
 }

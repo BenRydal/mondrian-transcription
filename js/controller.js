@@ -1,34 +1,32 @@
 class Controller {
 
-    constructor(pSketch) {
-        this.pSketch = pSketch;
+    constructor(sketch) {
+        this.sketch = sketch;
     }
 
     // TODO: change to ===
     handleKeyPressed() {
-        if (this.pSketch.key == 'p' || this.pSketch.key == 'P') {
-            this.pSketch.updateData.playPauseRecording();
-            if (this.pSketch.core.showInfo) this.handleIntroButton(); // prevent info screen from showing while recording for smooth user interaction
-        } else if (this.pSketch.key == 'r' || this.pSketch.key == 'R') this.pSketch.updateData.resetCurRecording();
-        else if (this.pSketch.key == 'b' || this.pSketch.key == 'B') this.pSketch.updateData.rewind();
-        else if (this.pSketch.key == 'f' || this.pSketch.key == 'F') this.pSketch.updateData.fastForward();
+        if (this.sketch.key == 'p' || this.sketch.key == 'P') {
+            this.sketch.mediator.playPauseRecording();
+            if (this.sketch.showInfo) this.handleIntroButton(); // prevent info screen from showing while recording for smooth user interaction
+        } else if (this.sketch.key == 'r' || this.sketch.key == 'R') this.sketch.mediator.resetCurRecording();
+        else if (this.sketch.key == 'b' || this.sketch.key == 'B') this.sketch.mediator.rewind();
+        else if (this.sketch.key == 'f' || this.sketch.key == 'F') this.sketch.mediator.fastForward();
     }
 
     /**
      * Shows/hides info screen and redraws data if needed
      */
     handleIntroButton() {
-        if (this.pSketch.core.showInfo && this.pSketch.core.dataIsLoaded(this.pSketch.floorPlan) && this.pSketch.core.dataIsLoaded(this.pSketch.videoPlayer)) {
-            this.pSketch.updateData.drawAllData();
+        console.log(app.sketch.showInfo);
+        if (this.sketch.showInfo && this.sketch.mediator.floorPlanLoaded() && this.sketch.mediator.videoLoaded()) {
+            this.sketch.mediator.updateAllData();
         }
-        this.pSketch.core.showInfo = !this.pSketch.core.showInfo;
+        this.sketch.showInfo = !this.sketch.showInfo;
     }
 
     handleSaveButton() {
-        if (this.pSketch.core.dataIsLoaded(this.pSketch.floorPlan) && this.pSketch.core.dataIsLoaded(this.pSketch.videoPlayer) && this.pSketch.core.curPath.xPos.length > 0) {
-            this.pSketch.core.writeFile();
-            this.pSketch.updateData.resetAfterWriteFile();
-        }
+        this.sketch.mediator.writeFile();
     }
 
     /**
@@ -39,10 +37,9 @@ class Controller {
         let file = input.files[0];
         input.value = ''; // reset input value so you can load same file again in browser
         let fileLocation = URL.createObjectURL(file);
-        this.pSketch.loadImage(fileLocation, (img) => {
+        this.sketch.loadImage(fileLocation, (img) => {
             URL.revokeObjectURL(img.src);
-            this.pSketch.floorPlan = img;
-            this.pSketch.updateData.newFloorPlanLoaded();
+            this.sketch.mediator.newFloorPlanLoaded(img);
             console.log("Floor Plan Loaded");
         }, e => {
             alert("Error loading floor plan image file. Please make sure it is correctly formatted as a PNG or JPG image file.")
@@ -58,8 +55,6 @@ class Controller {
         let file = input.files[0];
         input.value = ''; // reset input value so you can load same file again in browser
         let fileLocation = URL.createObjectURL(file);
-        if (this.pSketch.core.dataIsLoaded(this.pSketch.videoPlayer)) this.pSketch.videoPlayer.destroy(); // if a video exists, destroy it
-        // TODO: Add this.pSketch as parameter for videoPlayer
-        this.pSketch.videoPlayer = new VideoPlayer(fileLocation); // create new videoPlayer
+        this.sketch.mediator.createVideoOnLoad(fileLocation);
     }
 }
