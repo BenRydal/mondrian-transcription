@@ -79,4 +79,19 @@
          this.clearCurPath();
          this.paths = [];
      }
+
+     getTable() {
+         const FILEHEADERS = ["time", "x", "y"]; // Column headers for outputted .CSV movement files
+         let table = new p5.Table();
+         table.addColumn(FILEHEADERS[0]);
+         table.addColumn(FILEHEADERS[1]);
+         table.addColumn(FILEHEADERS[2]);
+         for (let i = 0; i < this.curPath.xPos.length; i++) {
+             let newRow = table.addRow();
+             newRow.setNum(FILEHEADERS[0], this.curPath.tPos[i]);
+             newRow.setNum(FILEHEADERS[1], this.curPath.xPos[i]);
+             newRow.setNum(FILEHEADERS[2], this.curPath.yPos[i]);
+         }
+         return table;
+     }
  }

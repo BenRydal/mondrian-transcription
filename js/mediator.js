@@ -45,12 +45,17 @@ class Mediator {
         }
     }
 
-    convertXposToDisplay(xPos) {
-        return this.sketch.displayFloorplanXpos + (xPos / (this.floorPlan.width / this.sketch.displayFloorplanWidth));
+    getFloorPlanWidth() {
+        return this.floorPlan.width;
     }
 
-    convertYposToDisplay(yPos) {
-        return this.sketch.displayFloorplanYpos + (yPos / (this.floorPlan.height / this.sketch.displayFloorplanHeight));
+    getFloorPlanHeight() {
+        return this.floorPlan.height;
+    }
+
+    updateIntro() {
+        if (this.sketch.showInfo && this.allDataLoaded()) this.updateAllData();
+        this.sketch.showInfo = !this.sketch.showInfo;
     }
 
     updateAllData() {
@@ -99,24 +104,9 @@ class Mediator {
     }
 
     /**
-     * Organizes methods to update data and reset screen after file has been written
-     * Sets recording to false
-     */
-    resetAfterWriteFile() {
-        this.path.curFileToOutput++;
-        this.path.addPath();
-        this.path.clearCurPath();
-        this.stopRecording();
-        this.updateAllData();
-    }
-
-    /**
      * Organize rewind video and remove data from core.curPath equivalent to videoPlayer.videoJumpValue, rewDraw all data and core.curPath
      */
     rewind() {
-        // Record point before rewinding to make sure curEndTime is correct in case points were not recording if mouse was not moving
-        //this.updateView.drawLineSegment();
-        //this.updatePath.addPoint();
         // Set time to rewind to base on last time value in list - videoPlayer.videoJumpValue
         const rewindToTime = this.path.curPath.tPos[this.path.curPath.tPos.length - 1] - this.videoPlayer.videoJumpValue;
         this.path.rewind(rewindToTime);
@@ -167,28 +157,18 @@ class Mediator {
     }
 
     allDataLoaded() {
-        return (this.dataIsLoaded(this.floorPlan) && this.dataIsLoaded(this.videoPlayer));
+        return this.dataIsLoaded(this.floorPlan) && this.dataIsLoaded(this.videoPlayer);
     }
 
     /**
      * Create and write coordinates to output file
-     * Increment curFileToOutput for next recording when finished and reset paths for next path recording
      */
     writeFile() {
-        if (this.floorPlanLoaded() && this.videoLoaded() && this.path.curPath.xPos.length > 0) {
-            const FILEHEADERS = ["time", "x", "y"]; // Column headers for outputted .CSV movement files
-            let table = new p5.Table();
-            table.addColumn(FILEHEADERS[0]);
-            table.addColumn(FILEHEADERS[1]);
-            table.addColumn(FILEHEADERS[2]);
-            for (let i = 0; i < this.path.curPath.xPos.length; i++) {
-                let newRow = table.addRow();
-                newRow.setNum(FILEHEADERS[0], this.path.curPath.tPos[i]);
-                newRow.setNum(FILEHEADERS[1], this.path.curPath.xPos[i]);
-                newRow.setNum(FILEHEADERS[2], this.path.curPath.yPos[i]);
-            }
-            this.sketch.saveTable(table, "Path_" + this.path.curFileToOutput + ".csv");
-            this.resetAfterWriteFile();
-        }
+        this.sketch.saveTable(this.path.getTable(), "Path_" + this.path.curFileToOutput + ".csv");
+        this.path.curFileToOutput++;
+        this.path.addPath();
+        this.path.clearCurPath();
+        this.stopRecording();
+        this.updateAllData();
     }
 }

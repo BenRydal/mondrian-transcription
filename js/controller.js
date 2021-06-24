@@ -8,11 +8,7 @@ class Controller {
      * Shows/hides info screen and redraws data if needed
      */
     handleIntroButton() {
-        console.log(this.sketch.mondrian.showInfo);
-        if (this.sketch.mondrian.showInfo && this.sketch.mondrian.mediator.floorPlanLoaded() && this.sketch.mondrian.mediator.videoLoaded()) {
-            this.sketch.mondrian.mediator.updateAllData();
-        }
-        this.sketch.mondrian.showInfo = !this.sketch.mondrian.showInfo;
+        this.sketch.mondrian.mediator.updateIntro();
     }
 
     handleSaveButton() {

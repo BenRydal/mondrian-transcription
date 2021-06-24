@@ -28,7 +28,7 @@ class Sketch {
              * Program loop organizes two drawing modes for when data is and is not loaded
              */
             sketch.draw = function () {
-                if (sketch.mediator.floorPlanLoaded() && sketch.mediator.videoLoaded()) {
+                if (sketch.mediator.allDataLoaded()) {
                     if (sketch.recording) sketch.mediator.updateRecording(); // records data and updates visualization if in record mode
                     // If info screen showing, redraw current screen first, then drawKeys
                     if (sketch.showInfo) {
@@ -66,8 +66,16 @@ class Sketch {
                 //this.strokeWeight(core.pathWeight);
                 this.strokeWeight(10);
                 for (let i = 1; i < p.xPos.length; i++) {
-                    this.line(this.mediator.convertXposToDisplay(p.xPos[i]), this.mediator.convertYposToDisplay(p.yPos[i]), this.mediator.convertXposToDisplay(p.xPos[i - 1]), this.mediator.convertYposToDisplay(p.yPos[i - 1]));
+                    this.line(this.scaleXposToDisplay(p.xPos[i]), this.scaleYposToDisplay(p.yPos[i]), this.scaleXposToDisplay(p.xPos[i - 1]), this.scaleYposToDisplay(p.yPos[i - 1]));
                 }
+            }
+
+            sketch.scaleXposToDisplay = function (xPos) {
+                return this.displayFloorplanXpos + (xPos / (this.mediator.getFloorPlanWidth() / this.displayFloorplanWidth));
+            }
+
+            sketch.scaleYposToDisplay = function (yPos) {
+                return this.displayFloorplanYpos + (yPos / (this.mediator.getFloorPlanHeight() / this.displayFloorplanHeight));
             }
 
             /**
@@ -116,14 +124,13 @@ class Sketch {
              * While wrapped in a P5 instance, this P5 method operates globally on the window (there can't be two of these methods)
              */
             sketch.keyPressed = function () {
-                if (sketch.mediator.floorPlanLoaded() && sketch.mediator.videoLoaded()) {
-                    // TODO: change to ===
-                    if (sketch.key == 'p' || sketch.key == 'P') {
+                if (sketch.mediator.allDataLoaded()) {
+                    if (sketch.key === 'p' || sketch.key === 'P') {
                         sketch.mediator.playPauseRecording();
-                        if (sketch.showInfo) app.handleIntroButton(); // prevent info screen from showing while recording for smooth user interaction
-                    } else if (sketch.key == 'r' || sketch.key == 'R') sketch.mediator.resetCurRecording();
-                    else if (sketch.key == 'b' || sketch.key == 'B') sketch.mediator.rewind();
-                    else if (sketch.key == 'f' || sketch.key == 'F') sketch.mediator.fastForward();
+                        if (sketch.showInfo) sketch.mediator.updateIntro(); // prevent info screen from showing while recording for smooth user interaction
+                    } else if (sketch.key === 'r' || sketch.key === 'R') sketch.mediator.resetCurRecording();
+                    else if (sketch.key === 'b' || sketch.key === 'B') sketch.mediator.rewind();
+                    else if (sketch.key === 'f' || sketch.key === 'F') sketch.mediator.fastForward();
                 }
             }
         });

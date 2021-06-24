@@ -5,10 +5,10 @@ class VideoPlayer {
      */
     constructor(fileLocation, sketch) {
         this.videoJumpValue = 5; // Integer value in seconds to ff or rewind
-        this.inputMovieWidth = undefined;
-        this.inputMovieHeight = undefined; // Decimal pixel width/ height of inputted video file
-        this.reScaledMovieWidth = undefined; // Decimal scaled width/height of input video file to fit display container
-        this.reScaledMovieHeight = undefined;
+        this.inputMovieWidth = null;
+        this.inputMovieHeight = null; // Decimal pixel width/ height of inputted video file
+        this.reScaledMovieWidth = null; // Decimal scaled width/height of input video file to fit display container
+        this.reScaledMovieHeight = null;
         this.movieDiv = sketch.createVideo(fileLocation, () => {
             // ADD VIDEO DURATION TEST HERE? console.log(movieDiv.duration());
             this.movieDiv.id('moviePlayer');
@@ -16,9 +16,8 @@ class VideoPlayer {
             // Native P5 onended and duration methods don't seem to work, so use below 
             const mov = document.getElementById('moviePlayer');
             mov.onended = () => sketch.recording = false;
-            // TODO: remove videoPlayer reference? app.mediator.videoPlayer?
-            sketch.mediator.videoPlayer.setInputMovieSize(); // set global movie size constants
-            sketch.mediator.videoPlayer.setDisplayMovieSize(sketch.displayVideoWidth, sketch.displayVideoHeight);
+            this.setInputMovieSize(); // set global movie size constants
+            this.setDisplayMovieSize(sketch.displayVideoWidth, sketch.displayVideoHeight);
             this.movieDiv.onload = () => URL.revokeObjectURL(this.src);
             sketch.mediator.newVideoLoaded();
             console.log("New Video Loaded");
@@ -85,6 +84,5 @@ class VideoPlayer {
 
     destroy() {
         this.movieDiv.remove(); // remove div element
-        // TODO: this.videoPlayer = null;
     }
 }
