@@ -2,7 +2,9 @@ class VideoPlayer {
 
     /**
      * @param  {String} fileLocation
+     * @param  {} P5Instance
      */
+
     constructor(fileLocation, sketch) {
         this.videoJumpValue = 5; // Integer value in seconds to ff or rewind
         this.inputMovieWidth = null;

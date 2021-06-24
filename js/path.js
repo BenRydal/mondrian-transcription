@@ -3,8 +3,7 @@
      constructor() {
          this.paths = []; // List to hold all path objects created
          this.colorList = ['#6a3d9a', '#ff7f00', '#33a02c', '#1f78b4', '#e31a1c', '#ffff99', '#b15928', '#cab2d6', '#fdbf6f', '#b2df8a', '#a6cee3', '#fb9a99'];
-         this.pathWeight = 5; // Integer size of drawn paths
-         this.curPath = this.createPath([], [], [], 0); // initialize with empty arrays and color black (0)
+         this.curPath = this.createPath([], [], [], 0, 7); // initialize with empty arrays, color black (0), path strokeWeight
          this.curFileToOutput = 0; // Integer counter to mark current file number to write to output
      }
 
@@ -15,19 +14,16 @@
       * @param  {Array} yPos
       * @param  {Array} tPos
       */
-     createPath(xPos, yPos, tPos, pColor) {
+     createPath(xPos, yPos, tPos, pColor, weight) {
          return {
              xPos,
              yPos,
              tPos,
-             pColor
+             pColor,
+             weight
          };
      }
 
-
-     /**
-      * Calculates correctly scaled x/y positions to actual image file of floor plan uploaded by user
-      */
      addPoint(point) {
          this.curPath.xPos.push(point.xPos);
          this.curPath.yPos.push(point.yPos);
@@ -35,14 +31,15 @@
      }
 
      addPath() {
-         this.paths.push(this.createPath(this.curPath.xPos, this.curPath.yPos, this.curPath.tPos, this.colorList[this.paths.length % this.colorList.length]));
+         this.paths.push(this.createPath(this.curPath.xPos, this.curPath.yPos, this.curPath.tPos, this.colorList[this.paths.length % this.colorList.length], 5));
      }
 
      /**
-      * Add to points to global core.curPath arraylists for each second being fast forwarded
+      * Add 1 new data point to curPath lists for amountInSeconds fastForwarded
+      * @param  {Integer/Number} amountInSeconds
       */
      fastForward(amountInSeconds) {
-         // IMPORTANT: get last values from cur lists first before loop
+         // IMPORTANT: get last values from cur lists first before loop. Uses to set x/yPos and increment tPos
          const xPos = this.curPath.xPos[this.curPath.tPos.length - 1];
          const yPos = this.curPath.yPos[this.curPath.tPos.length - 1];
          const tPos = this.curPath.tPos[this.curPath.tPos.length - 1];
@@ -55,11 +52,11 @@
          }
      }
      /**
-      * Remove all points from core.curPath arraylists that are greater than time parameter
+      * Remove all points from curPath Lists greater than rewindToTime parameter
       * @param  {Float/Number} rewindToTime
       */
      rewind(rewindToTime) {
-         // Start at end of x or y list (NOT t) and delete up to newEndTime
+         // IMPORTANT: Start at end of x or y list (NOT t) and delete up to newEndTime
          for (let i = this.curPath.xPos.length - 1; i >= 0; i--) {
              if (this.curPath.tPos[i] > rewindToTime) {
                  this.curPath.tPos.pop();

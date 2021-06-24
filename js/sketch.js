@@ -43,15 +43,14 @@ class Sketch {
                 }
             }
 
-            // TODO: consider moving pathWeight into constructing paths
-            sketch.drawLineSegment = function (weight, pathColor) {
+            sketch.drawLineSegment = function (curPath) {
                 // Constrain mouse to floor plan display
                 const xPos = this.constrain(this.mouseX, this.displayFloorplanXpos, this.displayFloorplanXpos + this.displayFloorplanWidth);
                 const yPos = this.constrain(this.mouseY, this.displayFloorplanYpos, this.displayFloorplanYpos + this.displayFloorplanHeight);
                 const pXPos = this.constrain(this.pmouseX, this.displayFloorplanXpos, this.displayFloorplanXpos + this.displayFloorplanWidth);
                 const pYPos = this.constrain(this.pmouseY, this.displayFloorplanYpos, this.displayFloorplanYpos + this.displayFloorplanHeight);
-                this.strokeWeight(weight);
-                this.stroke(pathColor);
+                this.strokeWeight(curPath.weight);
+                this.stroke(curPath.pColor);
                 this.line(xPos, yPos, pXPos, pYPos);
             }
 
@@ -62,9 +61,7 @@ class Sketch {
 
             sketch.drawPath = function (p) {
                 this.stroke(p.pColor);
-                // TODO: add pathweight to path TEMP!!!
-                //this.strokeWeight(core.pathWeight);
-                this.strokeWeight(10);
+                this.strokeWeight(p.weight);
                 for (let i = 1; i < p.xPos.length; i++) {
                     this.line(this.scaleXposToDisplay(p.xPos[i]), this.scaleYposToDisplay(p.yPos[i]), this.scaleXposToDisplay(p.xPos[i - 1]), this.scaleYposToDisplay(p.yPos[i - 1]));
                 }
