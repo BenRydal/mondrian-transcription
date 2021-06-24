@@ -13,7 +13,7 @@ class Sketch {
                 sketch.font_Lato = sketch.loadFont("data/fonts/Lato-Light.ttf");
                 sketch.recording = false; // Boolean to indicate when recording
                 sketch.showInfo = true; // Boolean to show/hide intro message
-                sketch.infoMsg = "MONDRIAN TRANSCRIPTION SOFTWARE\n\nby Ben Rydal Shapiro & contributors\nbuilt with p5.js & JavaScript\n\nHi there! This tool allows you to transcribe fine-grained movement data from video. To get started, use the top buttons to upload a floor plan image file (PNG or JPG) and a video file (MP4). Then, use the key codes below to interact with the video and use your cursor to draw on the floor plan. As you interact with the video and simultaneously draw on the floor plan, positioning data is recorded as a CSV file organized by time in seconds and x/y pixel positions scaled to the pixel size of your floor plan image file. Use the top right button to save this file anytime and then record another movement path. For more information, see: https://www.benrydal.com/software/this.pSketch-transcription\n\nKEY CODES:  Play/Pause (p), Fast-Forward (f), Rewind (b), Reset (r)";
+                sketch.infoMsg = "MONDRIAN TRANSCRIPTION SOFTWARE\n\nby Ben Rydal Shapiro & contributors\nbuilt with p5.js & JavaScript\n\nHi there! This tool allows you to transcribe fine-grained movement data from video. To get started, use the top buttons to upload a floor plan image file (PNG or JPG) and a video file (MP4). Then, use the key codes below to interact with the video and use your cursor to draw on the floor plan. As you interact with the video and simultaneously draw on the floor plan, positioning data is recorded as a CSV file organized by time in seconds and x/y pixel positions scaled to the pixel size of your floor plan image file. Use the top right button to save this file anytime and then record another movement path. For more information, see: https://www.benrydal.com/software/this.pSketch-transcription\n\nKEY CODES:  Play/Pause (p), Fast-Forward (f), Rewind (r)";
                 this.floorPlanContainer = {
                     width: sketch.width / 2,
                     height: sketch.height,
@@ -122,6 +122,19 @@ class Sketch {
             }
 
             /**
+             * Returns scaled mouse x/y position to input floorPlan image file
+             */
+            sketch.getScaledMousePos = function (floorPlan) {
+                // Constrain mouse to floor plan display and subtract floorPlan display x/y positions to set data to 0, 0 origin/coordinate system
+                const x = (this.constrain(this.mouseX, this.floorPlanContainer.xPos, this.floorPlanContainer.xPos + this.floorPlanContainer.width)) - this.floorPlanContainer.xPos;
+                const y = (this.constrain(this.mouseY, this.floorPlanContainer.yPos, this.floorPlanContainer.yPos + this.floorPlanContainer.height)) - this.floorPlanContainer.yPos;
+                // Scale x,y positions to input floor plan width/height
+                const xPos = +(x * (floorPlan.width / this.floorPlanContainer.width)).toFixed(2);
+                const yPos = +(y * (floorPlan.height / this.floorPlanContainer.height)).toFixed(2);
+                return [xPos, yPos];
+            }
+
+            /**
              * While wrapped in a P5 instance, this P5 method operates globally on the window (there can't be two of these methods)
              */
             sketch.keyPressed = function () {
@@ -129,11 +142,14 @@ class Sketch {
                     if (sketch.key === 'p' || sketch.key === 'P') {
                         sketch.mediator.playPauseRecording();
                         if (sketch.showInfo) sketch.mediator.updateIntro(); // prevent info screen from showing while recording for smooth user interaction
-                    } else if (sketch.key === 'r' || sketch.key === 'R') sketch.mediator.resetCurRecording();
-                    else if (sketch.key === 'b' || sketch.key === 'B') sketch.mediator.rewind();
+                    } else if (sketch.key === 'r' || sketch.key === 'R') sketch.mediator.rewind();
                     else if (sketch.key === 'f' || sketch.key === 'F') sketch.mediator.fastForward();
                 }
             }
+
+            // sketch.mousePressed = function () {
+
+            // }
         });
     }
 }

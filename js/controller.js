@@ -33,4 +33,8 @@ class Controller {
         let fileLocation = URL.createObjectURL(file);
         this.sketch.mondrian.mediator.loadVideo(fileLocation);
     }
+
+    handleResetButton() {
+        this.sketch.mondrian.mediator.resetCurRecording();
+    }
 }

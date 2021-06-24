@@ -17,7 +17,19 @@ class Mediator {
     updateRecording() {
         this.updateVideoFrame();
         this.sketch.drawLineSegment(this.path.curPath); // Apparently, this should not be called within testSampleRate block
-        if (this.testSampleRate()) this.path.addPoint(this.getPointDataFromDisplay());
+        if (this.testSampleRate()) this.updateCurPath();
+    }
+    /**
+     * Adds properly scaled data point from input floorPlan to current path
+     */
+    updateCurPath() {
+        const [xPos, yPos] = this.sketch.getScaledMousePos(this.floorPlan);
+        const time = +this.videoPlayer.movieDiv.time().toFixed(2);
+        this.path.addPoint({
+            xPos,
+            yPos,
+            time
+        });
     }
 
     updateIntro() {
@@ -46,7 +58,7 @@ class Mediator {
     }
 
     /**
-     * Organize rewind video and remove data from core.curPath equivalent to videoPlayer.videoJumpValue, rewDraw all data and core.curPath
+     * Coordinates rewinding of video and erasing of curPath data and updating display
      */
     rewind() {
         // Set time to rewind to base on last time value in list - videoPlayer.videoJumpValue
@@ -58,7 +70,7 @@ class Mediator {
     }
 
     /**
-     * Organize fast forwarding movie and path data, if movie not right at start or near end
+     * Coordinates fast forwarding of movie and path data, if movie not right at start or near end
      */
     fastForward() {
         if (this.videoPlayer.movieDiv.time() > 0 && (this.videoPlayer.movieDiv.time() < this.videoPlayer.movieDiv.duration() - this.videoPlayer.videoJumpValue)) {
@@ -112,24 +124,6 @@ class Mediator {
         else return +(this.path.curPath.tPos[this.path.curPath.tPos.length - 1].toFixed(0)) < +(this.videoPlayer.movieDiv.time().toFixed(0));
     }
 
-    /**
-     * Calculates correctly scaled x/y positions to actual image file of floor plan uploaded by user
-     */
-    getPointDataFromDisplay() {
-        // Constrain mouse to floor plan display and subtract floorPlan display x/y positions to set data to 0, 0 origin/coordinate system
-        const x = (this.sketch.constrain(this.sketch.mouseX, this.sketch.floorPlanContainer.xPos, this.sketch.floorPlanContainer.xPos + this.sketch.floorPlanContainer.width)) - this.sketch.floorPlanContainer.xPos;
-        const y = (this.sketch.constrain(this.sketch.mouseY, this.sketch.floorPlanContainer.yPos, this.sketch.floorPlanContainer.yPos + this.sketch.floorPlanContainer.height)) - this.sketch.floorPlanContainer.yPos;
-        // Scale x,y positions to input floor plan width/height
-        const xPos = +(x * (this.floorPlan.width / this.sketch.floorPlanContainer.width)).toFixed(2);
-        const yPos = +(y * (this.floorPlan.height / this.sketch.floorPlanContainer.height)).toFixed(2);
-        const time = +this.videoPlayer.movieDiv.time().toFixed(2);
-        return {
-            xPos,
-            yPos,
-            time
-        }
-    }
-
     getFloorPlanWidth() {
         return this.floorPlan.width;
     }
@@ -171,9 +165,6 @@ class Mediator {
         }
     }
 
-    /**
-     * Create and write coordinates to output file
-     */
     writeFile() {
         this.sketch.saveTable(this.path.getTable(), "Path_" + this.path.curFileToOutput + ".csv");
         this.path.curFileToOutput++;
