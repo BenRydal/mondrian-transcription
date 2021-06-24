@@ -52,9 +52,11 @@ class Mediator {
     }
 
     resetCurRecording() {
-        this.stopRecording();
-        this.path.clearCurPath();
-        this.updateAllData();
+        if (this.allDataLoaded()) {
+            this.stopRecording();
+            this.path.clearCurPath();
+            this.updateAllData();
+        }
     }
 
     /**
@@ -166,11 +168,13 @@ class Mediator {
     }
 
     writeFile() {
-        this.sketch.saveTable(this.path.getTable(), "Path_" + this.path.curFileToOutput + ".csv");
-        this.path.curFileToOutput++;
-        this.path.addPath();
-        this.path.clearCurPath();
-        this.stopRecording();
-        this.updateAllData();
+        if (this.allDataLoaded() && this.path.curPath.xPos.length > 0) {
+            this.sketch.saveTable(this.path.getTable(), "Path_" + this.path.curFileToOutput + ".csv");
+            this.path.curFileToOutput++;
+            this.path.addPath();
+            this.path.clearCurPath();
+            this.stopRecording();
+            this.updateAllData();
+        }
     }
 }
