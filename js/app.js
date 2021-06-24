@@ -10,7 +10,6 @@ https://etd.library.vanderbilt.edu/available/etd-03212018-140140/unrestricted/Sh
 */
 
 const app = new Controller(new Sketch());
-//const app = new Controller(new Mediator(new Sketch(), new Path(), null, null));
 
 
 // Controller--handles communication between user input in DOM and P5

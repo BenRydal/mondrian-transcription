@@ -22,8 +22,8 @@ class Mediator {
      * (2) if stopped sample at rate of 0 decimal points, approximately every 1 second in movie
      */
     testSampleRate() {
-        if (this.curPath.tPos.length === 0) return true;
-        else if (this.sketch.mouseX !== this.sketch.pmouseX || this.sketch.mouseY !== this.sketch.pmouseY) return +(this.path.curPath.tPos[core.curPath.tPos.length - 1].toFixed(2)) < +(this.videoPlayer.movieDiv.time().toFixed(2));
+        if (this.path.curPath.tPos.length === 0) return true;
+        else if (this.sketch.mouseX !== this.sketch.pmouseX || this.sketch.mouseY !== this.sketch.pmouseY) return +(this.path.curPath.tPos[this.path.curPath.tPos.length - 1].toFixed(2)) < +(this.videoPlayer.movieDiv.time().toFixed(2));
         else return +(this.path.curPath.tPos[this.path.curPath.tPos.length - 1].toFixed(0)) < +(this.videoPlayer.movieDiv.time().toFixed(0));
     }
 
@@ -64,7 +64,7 @@ class Mediator {
     }
 
     updateVideoFrame() {
-        this.drawVideoFrame(this.videoPlayer);
+        this.sketch.drawVideoFrame(this.videoPlayer);
     }
 
     createVideoOnLoad(fileLocation) {
@@ -187,7 +187,7 @@ class Mediator {
                 newRow.setNum(FILEHEADERS[1], this.path.curPath.xPos[i]);
                 newRow.setNum(FILEHEADERS[2], this.path.curPath.yPos[i]);
             }
-            this.sketch.saveTable(table, "Path_" + core.curFileToOutput + ".csv");
+            this.sketch.saveTable(table, "Path_" + this.path.curFileToOutput + ".csv");
             this.resetAfterWriteFile();
         }
     }

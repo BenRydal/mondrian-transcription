@@ -1,21 +1,7 @@
 class Sketch {
 
     constructor() {
-        this.recording = false; // Boolean to indicate when recording
-        this.showInfo = true; // Boolean to show/hide intro message
-        this.infoMsg = "MONDRIAN TRANSCRIPTION SOFTWARE\n\nby Ben Rydal Shapiro & contributors\nbuilt with p5.js & JavaScript\n\nHi there! This tool allows you to transcribe fine-grained movement data from video. To get started, use the top buttons to upload a floor plan image file (PNG or JPG) and a video file (MP4). Then, use the key codes below to interact with the video and use your cursor to draw on the floor plan. As you interact with the video and simultaneously draw on the floor plan, positioning data is recorded as a CSV file organized by time in seconds and x/y pixel positions scaled to the pixel size of your floor plan image file. Use the top right button to save this file anytime and then record another movement path. For more information, see: https://www.benrydal.com/software/this.pSketch-transcription\n\nKEY CODES:  Play/Pause (p), Fast-Forward (f), Rewind (b), Reset (r)";
-        this.mediator = null;
-        this.font_Lato = null;;
-        this.displayFloorplanWidth = null;
-        this.displayFloorplanHeight = null;
-        this.displayFloorplanXpos = null;
-        this.displayFloorplanYpos = null;
-        this.displayVideoWidth = null;
-        this.displayVideoHeight = null;
-        this.displayVideoXpos = null;
-        this.displayVideoYpos = null;
         this.mondrian = this.initializeSketch(); // creates drawing surface and keys
-
     }
 
     initializeSketch() {
@@ -23,34 +9,36 @@ class Sketch {
 
             sketch.setup = function () {
                 sketch.canvas = sketch.createCanvas(window.innerWidth, window.innerHeight);
-                this.mediator = new Mediator(sketch, new Path(), null, null);
-                this.font_Lato = sketch.loadFont("data/fonts/Lato-Light.ttf");
-                this.displayFloorplanWidth = sketch.width / 2;
-                this.displayFloorplanHeight = sketch.height;
-                this.displayFloorplanXpos = sketch.width / 2;
-                this.displayFloorplanYpos = 0;
-                this.displayVideoWidth = sketch.width / 2;
-                this.displayVideoHeight = sketch.height;
-                this.displayVideoXpos = 0;
-                this.displayVideoYpos = 0;
+                sketch.mediator = new Mediator(sketch, new Path(), null, null);
+                sketch.font_Lato = sketch.loadFont("data/fonts/Lato-Light.ttf");
+                sketch.displayFloorplanWidth = sketch.width / 2;
+                sketch.displayFloorplanHeight = sketch.height;
+                sketch.displayFloorplanXpos = sketch.width / 2;
+                sketch.displayFloorplanYpos = 0;
+                sketch.displayVideoWidth = sketch.width / 2;
+                sketch.displayVideoHeight = sketch.height;
+                sketch.displayVideoXpos = 0;
+                sketch.displayVideoYpos = 0;
+                sketch.recording = false; // Boolean to indicate when recording
+                sketch.showInfo = true; // Boolean to show/hide intro message
+                sketch.infoMsg = "MONDRIAN TRANSCRIPTION SOFTWARE\n\nby Ben Rydal Shapiro & contributors\nbuilt with p5.js & JavaScript\n\nHi there! This tool allows you to transcribe fine-grained movement data from video. To get started, use the top buttons to upload a floor plan image file (PNG or JPG) and a video file (MP4). Then, use the key codes below to interact with the video and use your cursor to draw on the floor plan. As you interact with the video and simultaneously draw on the floor plan, positioning data is recorded as a CSV file organized by time in seconds and x/y pixel positions scaled to the pixel size of your floor plan image file. Use the top right button to save this file anytime and then record another movement path. For more information, see: https://www.benrydal.com/software/this.pSketch-transcription\n\nKEY CODES:  Play/Pause (p), Fast-Forward (f), Rewind (b), Reset (r)";
             }
 
             /**
              * Program loop organizes two drawing modes for when data is and is not loaded
              */
             sketch.draw = function () {
-                sketch.drawIntroScreen();
                 if (sketch.mediator.floorPlanLoaded() && sketch.mediator.videoLoaded()) {
-                    if (this.recording) this.mediator.updateRecording(); // records data and updates visualization if in record mode
+                    if (sketch.recording) sketch.mediator.updateRecording(); // records data and updates visualization if in record mode
                     // If info screen showing, redraw current screen first, then drawKeys
-                    if (this.showInfo) {
-                        this.mediator.updateAllData();
-                        this.drawIntroScreen();
+                    if (sketch.showInfo) {
+                        sketch.mediator.updateAllData();
+                        sketch.drawIntroScreen();
                     }
                 } else {
                     sketch.drawLoadDataGUI();
-                    if (sketch.mediator.floorPlanLoaded()) this.mediator.updateFloorPlan();
-                    else if (sketch.mediator.videoLoaded()) this.mediator.updateVideoFrame();
+                    if (sketch.mediator.floorPlanLoaded()) sketch.mediator.updateFloorPlan();
+                    else if (sketch.mediator.videoLoaded()) sketch.mediator.updateVideoFrame();
                     if (sketch.showInfo) sketch.drawIntroScreen();
                 }
             }
@@ -112,7 +100,7 @@ class Sketch {
 
             sketch.drawIntroScreen = function () {
                 const introKeySpacing = 50; // Integer, general spacing variable
-                const introTextSize = sketch.width / 75;
+                const introTextSize = this.width / 75;
                 this.rectMode(this.CENTER);
                 this.stroke(0);
                 this.strokeWeight(1);
@@ -120,17 +108,23 @@ class Sketch {
                 this.rect(this.width / 2, this.height / 2, this.width / 2 + introKeySpacing, this.height / 2 + introKeySpacing);
                 this.fill(0);
                 this.textFont(this.font_Lato, introTextSize);
-                console.log(app.sketch.infoMsg);
-                this.text(app.sketch.infoMsg, this.width / 2, this.height / 2, this.width / 2, this.height / 2);
+                this.text(this.infoMsg, this.width / 2, this.height / 2, this.width / 2, this.height / 2);
                 this.rectMode(this.CORNER);
             }
 
             /**
              * While wrapped in a P5 instance, this P5 method operates globally on the window (there can't be two of these methods)
-            TODO: move to controller? 
-            */
+             */
             sketch.keyPressed = function () {
-                if (this.core.dataIsLoaded(this.floorPlan) && this.core.dataIsLoaded(this.videoPlayer)) app.handleKeyPressed();
+                if (sketch.mediator.floorPlanLoaded() && sketch.mediator.videoLoaded()) {
+                    // TODO: change to ===
+                    if (sketch.key == 'p' || sketch.key == 'P') {
+                        sketch.mediator.playPauseRecording();
+                        if (sketch.showInfo) app.handleIntroButton(); // prevent info screen from showing while recording for smooth user interaction
+                    } else if (sketch.key == 'r' || sketch.key == 'R') sketch.mediator.resetCurRecording();
+                    else if (sketch.key == 'b' || sketch.key == 'B') sketch.mediator.rewind();
+                    else if (sketch.key == 'f' || sketch.key == 'F') sketch.mediator.fastForward();
+                }
             }
         });
     }

@@ -15,10 +15,10 @@ class VideoPlayer {
             this.movieDiv.hide();
             // Native P5 onended and duration methods don't seem to work, so use below 
             const mov = document.getElementById('moviePlayer');
-            mov.onended = () => core.recording = false;
+            mov.onended = () => sketch.recording = false;
             // TODO: remove videoPlayer reference? app.mediator.videoPlayer?
             sketch.mediator.videoPlayer.setInputMovieSize(); // set global movie size constants
-            videoPlayer.setDisplayMovieSize(keys.displayVideoWidth, keys.displayVideoHeight);
+            sketch.mediator.videoPlayer.setDisplayMovieSize(sketch.displayVideoWidth, sketch.displayVideoHeight);
             this.movieDiv.onload = () => URL.revokeObjectURL(this.src);
             sketch.mediator.newVideoLoaded();
             console.log("New Video Loaded");
