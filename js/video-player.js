@@ -19,7 +19,7 @@ class VideoPlayer {
             const mov = document.getElementById('moviePlayer');
             mov.onended = () => sketch.recording = false;
             this.setInputMovieSize(); // set global movie size constants
-            this.setDisplayMovieSize(sketch.displayVideoWidth, sketch.displayVideoHeight);
+            this.setDisplayMovieSize(sketch.videoContainer.width, sketch.videoContainer.height);
             this.movieDiv.onload = () => URL.revokeObjectURL(this.src);
             sketch.mediator.newVideoLoaded();
             console.log("New Video Loaded");

@@ -117,11 +117,11 @@ class Mediator {
      */
     getPointDataFromDisplay() {
         // Constrain mouse to floor plan display and subtract floorPlan display x/y positions to set data to 0, 0 origin/coordinate system
-        const x = (this.sketch.constrain(this.sketch.mouseX, this.sketch.displayFloorplanXpos, this.sketch.displayFloorplanXpos + this.sketch.displayFloorplanWidth)) - this.sketch.displayFloorplanXpos;
-        const y = (this.sketch.constrain(this.sketch.mouseY, this.sketch.displayFloorplanYpos, this.sketch.displayFloorplanYpos + this.sketch.displayFloorplanHeight)) - this.sketch.displayFloorplanYpos;
+        const x = (this.sketch.constrain(this.sketch.mouseX, this.sketch.floorPlanContainer.xPos, this.sketch.floorPlanContainer.xPos + this.sketch.floorPlanContainer.width)) - this.sketch.floorPlanContainer.xPos;
+        const y = (this.sketch.constrain(this.sketch.mouseY, this.sketch.floorPlanContainer.yPos, this.sketch.floorPlanContainer.yPos + this.sketch.floorPlanContainer.height)) - this.sketch.floorPlanContainer.yPos;
         // Scale x,y positions to input floor plan width/height
-        const xPos = +(x * (this.floorPlan.width / this.sketch.displayFloorplanWidth)).toFixed(2);
-        const yPos = +(y * (this.floorPlan.height / this.sketch.displayFloorplanHeight)).toFixed(2);
+        const xPos = +(x * (this.floorPlan.width / this.sketch.floorPlanContainer.width)).toFixed(2);
+        const yPos = +(y * (this.floorPlan.height / this.sketch.floorPlanContainer.height)).toFixed(2);
         const time = +this.videoPlayer.movieDiv.time().toFixed(2);
         return {
             xPos,

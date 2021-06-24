@@ -11,21 +11,25 @@ class Sketch {
                 sketch.canvas = sketch.createCanvas(window.innerWidth, window.innerHeight);
                 sketch.mediator = new Mediator(sketch, new Path(), null, null);
                 sketch.font_Lato = sketch.loadFont("data/fonts/Lato-Light.ttf");
-                sketch.displayFloorplanWidth = sketch.width / 2;
-                sketch.displayFloorplanHeight = sketch.height;
-                sketch.displayFloorplanXpos = sketch.width / 2;
-                sketch.displayFloorplanYpos = 0;
-                sketch.displayVideoWidth = sketch.width / 2;
-                sketch.displayVideoHeight = sketch.height;
-                sketch.displayVideoXpos = 0;
-                sketch.displayVideoYpos = 0;
                 sketch.recording = false; // Boolean to indicate when recording
                 sketch.showInfo = true; // Boolean to show/hide intro message
                 sketch.infoMsg = "MONDRIAN TRANSCRIPTION SOFTWARE\n\nby Ben Rydal Shapiro & contributors\nbuilt with p5.js & JavaScript\n\nHi there! This tool allows you to transcribe fine-grained movement data from video. To get started, use the top buttons to upload a floor plan image file (PNG or JPG) and a video file (MP4). Then, use the key codes below to interact with the video and use your cursor to draw on the floor plan. As you interact with the video and simultaneously draw on the floor plan, positioning data is recorded as a CSV file organized by time in seconds and x/y pixel positions scaled to the pixel size of your floor plan image file. Use the top right button to save this file anytime and then record another movement path. For more information, see: https://www.benrydal.com/software/this.pSketch-transcription\n\nKEY CODES:  Play/Pause (p), Fast-Forward (f), Rewind (b), Reset (r)";
+                this.floorPlanContainer = {
+                    width: sketch.width / 2,
+                    height: sketch.height,
+                    xPos: sketch.width / 2,
+                    yPos: 0
+                };
+                this.videoContainer = {
+                    width: sketch.width / 2,
+                    height: sketch.height,
+                    xPos: 0,
+                    yPos: 0
+                };
             }
 
             /**
-             * Program loop organizes two drawing modes for when data is and is not loaded
+             * Program loop organizes two drawing modes based on whether data is loaded
              */
             sketch.draw = function () {
                 if (sketch.mediator.allDataLoaded()) {
@@ -45,10 +49,10 @@ class Sketch {
 
             sketch.drawLineSegment = function (curPath) {
                 // Constrain mouse to floor plan display
-                const xPos = this.constrain(this.mouseX, this.displayFloorplanXpos, this.displayFloorplanXpos + this.displayFloorplanWidth);
-                const yPos = this.constrain(this.mouseY, this.displayFloorplanYpos, this.displayFloorplanYpos + this.displayFloorplanHeight);
-                const pXPos = this.constrain(this.pmouseX, this.displayFloorplanXpos, this.displayFloorplanXpos + this.displayFloorplanWidth);
-                const pYPos = this.constrain(this.pmouseY, this.displayFloorplanYpos, this.displayFloorplanYpos + this.displayFloorplanHeight);
+                const xPos = this.constrain(this.mouseX, this.floorPlanContainer.xPos, this.floorPlanContainer.xPos + this.floorPlanContainer.width);
+                const yPos = this.constrain(this.mouseY, this.floorPlanContainer.yPos, this.floorPlanContainer.yPos + this.floorPlanContainer.height);
+                const pXPos = this.constrain(this.pmouseX, this.floorPlanContainer.xPos, this.floorPlanContainer.xPos + this.floorPlanContainer.width);
+                const pYPos = this.constrain(this.pmouseY, this.floorPlanContainer.yPos, this.floorPlanContainer.yPos + this.floorPlanContainer.height);
                 this.strokeWeight(curPath.weight);
                 this.stroke(curPath.pColor);
                 this.line(xPos, yPos, pXPos, pYPos);
@@ -68,11 +72,11 @@ class Sketch {
             }
 
             sketch.scaleXposToDisplay = function (xPos) {
-                return this.displayFloorplanXpos + (xPos / (this.mediator.getFloorPlanWidth() / this.displayFloorplanWidth));
+                return this.floorPlanContainer.xPos + (xPos / (this.mediator.getFloorPlanWidth() / this.floorPlanContainer.width));
             }
 
             sketch.scaleYposToDisplay = function (yPos) {
-                return this.displayFloorplanYpos + (yPos / (this.mediator.getFloorPlanHeight() / this.displayFloorplanHeight));
+                return this.floorPlanContainer.yPos + (yPos / (this.mediator.getFloorPlanHeight() / this.floorPlanContainer.height));
             }
 
             /**
@@ -81,15 +85,15 @@ class Sketch {
             sketch.drawVideoFrame = function (vp) {
                 this.fill(255);
                 this.stroke(255);
-                this.rect(this.displayVideoXpos, this.displayVideoYpos, this.displayVideoWidth, this.displayVideoHeight);
-                this.image(vp.movieDiv, this.displayVideoXpos, this.displayVideoYpos, vp.reScaledMovieWidth, vp.reScaledMovieHeight);
+                this.rect(this.videoContainer.xPos, this.videoContainer.yPos, this.videoContainer.width, this.videoContainer.height);
+                this.image(vp.movieDiv, this.videoContainer.xPos, this.videoContainer.yPos, vp.reScaledMovieWidth, vp.reScaledMovieHeight);
             }
 
             sketch.drawFloorPlan = function (floorPlan) {
                 this.fill(255); // draw white screen in case floor plan image has any transparency
                 this.stroke(255);
-                this.rect(this.displayFloorplanXpos, this.displayFloorplanYpos, this.displayFloorplanWidth, this.displayFloorplanHeight);
-                this.image(floorPlan, this.displayFloorplanXpos, this.displayFloorplanYpos, this.displayFloorplanWidth, this.displayFloorplanHeight);
+                this.rect(this.floorPlanContainer.xPos, this.floorPlanContainer.yPos, this.floorPlanContainer.width, this.floorPlanContainer.height);
+                this.image(floorPlan, this.floorPlanContainer.xPos, this.floorPlanContainer.yPos, this.floorPlanContainer.width, this.floorPlanContainer.height);
             }
 
             /**
@@ -98,9 +102,9 @@ class Sketch {
             sketch.drawLoadDataGUI = function () {
                 this.noStroke();
                 this.fill(225);
-                this.rect(this.displayFloorplanXpos, this.displayFloorplanYpos, this.displayFloorplanWidth, this.displayFloorplanHeight);
+                this.rect(this.floorPlanContainer.xPos, this.floorPlanContainer.yPos, this.floorPlanContainer.width, this.floorPlanContainer.height);
                 this.fill(200);
-                this.rect(this.displayVideoXpos, this.displayVideoYpos, this.displayVideoWidth, this.displayVideoHeight);
+                this.rect(this.videoContainer.xPos, this.videoContainer.yPos, this.videoContainer.width, this.videoContainer.height);
             }
 
             sketch.drawIntroScreen = function () {
