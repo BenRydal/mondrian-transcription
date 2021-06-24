@@ -4,9 +4,6 @@ class Controller {
         this.sketch = sketch;
     }
 
-    /**
-     * Shows/hides info screen and redraws data if needed
-     */
     handleIntroButton() {
         this.sketch.mondrian.mediator.updateIntro();
     }
@@ -17,30 +14,23 @@ class Controller {
 
     /**
      * Handles asynchronous loading and error handling of floor plan image file
-     * @param  {File} input
+     * @param  {PNG/JPG File} input
      */
-    loadFloorPlan(input) {
+    handleFloorPlanButton(input) {
         let file = input.files[0];
         input.value = ''; // reset input value so you can load same file again in browser
         let fileLocation = URL.createObjectURL(file);
-        this.sketch.mondrian.loadImage(fileLocation, (img) => {
-            URL.revokeObjectURL(img.src);
-            this.sketch.mondrian.mediator.newFloorPlanLoaded(img);
-            console.log("Floor Plan Loaded");
-        }, e => {
-            alert("Error loading floor plan image file. Please make sure it is correctly formatted as a PNG or JPG image file.")
-            console.log(e);
-        });
+        this.sketch.mondrian.mediator.loadFloorPlan(fileLocation);
     }
 
     /**
      * Handles async loading of video file and creates movie object
      * @param  {.MP4 File} input
      */
-    loadVideo(input) {
+    handleVideoButton(input) {
         let file = input.files[0];
         input.value = ''; // reset input value so you can load same file again in browser
         let fileLocation = URL.createObjectURL(file);
-        this.sketch.mondrian.mediator.createVideoOnLoad(fileLocation);
+        this.sketch.mondrian.mediator.loadVideo(fileLocation);
     }
 }

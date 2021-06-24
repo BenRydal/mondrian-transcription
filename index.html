@@ -27,10 +27,10 @@
                 onclick="app.handleIntroButton(this)"></button>
             <label for="introButton">INFORMATION</label>
             <input type="file" name="file" id="inputFloorPlan" name="file" class="inputfile" accept=".png, .jpg, .jpeg"
-                onchange="app.loadFloorPlan(this)">
+                onchange="app.handleFloorPlanButton(this)">
             <label for="inputFloorPlan">Load Floor Plan Image (PNG/JPG)</label>
             <input type="file" name="file" id="inputVideo" name="file" class="inputfile" accept=".mp4"
-                onchange="app.loadVideo(this)">
+                onchange="app.handleVideoButton(this)">
             <label for="inputVideo">Load Video File (MP4)</label>
             <button type="button" id="saveButton" class="inputfile" onclick="app.handleSaveButton(this)"></button>
             <label for="saveButton">Save Movement File (CSV)</label>

@@ -72,7 +72,7 @@ class Mediator {
         this.sketch.drawVideoFrame(this.videoPlayer);
     }
 
-    createVideoOnLoad(fileLocation) {
+    loadVideo(fileLocation) {
         if (this.videoLoaded()) this.videoPlayer.destroy(); // if a video exists, destroy it
         this.videoPlayer = new VideoPlayer(fileLocation, this.sketch); // create new videoPlayer
     }
@@ -82,6 +82,17 @@ class Mediator {
         this.stopRecording(); // necessary to be able to draw starting frame before playing the video
         this.updateVideoFrame(); // after video loaded, draw first frame to display it
         if (this.floorPlanLoaded()) this.updateFloorPlan();
+    }
+
+    loadFloorPlan(fileLocation) {
+        this.sketch.loadImage(fileLocation, (img) => {
+            this.newFloorPlanLoaded(img);
+            URL.revokeObjectURL(fileLocation);
+            console.log("Floor Plan Loaded");
+        }, e => {
+            alert("Error loading floor plan image file. Please make sure it is correctly formatted as a PNG or JPG image file.")
+            console.log(e);
+        });
     }
 
     newFloorPlanLoaded(img) {

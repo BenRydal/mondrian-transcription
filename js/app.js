@@ -10,11 +10,3 @@ https://etd.library.vanderbilt.edu/available/etd-03212018-140140/unrestricted/Sh
 */
 
 const app = new Controller(new Sketch());
-
-
-// Controller--handles communication between user input in DOM and P5
-// Path--holds Path data and methods 
-// VideoPlayer--holds Video data and methods
-// Mediator--mediates between P5 sketch and other classes
-// Sketch
-// UNKNOWN: write file, test data?
