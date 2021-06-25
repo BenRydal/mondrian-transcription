@@ -4,12 +4,10 @@
 <head>
     <title>Mondrian Transcription Software: Transcribing Movement from Video</title>
     <script src="https://cdn.jsdelivr.net/npm/p5@0.10.2/lib/p5.js"></script>
-    <script src="js/main.js"></script>
-    <script src="js/core.js"></script>
-    <script src="js/handlers.js"></script>
-    <script src="js/load-data.js"></script>
-    <script src="js/update-data.js"></script>
-    <script src="js/keys.js"></script>
+    <script src="js/controller.js"></script>
+    <script src="js/sketch.js"></script>
+    <script src="js/path.js"></script>
+    <script src="js/mediator.js"></script>
     <script src="js/video-player.js"></script>
     <link rel="stylesheet" type="text/css" href="css/input.css" />
     <link rel="apple-touch-icon" sizes="180x180" href="favicon/apple-touch-icon.png">
@@ -22,19 +20,21 @@
 </head>
 
 <body>
+    <script src="js/app.js"></script>
     <div class="introBar">
         <form action="/action_page.php">
-            <button type="button" id="introButton" class="inputfile"
-                onclick="handlers.handleIntroButton(this)"></button>
+            <button type="button" id="introButton" class="inputfile" onclick="app.handleIntroButton(this)"></button>
             <label for="introButton">INFORMATION</label>
             <input type="file" name="file" id="inputFloorPlan" name="file" class="inputfile" accept=".png, .jpg, .jpeg"
-                onchange="loadData.loadFloorPlan(this)">
+                onchange="app.handleFloorPlanButton(this)">
             <label for="inputFloorPlan">Load Floor Plan Image (PNG/JPG)</label>
             <input type="file" name="file" id="inputVideo" name="file" class="inputfile" accept=".mp4"
-                onchange="loadData.loadVideo(this)">
+                onchange="app.handleVideoButton(this)">
             <label for="inputVideo">Load Video File (MP4)</label>
-            <button type="button" id="saveButton" class="inputfile" onclick="handlers.handleSaveButton(this)"></button>
+            <button type="button" id="saveButton" class="inputfile" onclick="app.handleSaveButton(this)"></button>
             <label for="saveButton">Save Movement File (CSV)</label>
+            <button type="button" id="resetButton" class="inputfile" onclick="app.handleResetButton(this)"></button>
+            <label for="resetButton">Clear Recording</label>
         </form>
     </div>
 </body>
