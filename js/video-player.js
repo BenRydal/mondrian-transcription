@@ -2,32 +2,32 @@ class VideoPlayer {
 
     /**
      * @param  {String} fileLocation
-     * @param  {} P5Instance
+     * @param  {P5 Instance} sketch
      */
 
     constructor(fileLocation, sketch) {
         this.videoJumpValue = 5; // Integer value in seconds to ff or rewind
-        this.inputMovieWidth = null;
-        this.inputMovieHeight = null; // Decimal pixel width/ height of inputted video file
-        this.reScaledMovieWidth = null; // Decimal scaled width/height of input video file to fit display container
+        this.inputMovieWidth = null; // Original pixel size of video   
+        this.inputMovieHeight = null;
+        this.reScaledMovieWidth = null; // Rescaled pixel size of video to fit display container
         this.reScaledMovieHeight = null;
         this.movieDiv = sketch.createVideo(fileLocation, () => {
             // ADD VIDEO DURATION TEST HERE? console.log(movieDiv.duration());
             this.movieDiv.id('moviePlayer');
             this.movieDiv.hide();
-            // Native P5 onended and duration methods don't seem to work, so use below 
-            const mov = document.getElementById('moviePlayer');
-            mov.onended = () => sketch.recording = false;
             this.setInputMovieSize(); // set global movie size constants
             this.setDisplayMovieSize(sketch.videoContainer.width, sketch.videoContainer.height);
-            this.movieDiv.onload = () => URL.revokeObjectURL(this.src);
             sketch.mediator.newVideoLoaded();
+            this.movieDiv.onload = () => URL.revokeObjectURL(fileLocation);
+            // end program recording when movie ends
+            document.getElementById('moviePlayer').onended = () => sketch.recording = false;
             console.log("New Video Loaded");
         });
     }
 
     /**
      * Sets global pixel width/height for movie file to scale size dynamically in program
+     * NOTE: get input movie width/height because if you resize video movieDiv width/height are lost/set to 0
      */
     setInputMovieSize() {
         this.inputMovieWidth = this.movieDiv.width;
