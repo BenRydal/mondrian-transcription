@@ -169,7 +169,7 @@ class Mediator {
 
     writeFile() {
         if (this.allDataLoaded() && this.path.curPath.xPos.length > 0) {
-            this.sketch.mondrian.saveTable(this.path.getTable(), "Path_" + this.path.curFileToOutput + ".csv");
+            this.sketch.mondrian.saveTable(this.path.getTable(), "Path_" + this.path.curFileToOutput, "csv");
             this.path.curFileToOutput++;
             this.path.addPath();
             this.path.clearCurPath();
