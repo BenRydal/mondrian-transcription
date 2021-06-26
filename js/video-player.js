@@ -17,7 +17,7 @@ class VideoPlayer {
             this.movieDiv.hide();
             this.setInputMovieSize(); // set global movie size constants
             this.setDisplayMovieSize(sketch.videoContainer.width, sketch.videoContainer.height);
-            sketch.mediator.newVideoLoaded();
+            app.mediator.newVideoLoaded();
             this.movieDiv.onload = () => URL.revokeObjectURL(fileLocation);
             // end program recording when movie ends
             document.getElementById('moviePlayer').onended = () => sketch.recording = false;

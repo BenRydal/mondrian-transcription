@@ -9,4 +9,4 @@ To reference or read more about this work please see:
 https://etd.library.vanderbilt.edu/available/etd-03212018-140140/unrestricted/Shapiro_Dissertation.pdf
 */
 
-const app = new Controller(new Sketch());
+const app = new Controller(new Mediator());

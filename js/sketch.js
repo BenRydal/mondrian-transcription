@@ -9,7 +9,6 @@ class Sketch {
 
             sketch.setup = function () {
                 sketch.canvas = sketch.createCanvas(window.innerWidth, window.innerHeight);
-                sketch.mediator = new Mediator(sketch, new Path(), null, null);
                 sketch.font_Lato = sketch.loadFont("data/fonts/Lato-Light.ttf");
                 sketch.recording = false; // Boolean to indicate when recording
                 sketch.showInfo = true; // Boolean to show/hide intro message
@@ -32,17 +31,17 @@ class Sketch {
              * Program loop organizes two drawing modes based on whether data is loaded
              */
             sketch.draw = function () {
-                if (sketch.mediator.allDataLoaded()) {
-                    if (sketch.recording) sketch.mediator.updateRecording(); // records data and updates visualization if in record mode
+                if (app.mediator.allDataLoaded()) {
+                    if (sketch.recording) app.mediator.updateRecording(); // records data and updates visualization if in record mode
                     // If info screen showing, redraw current screen first, then drawKeys
                     if (sketch.showInfo) {
-                        sketch.mediator.updateAllData();
+                        app.mediator.updateAllData();
                         sketch.drawIntroScreen();
                     }
                 } else {
                     sketch.drawLoadDataGUI();
-                    if (sketch.mediator.floorPlanLoaded()) sketch.mediator.updateFloorPlan();
-                    else if (sketch.mediator.videoLoaded()) sketch.mediator.updateVideoFrame();
+                    if (app.mediator.floorPlanLoaded()) app.mediator.updateFloorPlan();
+                    else if (app.mediator.videoLoaded()) app.mediator.updateVideoFrame();
                     if (sketch.showInfo) sketch.drawIntroScreen();
                 }
             }
@@ -72,11 +71,11 @@ class Sketch {
             }
 
             sketch.scaleXposToDisplay = function (xPos) {
-                return this.floorPlanContainer.xPos + (xPos / (this.mediator.getFloorPlanWidth() / this.floorPlanContainer.width));
+                return this.floorPlanContainer.xPos + (xPos / (app.mediator.getFloorPlanWidth() / this.floorPlanContainer.width));
             }
 
             sketch.scaleYposToDisplay = function (yPos) {
-                return this.floorPlanContainer.yPos + (yPos / (this.mediator.getFloorPlanHeight() / this.floorPlanContainer.height));
+                return this.floorPlanContainer.yPos + (yPos / (app.mediator.getFloorPlanHeight() / this.floorPlanContainer.height));
             }
 
             /**
@@ -138,12 +137,12 @@ class Sketch {
              * While wrapped in a P5 instance, this P5 method operates globally on the window (there can't be two of these methods)
              */
             sketch.keyPressed = function () {
-                if (sketch.mediator.allDataLoaded()) {
+                if (app.mediator.allDataLoaded()) {
                     if (sketch.key === 'p' || sketch.key === 'P') {
-                        sketch.mediator.playPauseRecording();
-                        if (sketch.showInfo) sketch.mediator.updateIntro(); // prevent info screen from showing while recording for smooth user interaction
-                    } else if (sketch.key === 'r' || sketch.key === 'R') sketch.mediator.rewind();
-                    else if (sketch.key === 'f' || sketch.key === 'F') sketch.mediator.fastForward();
+                        app.mediator.playPauseRecording();
+                        if (sketch.showInfo) app.mediator.updateIntro(); // prevent info screen from showing while recording for smooth user interaction
+                    } else if (sketch.key === 'r' || sketch.key === 'R') app.mediator.rewind();
+                    else if (sketch.key === 'f' || sketch.key === 'F') app.mediator.fastForward();
                 }
             }
 
