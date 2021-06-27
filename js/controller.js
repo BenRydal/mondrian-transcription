@@ -1,15 +1,15 @@
 class Controller {
 
-    constructor(sketch) {
-        this.sketch = sketch;
+    constructor(mediator) {
+        this.mediator = mediator;
     }
 
     handleIntroButton() {
-        this.sketch.mondrian.mediator.updateIntro();
+        this.mediator.updateIntro();
     }
 
     handleSaveButton() {
-        this.sketch.mondrian.mediator.writeFile();
+        this.mediator.writeFile();
     }
 
     /**
@@ -20,7 +20,7 @@ class Controller {
         let file = input.files[0];
         input.value = ''; // reset input value so you can load same file again in browser
         let fileLocation = URL.createObjectURL(file);
-        this.sketch.mondrian.mediator.loadFloorPlan(fileLocation);
+        this.mediator.loadFloorPlan(fileLocation);
     }
 
     /**
@@ -31,10 +31,10 @@ class Controller {
         let file = input.files[0];
         input.value = ''; // reset input value so you can load same file again in browser
         let fileLocation = URL.createObjectURL(file);
-        this.sketch.mondrian.mediator.loadVideo(fileLocation);
+        this.mediator.loadVideo(fileLocation);
     }
 
     handleResetButton() {
-        this.sketch.mondrian.mediator.resetCurRecording();
+        this.mediator.resetCurRecording();
     }
 }
