@@ -138,17 +138,21 @@ class Sketch {
              */
             sketch.keyPressed = function () {
                 if (app.mediator.allDataLoaded()) {
-                    if (sketch.key === 'p' || sketch.key === 'P') {
-                        app.mediator.playPauseRecording();
-                        if (sketch.showInfo) app.mediator.updateIntro(); // prevent info screen from showing while recording for smooth user interaction
-                    } else if (sketch.key === 'r' || sketch.key === 'R') app.mediator.rewind();
+                    if (sketch.key === 'r' || sketch.key === 'R') app.mediator.rewind();
                     else if (sketch.key === 'f' || sketch.key === 'F') app.mediator.fastForward();
                 }
             }
 
-            // sketch.mousePressed = function () {
+            sketch.mousePressed = function () {
+                if (app.mediator.allDataLoaded() && sketch.overRect(this.floorPlanContainer.xPos, this.floorPlanContainer.yPos, this.floorPlanContainer.width, this.floorPlanContainer.height)) {
+                    app.mediator.playPauseRecording();
+                    if (sketch.showInfo) app.mediator.updateIntro(); // prevent info screen from showing while recording for smooth user interaction
+                }
+            }
 
-            // }
+            sketch.overRect = function (x, y, boxWidth, boxHeight) {
+                return sketch.mouseX >= x && sketch.mouseX <= x + boxWidth && sketch.mouseY >= y && sketch.mouseY <= y + boxHeight;
+            }
         });
     }
 }
