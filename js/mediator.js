@@ -13,6 +13,10 @@ class Mediator {
         this.isInfoShowing = true; // Boolean to show/hide intro message
     }
 
+    /*
+     ** ** ** ** UPDATE METHODS ** ** ** **
+     */
+
     /**
      * Coordinates video and line segment drawing in display. Decides whether to record data point based on sampling rate method
      */
@@ -111,6 +115,9 @@ class Mediator {
         }
     }
 
+    /*
+     ** ** ** ** DATA LOADING METHODS ** ** ** **
+     */
     loadVideo(fileLocation) {
         if (this.videoLoaded()) this.videoPlayer.destroy(); // if a video exists, destroy it
         this.videoPlayer = new VideoPlayer(fileLocation, this.sketch.mondrian); // create new videoPlayer
@@ -158,6 +165,10 @@ class Mediator {
         }
     }
 
+    /*
+     ** ** ** ** TEST DATA METHODS ** ** ** **
+     */
+
     /**
      * @param  {Any Type} data
      */
@@ -176,6 +187,10 @@ class Mediator {
     allDataLoaded() {
         return this.dataIsLoaded(this.floorPlan) && this.dataIsLoaded(this.videoPlayer);
     }
+
+    /*
+     ** ** ** ** GETTERS/SETTERS ** ** ** **
+     */
 
     getFloorPlanWidth() {
         return this.floorPlan.width;
