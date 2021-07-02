@@ -20,7 +20,7 @@ class VideoPlayer {
             app.mediator.newVideoLoaded();
             this.movieDiv.onload = () => URL.revokeObjectURL(fileLocation);
             // end program recording when movie ends
-            document.getElementById('moviePlayer').onended = () => sketch.recording = false;
+            document.getElementById('moviePlayer').onended = () => app.mediator.isRecording = false;
             console.log("New Video Loaded");
         });
     }

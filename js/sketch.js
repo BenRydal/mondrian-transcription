@@ -10,8 +10,6 @@ class Sketch {
             sketch.setup = function () {
                 sketch.canvas = sketch.createCanvas(window.innerWidth, window.innerHeight);
                 sketch.font_Lato = sketch.loadFont("data/fonts/Lato-Light.ttf");
-                sketch.recording = false; // Boolean to indicate when recording
-                sketch.showInfo = true; // Boolean to show/hide intro message
                 sketch.infoMsg = "MONDRIAN TRANSCRIPTION SOFTWARE\n\nby Ben Rydal Shapiro & contributors\nbuilt with p5.js & JavaScript\n\nHi there! This tool allows you to transcribe fine-grained movement data from video. To get started, use the top buttons to upload a floor plan image file (PNG or JPG) and a video file (MP4). Then, click anywhere on the floorplan to start recording movement data synchronized to the video—as you use your cursor to draw on the floor plan, positioning data is recorded as a CSV file organized by time in seconds and x/y pixel positions scaled to the pixel size of your floor plan image file. Play/pause recording by clicking on the floorplan. On your keyboard press ‘f’ to fast forward and ‘r’ to rewind the video and data recording in 5 second intervals. Use the top buttons to clear your current recording and restart the video or save your recording and record another movement path. For more information, see: https://www.benrydal.com/software/mondrian-transcription";
                 sketch.floorPlanContainer = {
                     width: sketch.width / 2,
@@ -32,9 +30,9 @@ class Sketch {
              */
             sketch.draw = function () {
                 if (app.mediator.allDataLoaded()) {
-                    if (sketch.recording) app.mediator.updateRecording(); // records data and updates visualization if in record mode
+                    if (app.mediator.isRecording) app.mediator.updateRecording(); // records data and updates visualization if in record mode
                     // If info screen showing, redraw current screen first, then drawKeys
-                    if (sketch.showInfo) {
+                    if (app.mediator.isInfoShowing) {
                         app.mediator.updateAllData();
                         sketch.drawIntroScreen();
                     }
@@ -42,7 +40,7 @@ class Sketch {
                     sketch.drawLoadDataGUI();
                     if (app.mediator.floorPlanLoaded()) app.mediator.updateFloorPlan();
                     else if (app.mediator.videoLoaded()) app.mediator.updateVideoFrame();
-                    if (sketch.showInfo) sketch.drawIntroScreen();
+                    if (app.mediator.isInfoShowing) sketch.drawIntroScreen();
                 }
             }
 
@@ -146,7 +144,7 @@ class Sketch {
             sketch.mousePressed = function () {
                 if (app.mediator.allDataLoaded() && sketch.overRect(this.floorPlanContainer.xPos, this.floorPlanContainer.yPos, this.floorPlanContainer.width, this.floorPlanContainer.height)) {
                     app.mediator.playPauseRecording();
-                    if (sketch.showInfo) app.mediator.updateIntro(); // prevent info screen from showing while recording for smooth user interaction
+                    if (app.mediator.isInfoShowing) app.mediator.updateIntro(); // prevent info screen from showing while recording for smooth user interaction
                 }
             }
 

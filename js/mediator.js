@@ -9,6 +9,8 @@ class Mediator {
         this.path = new Path();
         this.videoPlayer = null;
         this.floorPlan = null;
+        this.isRecording = false; // Boolean to indicate recording
+        this.isInfoShowing = true; // Boolean to show/hide intro message
     }
 
     /**
@@ -33,8 +35,8 @@ class Mediator {
     }
 
     updateIntro() {
-        if (this.sketch.mondrian.showInfo && this.allDataLoaded()) this.updateAllData();
-        this.sketch.mondrian.showInfo = !this.sketch.mondrian.showInfo;
+        if (this.isInfoShowing && this.allDataLoaded()) this.updateAllData();
+        this.isInfoShowing = !this.isInfoShowing;
     }
 
     updateAllData() {
@@ -67,7 +69,7 @@ class Mediator {
         const rewindToTime = this.path.curPath.tPos[this.path.curPath.tPos.length - 1] - this.videoPlayer.videoJumpValue;
         this.path.rewind(rewindToTime);
         this.videoPlayer.rewind(rewindToTime);
-        if (this.sketch.mondrian.recording) this.playPauseRecording(); // pause recording and video if currently recording
+        if (this.isRecording) this.playPauseRecording(); // pause recording and video if currently recording
         this.updateAllData();
     }
 
@@ -83,16 +85,16 @@ class Mediator {
 
     stopRecording() {
         this.videoPlayer.stop();
-        this.sketch.mondrian.recording = false;
+        this.isRecording = false;
     }
 
     playPauseRecording() {
-        if (this.sketch.mondrian.recording) {
+        if (this.isRecording) {
             this.videoPlayer.pause();
-            this.sketch.mondrian.recording = false;
+            this.isRecording = false;
         } else {
             this.videoPlayer.play();
-            this.sketch.mondrian.recording = true;
+            this.isRecording = true;
         }
     }
 
