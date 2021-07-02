@@ -13,6 +13,22 @@ class Mediator {
         this.isInfoShowing = true; // Boolean to show/hide intro message
     }
 
+    getIsRecording() {
+        return this.isRecording;
+    }
+
+    setIsRecording(value) {
+        this.isRecording = value;
+    }
+
+    getIsInfoShowing() {
+        return this.isInfoShowing;
+    }
+
+    setIsInfoShowing(value) {
+        this.isInfoShowing = value;
+    }
+
     /**
      * Coordinates video and line segment drawing in display. Decides whether to record data point based on sampling rate method
      */
@@ -35,8 +51,9 @@ class Mediator {
     }
 
     updateIntro() {
-        if (this.isInfoShowing && this.allDataLoaded()) this.updateAllData();
-        this.isInfoShowing = !this.isInfoShowing;
+        if (this.getIsInfoShowing() && this.allDataLoaded()) this.updateAllData();
+        if (this.getIsInfoShowing()) this.setIsInfoShowing(false);
+        else this.setIsInfoShowing(true);
     }
 
     updateAllData() {
@@ -69,7 +86,7 @@ class Mediator {
         const rewindToTime = this.path.curPath.tPos[this.path.curPath.tPos.length - 1] - this.videoPlayer.videoJumpValue;
         this.path.rewind(rewindToTime);
         this.videoPlayer.rewind(rewindToTime);
-        if (this.isRecording) this.playPauseRecording(); // pause recording and video if currently recording
+        if (this.getIsRecording()) this.playPauseRecording(); // pause recording and video if currently recording
         this.updateAllData();
     }
 
@@ -85,16 +102,16 @@ class Mediator {
 
     stopRecording() {
         this.videoPlayer.stop();
-        this.isRecording = false;
+        this.setIsRecording(false);
     }
 
     playPauseRecording() {
-        if (this.isRecording) {
+        if (this.getIsRecording()) {
             this.videoPlayer.pause();
-            this.isRecording = false;
+            this.setIsRecording(false);
         } else {
             this.videoPlayer.play();
-            this.isRecording = true;
+            this.setIsRecording(true);
         }
     }
 

@@ -30,9 +30,9 @@ class Sketch {
              */
             sketch.draw = function () {
                 if (app.mediator.allDataLoaded()) {
-                    if (app.mediator.isRecording) app.mediator.updateRecording(); // records data and updates visualization if in record mode
+                    if (app.mediator.getIsRecording()) app.mediator.updateRecording(); // records data and updates visualization if in record mode
                     // If info screen showing, redraw current screen first, then drawKeys
-                    if (app.mediator.isInfoShowing) {
+                    if (app.mediator.getIsInfoShowing()) {
                         app.mediator.updateAllData();
                         sketch.drawIntroScreen();
                     }
@@ -40,7 +40,7 @@ class Sketch {
                     sketch.drawLoadDataGUI();
                     if (app.mediator.floorPlanLoaded()) app.mediator.updateFloorPlan();
                     else if (app.mediator.videoLoaded()) app.mediator.updateVideoFrame();
-                    if (app.mediator.isInfoShowing) sketch.drawIntroScreen();
+                    if (app.mediator.getIsInfoShowing()) sketch.drawIntroScreen();
                 }
             }
 
@@ -144,7 +144,7 @@ class Sketch {
             sketch.mousePressed = function () {
                 if (app.mediator.allDataLoaded() && sketch.overRect(this.floorPlanContainer.xPos, this.floorPlanContainer.yPos, this.floorPlanContainer.width, this.floorPlanContainer.height)) {
                     app.mediator.playPauseRecording();
-                    if (app.mediator.isInfoShowing) app.mediator.updateIntro(); // prevent info screen from showing while recording for smooth user interaction
+                    if (app.mediator.getIsInfoShowing()) app.mediator.updateIntro(); // prevent info screen from showing while recording for smooth user interaction
                 }
             }
 
