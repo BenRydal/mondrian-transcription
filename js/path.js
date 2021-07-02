@@ -3,13 +3,13 @@
      constructor() {
          this.paths = []; // List to hold all path objects created
          this.colorList = ['#6a3d9a', '#ff7f00', '#33a02c', '#1f78b4', '#e31a1c', '#ffff99', '#b15928', '#cab2d6', '#fdbf6f', '#b2df8a', '#a6cee3', '#fb9a99'];
-         this.curPath = this.createPath([], [], [], 0, 7); // initialize with empty arrays, color black (0), path strokeWeight
+         this.curPath = this.createPath([], [], [], 0, 7); // initialize Path with empty arrays, color black (0), path strokeWeight
          this.curFileToOutput = 0; // Integer counter to mark current file number to write to output
      }
 
      /**
-      * Factory function that creates a Path object representing object being recorded such as a person or thing
-      * Holds decimal / number lists of x / y pixel positions and time values in seconds / fractions of seconds
+      * Factory function that creates a Path object 
+      * Path object represents object being recorded such as a person or artifact as decimal / number lists of x / y pixel positions and time values in seconds / fractions of seconds with color and strokeWeight
       * @param  {Array} xPos
       * @param  {Array} yPos
       * @param  {Array} tPos
@@ -19,8 +19,8 @@
              xPos,
              yPos,
              tPos,
-             pColor,
-             weight
+             pColor, // color of path
+             weight // strokeweight of path
          };
      }
 

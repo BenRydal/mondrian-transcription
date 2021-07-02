@@ -1,6 +1,6 @@
 /*
 Mediator class coordinates calls to 4 other classes including P5 sketch
-Contains methods for procedural updates, testing data, getters, and loading data (called from Controller)
+Contains methods for procedural updates, testing data, getters/setters, and loading data (called from Controller)
 */
 class Mediator {
 
@@ -13,22 +13,6 @@ class Mediator {
         this.isInfoShowing = true; // Boolean to show/hide intro message
     }
 
-    getIsRecording() {
-        return this.isRecording;
-    }
-
-    setIsRecording(value) {
-        this.isRecording = value;
-    }
-
-    getIsInfoShowing() {
-        return this.isInfoShowing;
-    }
-
-    setIsInfoShowing(value) {
-        this.isInfoShowing = value;
-    }
-
     /**
      * Coordinates video and line segment drawing in display. Decides whether to record data point based on sampling rate method
      */
@@ -37,6 +21,18 @@ class Mediator {
         this.sketch.mondrian.drawLineSegment(this.path.curPath); // Apparently, this should not be called within testSampleRate block
         if (this.testSampleRate()) this.updateCurPath();
     }
+
+    /**
+     * Method to sample data in 2 ways
+     * (1) if mouse moves sample at rate of 2 decimal points
+     * (2) if stopped sample at rate of 0 decimal points, approximately every 1 second in movie
+     */
+    testSampleRate() {
+        if (this.path.curPath.tPos.length === 0) return true;
+        else if (this.sketch.mondrian.mouseX !== this.sketch.mondrian.pmouseX || this.sketch.mondrian.mouseY !== this.sketch.mondrian.pmouseY) return +(this.path.curPath.tPos[this.path.curPath.tPos.length - 1].toFixed(2)) < +(this.videoPlayer.movieDiv.time().toFixed(2));
+        else return +(this.path.curPath.tPos[this.path.curPath.tPos.length - 1].toFixed(0)) < +(this.videoPlayer.movieDiv.time().toFixed(0));
+    }
+
     /**
      * Adds properly scaled data point from input floorPlan to current path
      */
@@ -115,44 +111,6 @@ class Mediator {
         }
     }
 
-    /**
-     * @param  {Any Type} data
-     */
-    dataIsLoaded(data) {
-        return data != null; // in javascript this tests for both undefined and null values
-    }
-
-    floorPlanLoaded() {
-        return this.dataIsLoaded(this.floorPlan);
-    }
-
-    videoLoaded() {
-        return this.dataIsLoaded(this.videoPlayer);
-    }
-
-    allDataLoaded() {
-        return this.dataIsLoaded(this.floorPlan) && this.dataIsLoaded(this.videoPlayer);
-    }
-
-    /**
-     * Method to sample data in 2 ways
-     * (1) if mouse moves sample at rate of 2 decimal points
-     * (2) if stopped sample at rate of 0 decimal points, approximately every 1 second in movie
-     */
-    testSampleRate() {
-        if (this.path.curPath.tPos.length === 0) return true;
-        else if (this.sketch.mondrian.mouseX !== this.sketch.mondrian.pmouseX || this.sketch.mondrian.mouseY !== this.sketch.mondrian.pmouseY) return +(this.path.curPath.tPos[this.path.curPath.tPos.length - 1].toFixed(2)) < +(this.videoPlayer.movieDiv.time().toFixed(2));
-        else return +(this.path.curPath.tPos[this.path.curPath.tPos.length - 1].toFixed(0)) < +(this.videoPlayer.movieDiv.time().toFixed(0));
-    }
-
-    getFloorPlanWidth() {
-        return this.floorPlan.width;
-    }
-
-    getFloorPlanHeight() {
-        return this.floorPlan.height;
-    }
-
     loadVideo(fileLocation) {
         if (this.videoLoaded()) this.videoPlayer.destroy(); // if a video exists, destroy it
         this.videoPlayer = new VideoPlayer(fileLocation, this.sketch.mondrian); // create new videoPlayer
@@ -195,5 +153,48 @@ class Mediator {
             this.stopRecording();
             this.updateAllData();
         }
+    }
+
+    /**
+     * @param  {Any Type} data
+     */
+    dataIsLoaded(data) {
+        return data != null; // in javascript this tests for both undefined and null values
+    }
+
+    floorPlanLoaded() {
+        return this.dataIsLoaded(this.floorPlan);
+    }
+
+    videoLoaded() {
+        return this.dataIsLoaded(this.videoPlayer);
+    }
+
+    allDataLoaded() {
+        return this.dataIsLoaded(this.floorPlan) && this.dataIsLoaded(this.videoPlayer);
+    }
+
+    getFloorPlanWidth() {
+        return this.floorPlan.width;
+    }
+
+    getFloorPlanHeight() {
+        return this.floorPlan.height;
+    }
+
+    getIsRecording() {
+        return this.isRecording;
+    }
+
+    setIsRecording(value) {
+        this.isRecording = value;
+    }
+
+    getIsInfoShowing() {
+        return this.isInfoShowing;
+    }
+
+    setIsInfoShowing(value) {
+        this.isInfoShowing = value;
     }
 }
