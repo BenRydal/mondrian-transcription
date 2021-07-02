@@ -115,8 +115,11 @@ class Mediator {
         if (this.videoLoaded()) this.videoPlayer.destroy(); // if a video exists, destroy it
         this.videoPlayer = new VideoPlayer(fileLocation, this.sketch.mondrian); // create new videoPlayer
     }
-
+    /**
+     * Tests if new video has a duration (additional formatting test) and updates all data/views if so or destroys video and alerts user if not
+     */
     newVideoLoaded() {
+        console.log("New Video Loaded");
         this.path.clearAllPaths();
         this.stopRecording(); // necessary to be able to draw starting frame before playing the video
         this.updateVideoFrame(); // after video loaded, draw first frame to display it
@@ -127,7 +130,6 @@ class Mediator {
         this.sketch.mondrian.loadImage(fileLocation, (img) => {
             this.newFloorPlanLoaded(img);
             URL.revokeObjectURL(fileLocation);
-            console.log("Floor Plan Loaded");
         }, e => {
             alert("Error loading floor plan image file. Please make sure it is correctly formatted as a PNG or JPG image file.")
             console.log(e);
@@ -135,6 +137,7 @@ class Mediator {
     }
 
     newFloorPlanLoaded(img) {
+        console.log("New Floor Plan Loaded");
         this.floorPlan = img;
         this.path.clearAllPaths();
         this.updateFloorPlan();
