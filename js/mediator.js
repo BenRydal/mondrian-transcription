@@ -1,11 +1,11 @@
 /*
-Mediator class coordinates calls to 4 other classes including P5 sketch
+Mediator class coordinates calls to 4 other classes including P5 sk
 Contains methods for procedural updates, testing data, getters/setters, and loading data (called from Controller)
 */
 class Mediator {
 
     constructor(sketch) {
-        this.sketch = sketch;
+        this.sk = sketch;
         this.path = new Path();
         this.videoPlayer = null;
         this.floorPlan = null;
@@ -22,7 +22,7 @@ class Mediator {
      */
     updateRecording() {
         this.updateVideoFrame();
-        this.sketch.drawLineSegment(this.path.curPath); // Apparently, this should not be called within testSampleRate block
+        this.sk.drawLineSegment(this.path.curPath); // Apparently, this should not be called within testSampleRate block
         if (this.testSampleRate()) this.updateCurPath();
     }
 
@@ -33,7 +33,7 @@ class Mediator {
      */
     testSampleRate() {
         if (this.path.curPath.tPos.length === 0) return true;
-        else if (this.sketch.mouseX !== this.sketch.pmouseX || this.sketch.mouseY !== this.sketch.pmouseY) return +(this.path.curPath.tPos[this.path.curPath.tPos.length - 1].toFixed(2)) < +(this.videoPlayer.movieDiv.time().toFixed(2));
+        else if (this.sk.mouseX !== this.sk.pmouseX || this.sk.mouseY !== this.sk.pmouseY) return +(this.path.curPath.tPos[this.path.curPath.tPos.length - 1].toFixed(2)) < +(this.videoPlayer.movieDiv.time().toFixed(2));
         else return +(this.path.curPath.tPos[this.path.curPath.tPos.length - 1].toFixed(0)) < +(this.videoPlayer.movieDiv.time().toFixed(0));
     }
 
@@ -41,7 +41,7 @@ class Mediator {
      * Adds properly scaled data point from input floorPlan to current path
      */
     updateCurPath() {
-        const [xPos, yPos] = this.sketch.getScaledMousePos(this.floorPlan);
+        const [xPos, yPos] = this.sk.getScaledMousePos(this.floorPlan);
         const time = +this.videoPlayer.movieDiv.time().toFixed(2);
         this.path.addPoint({
             xPos,
@@ -59,15 +59,15 @@ class Mediator {
     updateAllData() {
         this.updateFloorPlan();
         this.updateVideoFrame();
-        this.sketch.drawAllPaths(this.path.paths, this.path.curPath);
+        this.sk.drawAllPaths(this.path.paths, this.path.curPath);
     }
 
     updateFloorPlan() {
-        this.sketch.drawFloorPlan(this.floorPlan);
+        this.sk.drawFloorPlan(this.floorPlan);
     }
 
     updateVideoFrame() {
-        this.sketch.drawVideoFrame(this.videoPlayer);
+        this.sk.drawVideoFrame(this.videoPlayer);
     }
 
     resetCurRecording() {
@@ -120,7 +120,7 @@ class Mediator {
      */
     loadVideo(fileLocation) {
         if (this.videoLoaded()) this.videoPlayer.destroy(); // if a video exists, destroy it
-        this.videoPlayer = new VideoPlayer(fileLocation, this.sketch); // create new videoPlayer
+        this.videoPlayer = new VideoPlayer(fileLocation, this.sk); // create new videoPlayer
     }
     /**
      * Tests if new video has a duration (additional formatting test) and updates all data/views if so or destroys video and alerts user if not
@@ -134,7 +134,7 @@ class Mediator {
     }
 
     loadFloorPlan(fileLocation) {
-        this.sketch.loadImage(fileLocation, (img) => {
+        this.sk.loadImage(fileLocation, (img) => {
             this.newFloorPlanLoaded(img);
             URL.revokeObjectURL(fileLocation);
         }, e => {
@@ -156,7 +156,7 @@ class Mediator {
 
     writeFile() {
         if (this.allDataLoaded() && this.path.curPath.xPos.length > 0) {
-            this.sketch.saveTable(this.path.getTable(), "Path_" + this.path.curFileToOutput, "csv");
+            this.sk.saveTable(this.path.getTable(), "Path_" + this.path.curFileToOutput, "csv");
             this.path.curFileToOutput++;
             this.path.addPath();
             this.path.clearCurPath();
