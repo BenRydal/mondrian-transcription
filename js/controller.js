@@ -17,10 +17,8 @@ class Controller {
      * @param  {PNG/JPG File} input
      */
     handleFloorPlanButton(input) {
-        let file = input.files[0];
+        this.mediator.loadFloorPlan(URL.createObjectURL(input.files[0]));
         input.value = ''; // reset input value so you can load same file again in browser
-        let fileLocation = URL.createObjectURL(file);
-        this.mediator.loadFloorPlan(fileLocation);
     }
 
     /**
@@ -28,10 +26,8 @@ class Controller {
      * @param  {.MP4 File} input
      */
     handleVideoButton(input) {
-        let file = input.files[0];
+        this.mediator.loadVideo(URL.createObjectURL(input.files[0]));
         input.value = ''; // reset input value so you can load same file again in browser
-        let fileLocation = URL.createObjectURL(file);
-        this.mediator.loadVideo(fileLocation);
     }
 
     handleResetButton() {
