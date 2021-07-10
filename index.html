@@ -20,20 +20,19 @@
 </head>
 
 <body>
-    <script src="js/app.js"></script>
     <div class="introBar">
         <form action="/action_page.php">
-            <button type="button" id="introButton" class="inputfile" onclick="app.handleIntroButton(this)"></button>
+            <button type="button" id="introButton" class="inputfile" onclick="mondrian.controller.handleIntroButton(this)"></button>
             <label for="introButton">INFORMATION</label>
             <input type="file" name="file" id="inputFloorPlan" name="file" class="inputfile" accept=".png, .jpg, .jpeg"
-                onchange="app.handleFloorPlanButton(this)">
+                onchange="mondrian.controller.handleFloorPlanButton(this)">
             <label for="inputFloorPlan">LOAD FLOOR PLAN (PNG/JPG)</label>
             <input type="file" name="file" id="inputVideo" name="file" class="inputfile" accept=".mp4"
-                onchange="app.handleVideoButton(this)">
+                onchange="mondrian.controller.handleVideoButton(this)">
             <label for="inputVideo">LOAD VIDEO (MP4)</label>
-            <button type="button" id="saveButton" class="inputfile" onclick="app.handleSaveButton(this)"></button>
+            <button type="button" id="saveButton" class="inputfile" onclick="mondrian.controller.handleSaveButton(this)"></button>
             <label for="saveButton">SAVE MOVEMENT PATH (CSV)</label>
-            <button type="button" id="resetButton" class="inputfile" onclick="app.handleResetButton(this)"></button>
+            <button type="button" id="resetButton" class="inputfile" onclick="mondrian.controller.handleResetButton(this)"></button>
             <label for="resetButton">CLEAR RECORDING</label>
         </form>
     </div>
