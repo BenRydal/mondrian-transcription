@@ -92,6 +92,16 @@ const mondrian = new p5((sk) => {
         this.image(vp.movieDiv, this.videoContainer.xPos, this.videoContainer.yPos, vp.reScaledMovieWidth, vp.reScaledMovieHeight);
     }
 
+    sk.drawVideoTimeLabel = function (curMovieTime) {
+        this.fill(0);
+        this.noStroke();
+        const labelSpacing = 30;
+        const minutes = Math.floor(curMovieTime / 60);
+        const seconds = Math.floor(curMovieTime - minutes * 60);
+        const label = minutes + " minutes  " + seconds + " seconds";
+        this.text(label, this.videoContainer.xPos + labelSpacing / 2, this.videoContainer.yPos + labelSpacing);
+    }
+
     sk.drawFloorPlan = function (floorPlan) {
         this.fill(255); // draw white screen in case floor plan image has any transparency
         this.stroke(255);
