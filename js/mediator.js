@@ -34,6 +34,10 @@ class Mediator {
         else return +(this.path.curPath.tPos[this.path.curPath.tPos.length - 1].toFixed(0)) < +(this.videoPlayer.movieDiv.time().toFixed(0));
     }
 
+    updateCurPathBug() {
+        if (this.path.curPath.xPos.length > 0) this.sk.drawCurPathBug(this.path.curPath.xPos[this.path.curPath.xPos.length - 1], this.path.curPath.yPos[this.path.curPath.yPos.length - 1]);
+    }
+
     /**
      * Adds properly scaled data point from input floorPlan to current path
      */
@@ -108,6 +112,7 @@ class Mediator {
             this.videoPlayer.pause();
             this.setIsRecording(false);
         } else {
+            this.updateAllData(); // update all data to erase rewind bug
             this.videoPlayer.play();
             this.setIsRecording(true);
         }

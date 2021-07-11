@@ -37,6 +37,7 @@ const mondrian = new p5((sk) => {
     sk.draw = function () {
         if (sk.mediator.allDataLoaded()) {
             if (sk.mediator.getIsRecording()) sk.mediator.updateRecording(); // records data and updates visualization if in record mode
+            else sk.mediator.updateCurPathBug();
             // If info screen showing, redraw current screen first, then drawKeys
             if (sk.mediator.getIsInfoShowing()) {
                 sk.mediator.updateAllData();
@@ -48,6 +49,18 @@ const mondrian = new p5((sk) => {
             else if (sk.mediator.videoLoaded()) sk.mediator.updateVideoFrame();
             if (sk.mediator.getIsInfoShowing()) sk.drawIntroScreen();
         }
+    }
+
+    /**
+     * Draws circle for last index in current path being recorded
+     * @param  {Float/Number} xPos
+     * @param  {Float/Number} yPos
+     */
+    sk.drawCurPathBug = function (xPos, yPos) {
+        const rewindBugSize = 25;
+        this.noStroke();
+        this.fill(255, 0, 0);
+        this.circle(this.scaleXposToDisplay(xPos), this.scaleYposToDisplay(yPos), rewindBugSize);
     }
 
     sk.drawLineSegment = function (curPath) {
