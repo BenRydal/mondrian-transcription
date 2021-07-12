@@ -11,10 +11,13 @@ https://etd.library.vanderbilt.edu/available/etd-03212018-140140/unrestricted/Sh
 
 const mondrian = new p5((sk) => {
 
+    sk.preload = function () {
+        sk.font_Lato = sk.loadFont("data/fonts/Lato-Light.ttf");
+    }
+
     sk.setup = function () {
         sk.canvas = sk.createCanvas(window.innerWidth, window.innerHeight);
-        sk.font_Lato = sk.loadFont("data/fonts/Lato-Light.ttf");
-        sk.infoMsg = "MONDRIAN TRANSCRIPTION SOFTWARE\n\nby Ben Rydal Shapiro & contributors\nbuilt with p5.js & JavaScript\n\nHi there! This tool allows you to transcribe fine-grained movement data from video. To get started, use the top buttons to upload a floor plan image file (PNG or JPG) and a video file (MP4). Then, click anywhere on the floorplan to start recording movement data synchronized to the video—as you use your cursor to draw on the floor plan, positioning data is recorded as a CSV file organized by time in seconds and x/y pixel positions scaled to the pixel size of your floor plan image file. Play/pause recording by clicking on the floorplan. On your keyboard press ‘f’ to fast forward and ‘r’ to rewind the video and data recording in 5 second intervals. Use the top buttons to clear your current recording and restart the video or save your recording and record another movement path. For more information, see: https://www.benrydal.com/software/mondrian-transcription";
+        sk.infoMsg = "MONDRIAN TRANSCRIPTION SOFTWARE\n\nby Ben Rydal Shapiro & contributors\nbuilt with p5.js & JavaScript\n\nHi there! This tool allows you to transcribe fine-grained movement data from video. To get started, use the top buttons to upload a floor plan image (PNG or JPG) and a video (MP4). Then, click anywhere on the floor plan to start recording movement data synchronized to the video. As you use your cursor to draw on the floor plan, positioning data is recorded organized by time in seconds and x/y pixel positions scaled to the pixel size of your floor plan image. Play/pause recording by clicking on the floor plan. Press ‘f’ to fast forward and ‘r’ to rewind the video and data recording in 5 second intervals. Use the top buttons to clear your recording or save your recording as a CSV file. For more information, see: https://www.benrydal.com/software/mondrian-transcription";
         sk.mediator = new Mediator(sk);
         sk.controller = new Controller(sk.mediator);
         sk.floorPlanContainer = {
