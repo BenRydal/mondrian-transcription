@@ -116,8 +116,8 @@ class Mediator {
             this.videoPlayer.pause();
             this.sketchIsRecording = false;
             this.updateCurPathBug();
-        } else {
-            this.updateAllData(); // update all data to erase rewind bug
+        } else if (this.videoPlayer.movieDiv.time() < this.videoPlayer.movieDiv.duration()) {
+            this.updateAllData(); // update all data to erase curPathBug
             this.videoPlayer.play();
             this.sketchIsRecording = true;
         }
