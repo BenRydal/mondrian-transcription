@@ -39,19 +39,26 @@ const mondrian = new p5((sk) => {
      */
     sk.draw = function () {
         if (sk.mediator.allDataLoaded()) {
-            if (sk.mediator.getIsRecording()) sk.mediator.updateRecording(); // records data and updates visualization if in record mode
-            else sk.mediator.updateCurPathBug();
-            // If info screen showing, redraw current screen first, then drawKeys
-            if (sk.mediator.getIsInfoShowing()) {
-                sk.mediator.updateAllData();
-                sk.drawIntroScreen();
-            }
+            if (sk.mediator.sketchIsRecording) sk.mediator.updateRecording(); // records data and updates visualization if in record mode
+            sk.updateIntroScreen();
         } else {
-            sk.drawLoadDataGUI();
-            if (sk.mediator.floorPlanLoaded()) sk.mediator.updateFloorPlan();
-            else if (sk.mediator.videoLoaded()) sk.mediator.updateVideoFrame();
-            if (sk.mediator.getIsInfoShowing()) sk.drawIntroScreen();
+            sk.updateLoadDataScreen();
         }
+    }
+
+    // If info screen showing, redraw all data first, then the info screen
+    sk.updateIntroScreen = function () {
+        if (sk.mediator.getIsInfoShowing()) {
+            sk.mediator.updateAllData();
+            sk.drawIntroScreen();
+        }
+    }
+
+    sk.updateLoadDataScreen = function () {
+        sk.drawLoadDataBackground();
+        if (sk.mediator.floorPlanLoaded()) sk.mediator.updateFloorPlan();
+        else if (sk.mediator.videoLoaded()) sk.mediator.updateVideoFrame();
+        if (sk.mediator.getIsInfoShowing()) sk.drawIntroScreen();
     }
 
     /**
@@ -63,7 +70,7 @@ const mondrian = new p5((sk) => {
         const rewindBugSize = 25;
         this.noStroke();
         this.fill(255, 0, 0);
-        this.circle(this.scaleXposToDisplay(xPos), this.scaleYposToDisplay(yPos), rewindBugSize);
+        this.circle(this.scaleXPosToDisplayFloorPlan(xPos), this.scaleYPosToDisplayFloorPlan(yPos), rewindBugSize);
     }
 
     sk.drawLineSegment = function (curPath) {
@@ -81,16 +88,8 @@ const mondrian = new p5((sk) => {
         this.stroke(path.pColor);
         this.strokeWeight(path.weight);
         for (let i = 1; i < path.pointArray.length; i++) {
-            this.line(this.scaleXposToDisplay(path.pointArray[i].xPos), this.scaleYposToDisplay(path.pointArray[i].yPos), this.scaleXposToDisplay(path.pointArray[i - 1].xPos), this.scaleYposToDisplay(path.pointArray[i - 1].yPos));
+            this.line(this.scaleXPosToDisplayFloorPlan(path.pointArray[i].xPos), this.scaleYPosToDisplayFloorPlan(path.pointArray[i].yPos), this.scaleXPosToDisplayFloorPlan(path.pointArray[i - 1].xPos), this.scaleYPosToDisplayFloorPlan(path.pointArray[i - 1].yPos));
         }
-    }
-
-    sk.scaleXposToDisplay = function (xPos) {
-        return this.floorPlanContainer.xPos + (xPos / (sk.mediator.getFloorPlanWidth() / this.floorPlanContainer.width));
-    }
-
-    sk.scaleYposToDisplay = function (yPos) {
-        return this.floorPlanContainer.yPos + (yPos / (sk.mediator.getFloorPlanHeight() / this.floorPlanContainer.height));
     }
 
     /**
@@ -120,10 +119,7 @@ const mondrian = new p5((sk) => {
         this.image(floorPlan, this.floorPlanContainer.xPos, this.floorPlanContainer.yPos, this.floorPlanContainer.width, this.floorPlanContainer.height);
     }
 
-    /**
-     * Draws floor plan, video, and key windows
-     */
-    sk.drawLoadDataGUI = function () {
+    sk.drawLoadDataBackground = function () {
         this.noStroke();
         this.fill(225);
         this.rect(this.floorPlanContainer.xPos, this.floorPlanContainer.yPos, this.floorPlanContainer.width, this.floorPlanContainer.height);
@@ -156,6 +152,14 @@ const mondrian = new p5((sk) => {
         const xPos = +(x * (floorPlan.width / this.floorPlanContainer.width)).toFixed(2);
         const yPos = +(y * (floorPlan.height / this.floorPlanContainer.height)).toFixed(2);
         return [xPos, yPos];
+    }
+
+    sk.scaleXPosToDisplayFloorPlan = function (xPos) {
+        return this.floorPlanContainer.xPos + (xPos / (sk.mediator.floorPlanWidth / this.floorPlanContainer.width));
+    }
+
+    sk.scaleYPosToDisplayFloorPlan = function (yPos) {
+        return this.floorPlanContainer.yPos + (yPos / (sk.mediator.floorPlanHeight / this.floorPlanContainer.height));
     }
 
     /**

@@ -29,11 +29,16 @@ class Mediator {
      * (2) if stopped sample at rate of 0 decimal points, approximately every 1 second in movie
      */
     testSampleRate() {
-        if (this.path.curPath.pointArray.length === 0) return true;
-        else if (this.sk.mouseX !== this.sk.pmouseX || this.sk.mouseY !== this.sk.pmouseY) return +(this.path.curPathEndPoint.tPos.toFixed(2)) < +(this.videoPlayer.movieDiv.time().toFixed(2));
-        else return +(this.path.curPathEndPoint.tPos.toFixed(0)) < +(this.videoPlayer.movieDiv.time().toFixed(0));
-        // else return +(this.path.curPath.pointArray.tPos[this.path.curPath.pointArray.tPos.length - 1].toFixed(0)) < +(this.videoPlayer.movieDiv.time().toFixed(0));
+        if (this.sk.mouseX !== this.sk.pmouseX || this.sk.mouseY !== this.sk.pmouseY) return this.stillRecording(2);
+        else return this.stillRecording(0);
     }
+
+    stillRecording(roundValue) {
+        if (this.path.curPath.pointArray.length === 0) return true;
+        return +(this.path.curPathEndPoint.tPos.toFixed(roundValue)) < +(this.videoPlayer.movieDiv.time().toFixed(roundValue));
+    }
+
+
 
     updateCurPathBug() {
         if (this.path.curPath.pointArray.length > 0) this.sk.drawCurPathBug(this.path.curPathEndPoint.xPos, this.path.curPathEndPoint.yPos);
@@ -86,8 +91,9 @@ class Mediator {
         const rewindToTime = this.path.curPathEndPoint.tPos - this.videoPlayer.videoJumpValue;
         this.path.rewind(rewindToTime);
         this.videoPlayer.rewind(rewindToTime);
-        if (this.getIsRecording()) this.playPauseRecording(); // pause recording and video if currently recording
+        if (this.sketchIsRecording) this.playPauseRecording(); // pause recording and video if currently recording
         this.updateAllData();
+        this.updateCurPathBug();
     }
 
     /**
@@ -102,17 +108,18 @@ class Mediator {
 
     stopRecording() {
         this.videoPlayer.stop();
-        this.setIsRecording(false);
+        this.sketchIsRecording = false;
     }
 
     playPauseRecording() {
-        if (this.getIsRecording()) {
+        if (this.sketchIsRecording) {
             this.videoPlayer.pause();
-            this.setIsRecording(false);
+            this.sketchIsRecording = false;
+            this.updateCurPathBug();
         } else {
             this.updateAllData(); // update all data to erase rewind bug
             this.videoPlayer.play();
-            this.setIsRecording(true);
+            this.sketchIsRecording = true;
         }
     }
 
@@ -188,21 +195,22 @@ class Mediator {
 
     // ** ** ** ** GETTERS/SETTERS ** ** ** **
 
-    getFloorPlanWidth() {
+    get floorPlanWidth() {
         return this.floorPlan.width;
     }
 
-    getFloorPlanHeight() {
+    get floorPlanHeight() {
         return this.floorPlan.height;
     }
 
-    getIsRecording() {
+    get sketchIsRecording() {
         return this.isRecording;
     }
 
-    setIsRecording(value) {
+    set sketchIsRecording(value) {
         this.isRecording = value;
     }
+
 
     getIsInfoShowing() {
         return this.isInfoShowing;

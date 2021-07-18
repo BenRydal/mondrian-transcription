@@ -18,7 +18,7 @@ class VideoPlayer {
             this.setInputMovieSize(); // set global movie size constants
             this.setDisplayMovieSize(sketch.videoContainer.width, sketch.videoContainer.height);
             this.movieDiv.onload = () => URL.revokeObjectURL(fileLocation);
-            document.getElementById('moviePlayer').onended = () => sketch.mediator.setIsRecording(false); // end program recording when movie ends
+            document.getElementById('moviePlayer').onended = () => sketch.mediator.sketchIsRecording = false; // end program recording when movie ends
             sketch.mediator.newVideoLoaded();
         });
     }
