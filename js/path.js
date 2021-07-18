@@ -90,8 +90,4 @@
          if (this.curPath.pointArray.length > 0) return this.curPath.pointArray[this.curPath.pointArray.length - 1];
          else return 0;
      }
-
-     curPathHasData() {
-         return this.curPath.pointArray.length > 0;
-     }
  }

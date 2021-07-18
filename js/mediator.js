@@ -87,14 +87,14 @@ class Mediator {
         this.videoPlayer.rewind(rewindToTime);
         if (this.sketchIsRecording) this.playPauseRecording(); // pause recording and video if currently recording
         this.updateAllData();
-        if (this.path.curPathHasData()) this.sk.drawCurPathBug(this.path.curPathEndPoint.xPos, this.path.curPathEndPoint.yPos);
+        if (this.path.curPath.pointArray.length > 0) this.sk.drawCurPathBug(this.path.curPathEndPoint.xPos, this.path.curPathEndPoint.yPos);
     }
 
     /**
      * Coordinates fast forwarding of movie and path data, if movie not right at start or near end
      */
     fastForward() {
-        if (this.testVideoForFastForward()) {
+        if (this.testVideoTimeForFastForward()) {
             this.videoPlayer.fastForward();
             this.path.fastForward(this.videoPlayer.videoJumpValue);
         }
@@ -109,8 +109,8 @@ class Mediator {
         if (this.sketchIsRecording) {
             this.videoPlayer.pause();
             this.sketchIsRecording = false;
-            if (this.path.curPathHasData()) this.sk.drawCurPathBug(this.path.curPathEndPoint.xPos, this.path.curPathEndPoint.yPos);
-        } else if (this.videoNotComplete()) {
+            if (this.path.curPath.pointArray.length > 0) this.sk.drawCurPathBug(this.path.curPathEndPoint.xPos, this.path.curPathEndPoint.yPos);
+        } else if (this.testVideoTimeForRecording()) {
             this.updateAllData(); // update all data to erase curPathBug
             this.videoPlayer.play();
             this.sketchIsRecording = true;
@@ -187,11 +187,11 @@ class Mediator {
         return this.dataIsLoaded(this.floorPlan) && this.dataIsLoaded(this.videoPlayer);
     }
 
-    videoNotComplete() {
+    testVideoTimeForRecording() {
         return this.videoPlayer.movieDiv.time() < this.videoPlayer.movieDiv.duration();
     }
 
-    testVideoForFastForward() {
+    testVideoTimeForFastForward() {
         return this.videoPlayer.movieDiv.time() > 0 && (this.videoPlayer.movieDiv.time() < this.videoPlayer.movieDiv.duration() - this.videoPlayer.videoJumpValue);
     }
 
