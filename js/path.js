@@ -7,10 +7,6 @@
          this.curFileToOutput = 0; // Integer counter to mark current file number to write to output
      }
 
-     get curPathEndPoint() {
-         return this.curPath.pointArray[this.curPath.pointArray.length - 1];
-     }
-
      /**
       * Factory function that creates a Path object 
       * Path object represents object being recorded such as a person or artifact as decimal / number lists of x / y pixel positions and time values in seconds / fractions of seconds with color and strokeWeight
@@ -89,5 +85,9 @@
              newRow.setNum(FILEHEADERS[2], point.yPos);
          }
          return table;
+     }
+
+     get curPathEndPoint() {
+         return this.curPath.pointArray[this.curPath.pointArray.length - 1];
      }
  }
