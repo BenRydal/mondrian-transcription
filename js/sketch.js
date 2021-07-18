@@ -48,7 +48,7 @@ const mondrian = new p5((sk) => {
 
     // If info screen showing, redraw all data first, then the info screen
     sk.updateIntroScreen = function () {
-        if (sk.mediator.getIsInfoShowing()) {
+        if (sk.mediator.sketchIsInfoShowing) {
             sk.mediator.updateAllData();
             sk.drawIntroScreen();
         }
@@ -58,7 +58,7 @@ const mondrian = new p5((sk) => {
         sk.drawLoadDataBackground();
         if (sk.mediator.floorPlanLoaded()) sk.mediator.updateFloorPlan();
         else if (sk.mediator.videoLoaded()) sk.mediator.updateVideoFrame();
-        if (sk.mediator.getIsInfoShowing()) sk.drawIntroScreen();
+        if (sk.mediator.sketchIsInfoShowing) sk.drawIntroScreen();
     }
 
     /**
@@ -175,7 +175,7 @@ const mondrian = new p5((sk) => {
     sk.mousePressed = function () {
         if (sk.mediator.allDataLoaded() && sk.overRect(this.floorPlanContainer.xPos, this.floorPlanContainer.yPos, this.floorPlanContainer.width, this.floorPlanContainer.height)) {
             sk.mediator.playPauseRecording();
-            if (sk.mediator.getIsInfoShowing()) sk.mediator.updateIntro(); // prevent info screen from showing while recording for smooth user interaction
+            if (sk.mediator.sketchIsInfoShowing) sk.mediator.updateIntro(); // prevent info screen from showing while recording for smooth user interaction
         }
     }
 

@@ -54,9 +54,9 @@ class Mediator {
     }
 
     updateIntro() {
-        if (this.getIsInfoShowing() && this.allDataLoaded()) this.updateAllData();
-        if (this.getIsInfoShowing()) this.setIsInfoShowing(false);
-        else this.setIsInfoShowing(true);
+        if (this.sketchIsInfoShowing && this.allDataLoaded()) this.updateAllData();
+        if (this.sketchIsInfoShowing) this.sketchIsInfoShowing = false;
+        else this.sketchIsInfoShowing = true;
     }
 
     updateAllData() {
@@ -211,12 +211,11 @@ class Mediator {
         this.isRecording = value;
     }
 
-
-    getIsInfoShowing() {
+    get sketchIsInfoShowing() {
         return this.isInfoShowing;
     }
 
-    setIsInfoShowing(value) {
+    set sketchIsInfoShowing(value) {
         this.isInfoShowing = value;
     }
 }
