@@ -87,6 +87,7 @@
      }
 
      get curPathEndPoint() {
-         return this.curPath.pointArray[this.curPath.pointArray.length - 1];
+         if (this.curPath.pointArray.length > 0) return this.curPath.pointArray[this.curPath.pointArray.length - 1];
+         else return 0;
      }
  }
