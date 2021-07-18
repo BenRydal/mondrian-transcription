@@ -117,7 +117,7 @@ class Mediator {
         }
     }
 
-    // ** ** ** ** DATA LOADING METHODS ** ** ** **
+    // ** ** ** ** LOAD DATA METHODS ** ** ** **
 
     loadVideo(fileLocation) {
         if (this.videoLoaded()) this.videoPlayer.destroy(); // if a video exists, destroy it
@@ -166,7 +166,7 @@ class Mediator {
         }
     }
 
-    // ** ** ** ** TEST DATA METHODS ** ** ** **
+    // ** ** ** ** TEST HELPER METHODS ** ** ** **
 
     /**
      * @param  {Any Type} data

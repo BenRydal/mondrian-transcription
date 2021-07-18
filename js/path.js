@@ -42,13 +42,12 @@
       * @param  {Integer/Number} amountInSeconds
       */
      fastForward(amountInSeconds) {
-         // IMPORTANT: get last values from cur lists first before loop. Uses to set x/yPos and increment tPos
-         const point = this.curPath.pointArray[this.curPath.pointArray.length - 1];
-         // Add points for amountInSeconds starting at 1 (tPos is only number that changes/increments)
-         for (let i = 1; i <= amountInSeconds; i++) {
+         const point = this.curPath.pointArray[this.curPath.pointArray.length - 1]; // IMPORTANT: get this value before loop
+         for (let i = 1; i <= amountInSeconds; i++) { // only tPos is different with each added point
              this.curPath.pointArray.push(this.createPoint(point.xPos, point.yPos, +(point.tPos + i).toFixed(2)));
          }
      }
+
      /**
       * Remove all points from curPath Lists greater than rewindToTime parameter
       * @param  {Float/Number} rewindToTime
