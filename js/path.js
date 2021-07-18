@@ -8,11 +8,7 @@
      }
 
      /**
-      * Factory function that creates a Path object 
-      * Path object represents object being recorded such as a person or artifact as decimal / number lists of x / y pixel positions and time values in seconds / fractions of seconds with color and strokeWeight
-      * @param  {Array} xPos
-      * @param  {Array} yPos
-      * @param  {Array} tPos
+      * Path object represents object being recorded such as a person or artifact
       */
      createPath(pointArray, pColor, weight) {
          return {
@@ -22,6 +18,9 @@
          };
      }
 
+     /**
+      * Point has Float/Number xPos, yPos and tPos
+      */
      createPoint(xPos, yPos, tPos) {
          return {
              xPos,
@@ -30,12 +29,12 @@
          };
      }
 
-     addPoint(xPos, yPos, time) {
-         this.curPath.pointArray.push(this.createPoint(xPos, yPos, time));
-     }
-
      addPath() {
          this.paths.push(this.createPath(this.curPath.pointArray, this.colorList[this.paths.length % this.colorList.length], 5));
+     }
+
+     addPoint(xPos, yPos, time) {
+         this.curPath.pointArray.push(this.createPoint(xPos, yPos, time));
      }
 
      /**
@@ -72,7 +71,7 @@
          this.paths = [];
      }
 
-     getTable() {
+     writeTable() {
          const FILEHEADERS = ["time", "x", "y"]; // Column headers for outputted .CSV movement files
          let table = new p5.Table();
          table.addColumn(FILEHEADERS[0]);

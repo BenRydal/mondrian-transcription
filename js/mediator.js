@@ -57,7 +57,8 @@ class Mediator {
     updateAllData() {
         this.updateFloorPlan();
         this.updateVideoFrame();
-        this.sk.drawAllPaths(this.path.paths, this.path.curPath);
+        for (const path of this.path.paths) this.sk.drawPath(path); // update all recorded paths
+        this.sk.drawPath(this.path.curPath); // update current path last
     }
 
     updateFloorPlan() {
@@ -155,7 +156,7 @@ class Mediator {
 
     writeFile() {
         if (this.allDataLoaded() && this.path.curPath.pointArray.length > 0) {
-            this.sk.saveTable(this.path.getTable(), "Path_" + this.path.curFileToOutput, "csv");
+            this.sk.saveTable(this.path.writeTable(), "Path_" + this.path.curFileToOutput, "csv");
             this.path.curFileToOutput++;
             this.path.addPath();
             this.path.clearCurPath();
