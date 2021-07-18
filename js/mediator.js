@@ -29,19 +29,13 @@ class Mediator {
      * (2) if stopped sample at rate of 0 decimal points, approximately every 1 second in movie
      */
     testSampleRate() {
-        if (this.sk.mouseX !== this.sk.pmouseX || this.sk.mouseY !== this.sk.pmouseY) return this.stillRecording(2);
-        else return this.stillRecording(0);
+        if (this.path.curPath.pointArray.length === 0) return true; // always return true if first data point
+        else if (this.sk.mouseX !== this.sk.pmouseX || this.sk.mouseY !== this.sk.pmouseY) return this.sampleAtRate(2);
+        else return this.sampleAtRate(0);
     }
 
-    stillRecording(roundValue) {
-        if (this.path.curPath.pointArray.length === 0) return true;
-        return +(this.path.curPathEndPoint.tPos.toFixed(roundValue)) < +(this.videoPlayer.movieDiv.time().toFixed(roundValue));
-    }
-
-
-
-    updateCurPathBug() {
-        if (this.path.curPath.pointArray.length > 0) this.sk.drawCurPathBug(this.path.curPathEndPoint.xPos, this.path.curPathEndPoint.yPos);
+    sampleAtRate(rate) {
+        return +(this.path.curPathEndPoint.tPos.toFixed(rate)) < +(this.videoPlayer.movieDiv.time().toFixed(rate));
     }
 
     /**
@@ -93,14 +87,14 @@ class Mediator {
         this.videoPlayer.rewind(rewindToTime);
         if (this.sketchIsRecording) this.playPauseRecording(); // pause recording and video if currently recording
         this.updateAllData();
-        this.updateCurPathBug();
+        if (this.path.curPathHasData()) this.sk.drawCurPathBug(this.path.curPathEndPoint.xPos, this.path.curPathEndPoint.yPos);
     }
 
     /**
      * Coordinates fast forwarding of movie and path data, if movie not right at start or near end
      */
     fastForward() {
-        if (this.videoPlayer.movieDiv.time() > 0 && (this.videoPlayer.movieDiv.time() < this.videoPlayer.movieDiv.duration() - this.videoPlayer.videoJumpValue)) {
+        if (this.testVideoForFastForward()) {
             this.videoPlayer.fastForward();
             this.path.fastForward(this.videoPlayer.videoJumpValue);
         }
@@ -115,8 +109,8 @@ class Mediator {
         if (this.sketchIsRecording) {
             this.videoPlayer.pause();
             this.sketchIsRecording = false;
-            this.updateCurPathBug();
-        } else if (this.videoPlayer.movieDiv.time() < this.videoPlayer.movieDiv.duration()) {
+            if (this.path.curPathHasData()) this.sk.drawCurPathBug(this.path.curPathEndPoint.xPos, this.path.curPathEndPoint.yPos);
+        } else if (this.videoNotComplete()) {
             this.updateAllData(); // update all data to erase curPathBug
             this.videoPlayer.play();
             this.sketchIsRecording = true;
@@ -191,6 +185,14 @@ class Mediator {
 
     allDataLoaded() {
         return this.dataIsLoaded(this.floorPlan) && this.dataIsLoaded(this.videoPlayer);
+    }
+
+    videoNotComplete() {
+        return this.videoPlayer.movieDiv.time() < this.videoPlayer.movieDiv.duration();
+    }
+
+    testVideoForFastForward() {
+        return this.videoPlayer.movieDiv.time() > 0 && (this.videoPlayer.movieDiv.time() < this.videoPlayer.movieDiv.duration() - this.videoPlayer.videoJumpValue);
     }
 
     // ** ** ** ** GETTERS/SETTERS ** ** ** **
