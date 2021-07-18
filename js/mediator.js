@@ -29,13 +29,14 @@ class Mediator {
      * (2) if stopped sample at rate of 0 decimal points, approximately every 1 second in movie
      */
     testSampleRate() {
-        if (this.path.curPath.tPos.length === 0) return true;
-        else if (this.sk.mouseX !== this.sk.pmouseX || this.sk.mouseY !== this.sk.pmouseY) return +(this.path.curPath.tPos[this.path.curPath.tPos.length - 1].toFixed(2)) < +(this.videoPlayer.movieDiv.time().toFixed(2));
-        else return +(this.path.curPath.tPos[this.path.curPath.tPos.length - 1].toFixed(0)) < +(this.videoPlayer.movieDiv.time().toFixed(0));
+        if (this.path.curPath.pointArray.length === 0) return true;
+        else if (this.sk.mouseX !== this.sk.pmouseX || this.sk.mouseY !== this.sk.pmouseY) return +(this.path.curPathEndPoint.tPos.toFixed(2)) < +(this.videoPlayer.movieDiv.time().toFixed(2));
+        else return +(this.path.curPathEndPoint.tPos.toFixed(0)) < +(this.videoPlayer.movieDiv.time().toFixed(0));
+        // else return +(this.path.curPath.pointArray.tPos[this.path.curPath.pointArray.tPos.length - 1].toFixed(0)) < +(this.videoPlayer.movieDiv.time().toFixed(0));
     }
 
     updateCurPathBug() {
-        if (this.path.curPath.xPos.length > 0) this.sk.drawCurPathBug(this.path.curPath.xPos[this.path.curPath.xPos.length - 1], this.path.curPath.yPos[this.path.curPath.yPos.length - 1]);
+        if (this.path.curPath.pointArray.length > 0) this.sk.drawCurPathBug(this.path.curPathEndPoint.xPos, this.path.curPathEndPoint.yPos);
     }
 
     /**
@@ -44,11 +45,7 @@ class Mediator {
     updateCurPath() {
         const [xPos, yPos] = this.sk.getScaledMousePos(this.floorPlan);
         const time = +this.videoPlayer.movieDiv.time().toFixed(2);
-        this.path.addPoint({
-            xPos,
-            yPos,
-            time
-        });
+        this.path.addPoint(xPos, yPos, time);
     }
 
     updateIntro() {
@@ -85,7 +82,7 @@ class Mediator {
      */
     rewind() {
         // Set time to rewind to base on last time value in list - videoPlayer.videoJumpValue
-        const rewindToTime = this.path.curPath.tPos[this.path.curPath.tPos.length - 1] - this.videoPlayer.videoJumpValue;
+        const rewindToTime = this.path.curPathEndPoint.tPos - this.videoPlayer.videoJumpValue;
         this.path.rewind(rewindToTime);
         this.videoPlayer.rewind(rewindToTime);
         if (this.getIsRecording()) this.playPauseRecording(); // pause recording and video if currently recording
@@ -157,7 +154,7 @@ class Mediator {
     }
 
     writeFile() {
-        if (this.allDataLoaded() && this.path.curPath.xPos.length > 0) {
+        if (this.allDataLoaded() && this.path.curPath.pointArray.length > 0) {
             this.sk.saveTable(this.path.getTable(), "Path_" + this.path.curFileToOutput, "csv");
             this.path.curFileToOutput++;
             this.path.addPath();

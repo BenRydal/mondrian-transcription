@@ -82,11 +82,11 @@ const mondrian = new p5((sk) => {
         this.drawPath(curPath); // draw current path last
     }
 
-    sk.drawPath = function (p) {
-        this.stroke(p.pColor);
-        this.strokeWeight(p.weight);
-        for (let i = 1; i < p.xPos.length; i++) {
-            this.line(this.scaleXposToDisplay(p.xPos[i]), this.scaleYposToDisplay(p.yPos[i]), this.scaleXposToDisplay(p.xPos[i - 1]), this.scaleYposToDisplay(p.yPos[i - 1]));
+    sk.drawPath = function (point) {
+        this.stroke(point.pColor);
+        this.strokeWeight(point.weight);
+        for (let i = 1; i < point.pointArray.length; i++) {
+            this.line(this.scaleXposToDisplay(point.pointArray[i].xPos), this.scaleYposToDisplay(point.pointArray[i].yPos), this.scaleXposToDisplay(point.pointArray[i - 1].xPos), this.scaleYposToDisplay(point.pointArray[i - 1].yPos));
         }
     }
 
