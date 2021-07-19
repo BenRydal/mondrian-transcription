@@ -6,7 +6,6 @@ class VideoPlayer {
      */
 
     constructor(fileLocation, sketch) {
-        this.videoJumpValue = 5; // Integer value in seconds to ff or rewind
         this.inputMovieWidth = null; // Original pixel size of video   
         this.inputMovieHeight = null;
         this.reScaledMovieWidth = null; // Rescaled pixel size of video to fit display container
@@ -69,16 +68,17 @@ class VideoPlayer {
         this.movieDiv.pause();
     }
 
-    fastForward() {
-        this.movieDiv.time(this.movieDiv.time() + this.videoJumpValue); // ff by videoJumpValue
+    fastForward(jumpInSeconds) {
+        const curTime = this.movieDiv.time();
+        this.movieDiv.time(curTime + jumpInSeconds);
     }
 
     /**
      * Rewind movie to parameter rewindToTime or 0 if it is too close to start of video
      * @param  {Float/Number} rewindToTime
      */
-    rewind(rewindToTime) {
-        if (this.movieDiv.time() > this.videoJumpValue) this.movieDiv.time(rewindToTime);
+    rewind(rewindToTime, jumpInSeconds) {
+        if (this.movieDiv.time() > jumpInSeconds) this.movieDiv.time(rewindToTime);
         else this.movieDiv.time(0);
     }
 

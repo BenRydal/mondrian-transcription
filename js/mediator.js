@@ -11,6 +11,7 @@ class Mediator {
         this.floorPlan = null;
         this.isRecording = false; // Boolean to indicate recording
         this.isInfoShowing = true; // Boolean to show/hide intro message
+        this.jumpInSeconds = 5; // Integer value in seconds to ff or rewind
     }
 
     handleKeyPressed(keyValue) {
@@ -118,10 +119,9 @@ class Mediator {
      * Coordinates rewinding of video and erasing of curPath data and updating display
      */
     rewind() {
-        // Set time to rewind to base on last time value in list - videoPlayer.videoJumpValue
-        const rewindToTime = this.path.curPathEndPoint.tPos - this.videoPlayer.videoJumpValue;
+        const rewindToTime = this.path.curPathEndPoint.tPos - this.jumpInSeconds; // set time to rewind to based on last value in list
         this.path.rewind(rewindToTime);
-        this.videoPlayer.rewind(rewindToTime);
+        this.videoPlayer.rewind(rewindToTime, this.jumpInSeconds);
         if (this.isRecording) this.playPauseRecording(); // pause recording and video if currently recording
         this.updateAllData();
         if (this.path.curPath.pointArray.length > 0) this.sk.drawCurPathBug(this.path.curPathEndPoint);
@@ -132,8 +132,8 @@ class Mediator {
      */
     fastForward() {
         if (this.testVideoTimeForFastForward()) {
-            this.videoPlayer.fastForward();
-            this.path.fastForward(this.videoPlayer.videoJumpValue);
+            this.videoPlayer.fastForward(this.jumpInSeconds);
+            this.path.fastForward(this.jumpInSeconds);
         }
     }
 
@@ -229,7 +229,7 @@ class Mediator {
     }
 
     testVideoTimeForFastForward() {
-        return this.videoPlayer.movieDiv.time() > 0 && (this.videoPlayer.movieDiv.time() < this.videoPlayer.movieDiv.duration() - this.videoPlayer.videoJumpValue);
+        return this.videoPlayer.movieDiv.time() > 0 && (this.videoPlayer.movieDiv.time() < this.videoPlayer.movieDiv.duration() - this.jumpInSeconds);
     }
 
     // ** ** ** ** GETTERS/SETTERS ** ** ** **
