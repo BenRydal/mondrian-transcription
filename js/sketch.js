@@ -38,27 +38,7 @@ const mondrian = new p5((sk) => {
      * Program loop organizes two drawing modes based on whether data is loaded
      */
     sk.draw = function () {
-        if (sk.mediator.allDataLoaded()) {
-            if (sk.mediator.sketchIsRecording) sk.mediator.updateRecording(); // records data and updates visualization if in record mode
-            sk.updateIntroScreen();
-        } else {
-            sk.updateLoadDataScreen();
-        }
-    }
-
-    // If info screen showing, redraw all data first, then the info screen
-    sk.updateIntroScreen = function () {
-        if (sk.mediator.sketchIsInfoShowing) {
-            sk.mediator.updateAllData();
-            sk.drawIntroScreen();
-        }
-    }
-
-    sk.updateLoadDataScreen = function () {
-        sk.drawLoadDataBackground();
-        if (sk.mediator.floorPlanLoaded()) sk.mediator.updateFloorPlan();
-        else if (sk.mediator.videoLoaded()) sk.mediator.updateVideoFrame();
-        if (sk.mediator.sketchIsInfoShowing) sk.drawIntroScreen();
+        sk.mediator.updateDrawLoop();
     }
 
     /**

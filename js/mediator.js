@@ -14,6 +14,29 @@ class Mediator {
     }
 
     // ** ** ** ** UPDATE METHODS ** ** ** **
+
+    updateDrawLoop() {
+        if (this.allDataLoaded()) {
+            if (this.sketchIsRecording) this.updateRecording();
+            if (this.sketchIsInfoShowing) this.updateIntroScreen();
+        } else {
+            this.sk.drawLoadDataBackground();
+            if (this.sketchIsInfoShowing) this.updateLoadDataScreen();
+        }
+    }
+
+    updateLoadDataScreen() {
+        if (this.floorPlanLoaded()) this.updateFloorPlan();
+        else if (this.videoLoaded()) this.updateVideoFrame();
+        if (this.sketchIsInfoShowing) this.sk.drawIntroScreen();
+    }
+
+    // If info screen showing, redraw all data first, then the info screen
+    updateIntroScreen() {
+        this.updateAllData();
+        this.sk.drawIntroScreen();
+    }
+
     /**
      * Coordinates video and line segment drawing in display. Decides whether to record data point based on sampling rate method
      */
