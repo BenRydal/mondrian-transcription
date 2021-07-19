@@ -13,6 +13,20 @@ class Mediator {
         this.isInfoShowing = true; // Boolean to show/hide intro message
     }
 
+    handleKeyPressed(keyValue) {
+        if (this.allDataLoaded()) {
+            if (keyValue === 'r' || keyValue === 'R') this.rewind();
+            else if (keyValue === 'f' || keyValue === 'F') this.fastForward();
+        }
+    }
+
+    handleMousePressed() {
+        if (this.allDataLoaded()) {
+            this.playPauseRecording();
+            if (this.sketchIsInfoShowing) this.updateIntro(); // prevent info screen from showing while recording for smooth user interaction
+        }
+    }
+
     // ** ** ** ** UPDATE METHODS ** ** ** **
 
     updateDrawLoop() {

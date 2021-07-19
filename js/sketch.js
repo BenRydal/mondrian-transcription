@@ -143,23 +143,21 @@ const mondrian = new p5((sk) => {
     }
 
     /**
-     * While wrapped in a P5 instance, this P5 method operates globally on the window (there can't be two of these methods)
+     * While wrapped in a P5 instance, keyPressed and mousePressed P5 methods operate globally on the window (there can't be two of these methods)
      */
     sk.keyPressed = function () {
-        if (sk.mediator.allDataLoaded()) {
-            if (sk.key === 'r' || sk.key === 'R') sk.mediator.rewind();
-            else if (sk.key === 'f' || sk.key === 'F') sk.mediator.fastForward();
-        }
+        sk.mediator.handleKeyPressed(sk.key);
     }
 
     sk.mousePressed = function () {
-        if (sk.mediator.allDataLoaded() && sk.overRect(this.floorPlanContainer.xPos, this.floorPlanContainer.yPos, this.floorPlanContainer.width, this.floorPlanContainer.height)) {
-            sk.mediator.playPauseRecording();
-            if (sk.mediator.sketchIsInfoShowing) sk.mediator.updateIntro(); // prevent info screen from showing while recording for smooth user interaction
-        }
+        if (sk.overFloorPlan()) sk.mediator.handleMousePressed();
     }
 
     sk.overRect = function (x, y, boxWidth, boxHeight) {
         return sk.mouseX >= x && sk.mouseX <= x + boxWidth && sk.mouseY >= y && sk.mouseY <= y + boxHeight;
+    }
+
+    sk.overFloorPlan = function () {
+        return sk.overRect(this.floorPlanContainer.xPos, this.floorPlanContainer.yPos, this.floorPlanContainer.width, this.floorPlanContainer.height);
     }
 });
