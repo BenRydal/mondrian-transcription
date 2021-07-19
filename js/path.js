@@ -13,16 +13,18 @@
      createPath(pointArray, pColor, weight) {
          return {
              pointArray, // array of point objects
-             pColor, // color of path
-             weight // strokeweight of path
+             pColor, // path color
+             weight // path strokeWeight
          };
      }
 
      /**
-      * Point has Float/Number xPos, yPos and tPos
+      * Point has Float/Number mouse x/y positions, scaled x/y positions to floor plan image file and time position derived from video
       */
-     createPoint(xPos, yPos, tPos) {
+     createPoint(mouseXPos, mouseYPos, xPos, yPos, tPos) {
          return {
+             mouseXPos, // array of mouse positions to display paths in floor plan container, provides ability to draw paths while program runs
+             mouseYPos,
              xPos,
              yPos,
              tPos,
@@ -33,8 +35,8 @@
          this.paths.push(this.createPath(this.curPath.pointArray, this.colorList[this.paths.length % this.colorList.length], 5));
      }
 
-     addPointToCurPath(xPos, yPos, time) {
-         this.curPath.pointArray.push(this.createPoint(xPos, yPos, time));
+     addPointToCurPath(mouseXPos, mouseYPos, xPos, yPos, time) {
+         this.curPath.pointArray.push(this.createPoint(mouseXPos, mouseYPos, xPos, yPos, time));
      }
 
      /**
@@ -44,7 +46,7 @@
      fastForward(amountInSeconds) {
          const point = this.curPath.pointArray[this.curPath.pointArray.length - 1]; // IMPORTANT: get this value before loop
          for (let i = 1; i <= amountInSeconds; i++) { // only tPos is different with each added point
-             this.curPath.pointArray.push(this.createPoint(point.xPos, point.yPos, +(point.tPos + i).toFixed(2)));
+             this.curPath.pointArray.push(this.createPoint(point.mouseXPos, point.mouseYPos, point.xPos, point.yPos, +(point.tPos + i).toFixed(2)));
          }
      }
 
@@ -62,6 +64,7 @@
      }
 
      clearCurPath() {
+         this.curPath.mousePosArray = [];
          this.curPath.pointArray = [];
      }
 

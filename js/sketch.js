@@ -46,11 +46,10 @@ const mondrian = new p5((sk) => {
      * @param  {Float/Number} xPos
      * @param  {Float/Number} yPos
      */
-    sk.drawCurPathBug = function (xPos, yPos) {
-        const rewindBugSize = 25;
+    sk.drawCurPathBug = function (point) {
         this.noStroke();
         this.fill(255, 0, 0);
-        this.circle(this.scaleXPosToDisplayFloorPlan(xPos), this.scaleYPosToDisplayFloorPlan(yPos), rewindBugSize);
+        this.circle(point.mouseXPos, point.mouseYPos, 25);
     }
 
     sk.drawLineSegment = function (curPath) {
@@ -68,7 +67,7 @@ const mondrian = new p5((sk) => {
         this.stroke(path.pColor);
         this.strokeWeight(path.weight);
         for (let i = 1; i < path.pointArray.length; i++) {
-            this.line(this.scaleXPosToDisplayFloorPlan(path.pointArray[i].xPos), this.scaleYPosToDisplayFloorPlan(path.pointArray[i].yPos), this.scaleXPosToDisplayFloorPlan(path.pointArray[i - 1].xPos), this.scaleYPosToDisplayFloorPlan(path.pointArray[i - 1].yPos));
+            this.line(path.pointArray[i].mouseXPos, path.pointArray[i].mouseYPos, path.pointArray[i - 1].mouseXPos, path.pointArray[i - 1].mouseYPos);
         }
     }
 
@@ -122,24 +121,15 @@ const mondrian = new p5((sk) => {
     }
 
     /**
-     * Returns scaled mouse x/y position to input floorPlan image file
+     * Returns mouse position constrained to display window and scaled to input floor plan width/height
+     * NOTE: First, constrain mouse to floor plan display and subtract floorPlan display x/y positions to set data to 0, 0 origin/coordinate system, then, scale x, y positions to input floor plan width / height
      */
-    sk.scaleMousePosToInputFloorPlan = function (floorPlan) {
-        // Constrain mouse to floor plan display and subtract floorPlan display x/y positions to set data to 0, 0 origin/coordinate system
-        const x = (this.constrain(this.mouseX, this.floorPlanContainer.xPos, this.floorPlanContainer.xPos + this.floorPlanContainer.width)) - this.floorPlanContainer.xPos;
-        const y = (this.constrain(this.mouseY, this.floorPlanContainer.yPos, this.floorPlanContainer.yPos + this.floorPlanContainer.height)) - this.floorPlanContainer.yPos;
-        // Scale x,y positions to input floor plan width/height
-        const xPos = +(x * (floorPlan.width / this.floorPlanContainer.width)).toFixed(2);
-        const yPos = +(y * (floorPlan.height / this.floorPlanContainer.height)).toFixed(2);
-        return [xPos, yPos];
-    }
-
-    sk.scaleXPosToDisplayFloorPlan = function (xPos) {
-        return this.floorPlanContainer.xPos + (xPos / (sk.mediator.floorPlanWidth / this.floorPlanContainer.width));
-    }
-
-    sk.scaleYPosToDisplayFloorPlan = function (yPos) {
-        return this.floorPlanContainer.yPos + (yPos / (sk.mediator.floorPlanHeight / this.floorPlanContainer.height));
+    sk.getPositioningData = function (floorPlan) {
+        const mouseXPos = (this.constrain(this.mouseX, this.floorPlanContainer.xPos, this.floorPlanContainer.xPos + this.floorPlanContainer.width));
+        const mouseYPos = (this.constrain(this.mouseY, this.floorPlanContainer.yPos, this.floorPlanContainer.yPos + this.floorPlanContainer.height));
+        const pointXPos = +((mouseXPos - this.floorPlanContainer.xPos) * (floorPlan.width / this.floorPlanContainer.width)).toFixed(2);
+        const pointYPos = +((mouseYPos - this.floorPlanContainer.yPos) * (floorPlan.height / this.floorPlanContainer.height)).toFixed(2);
+        return [mouseXPos, mouseYPos, pointXPos, pointYPos];
     }
 
     /**

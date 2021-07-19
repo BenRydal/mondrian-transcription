@@ -79,9 +79,9 @@ class Mediator {
      * Adds properly scaled data point from input floorPlan to current path
      */
     updateCurPath() {
-        const [xPos, yPos] = this.sk.scaleMousePosToInputFloorPlan(this.floorPlan);
+        const [mouseXPos, mouseYPos, pointXPos, pointYPos] = this.sk.getPositioningData(this.floorPlan);
         const time = +this.videoPlayer.movieDiv.time().toFixed(2);
-        this.path.addPointToCurPath(xPos, yPos, time);
+        this.path.addPointToCurPath(mouseXPos, mouseYPos, pointXPos, pointYPos, time);
     }
 
     updateIntro() {
@@ -124,7 +124,7 @@ class Mediator {
         this.videoPlayer.rewind(rewindToTime);
         if (this.isRecording) this.playPauseRecording(); // pause recording and video if currently recording
         this.updateAllData();
-        if (this.path.curPath.pointArray.length > 0) this.sk.drawCurPathBug(this.path.curPathEndPoint.xPos, this.path.curPathEndPoint.yPos);
+        if (this.path.curPath.pointArray.length > 0) this.sk.drawCurPathBug(this.path.curPathEndPoint);
     }
 
     /**
@@ -146,7 +146,7 @@ class Mediator {
         if (this.isRecording) {
             this.videoPlayer.pause();
             this.isRecording = false;
-            if (this.path.curPath.pointArray.length > 0) this.sk.drawCurPathBug(this.path.curPathEndPoint.xPos, this.path.curPathEndPoint.yPos);
+            if (this.path.curPath.pointArray.length > 0) this.sk.drawCurPathBug(this.path.curPathEndPoint);
         } else if (this.testVideoTimeForRecording()) {
             this.updateAllData(); // update all data to erase curPathBug
             this.videoPlayer.play();
