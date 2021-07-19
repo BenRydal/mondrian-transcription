@@ -124,7 +124,7 @@ const mondrian = new p5((sk) => {
     /**
      * Returns scaled mouse x/y position to input floorPlan image file
      */
-    sk.getScaledMousePos = function (floorPlan) {
+    sk.scaleMousePosToInputFloorPlan = function (floorPlan) {
         // Constrain mouse to floor plan display and subtract floorPlan display x/y positions to set data to 0, 0 origin/coordinate system
         const x = (this.constrain(this.mouseX, this.floorPlanContainer.xPos, this.floorPlanContainer.xPos + this.floorPlanContainer.width)) - this.floorPlanContainer.xPos;
         const y = (this.constrain(this.mouseY, this.floorPlanContainer.yPos, this.floorPlanContainer.yPos + this.floorPlanContainer.height)) - this.floorPlanContainer.yPos;

@@ -79,7 +79,7 @@ class Mediator {
      * Adds properly scaled data point from input floorPlan to current path
      */
     updateCurPath() {
-        const [xPos, yPos] = this.sk.getScaledMousePos(this.floorPlan);
+        const [xPos, yPos] = this.sk.scaleMousePosToInputFloorPlan(this.floorPlan);
         const time = +this.videoPlayer.movieDiv.time().toFixed(2);
         this.path.addPointToCurPath(xPos, yPos, time);
     }
