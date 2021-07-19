@@ -23,7 +23,7 @@ class Mediator {
     handleMousePressed() {
         if (this.allDataLoaded()) {
             this.playPauseRecording();
-            if (this.sketchIsInfoShowing) this.updateIntro(); // prevent info screen from showing while recording for smooth user interaction
+            if (this.isInfoShowing) this.updateIntro(); // prevent info screen from showing while recording for smooth user interaction
         }
     }
 
@@ -31,18 +31,18 @@ class Mediator {
 
     updateDrawLoop() {
         if (this.allDataLoaded()) {
-            if (this.sketchIsRecording) this.updateRecording();
-            if (this.sketchIsInfoShowing) this.updateIntroScreen();
+            if (this.isRecording) this.updateRecording();
+            if (this.isInfoShowing) this.updateIntroScreen();
         } else {
             this.sk.drawLoadDataBackground();
-            if (this.sketchIsInfoShowing) this.updateLoadDataScreen();
+            if (this.isInfoShowing) this.updateLoadDataScreen();
         }
     }
 
     updateLoadDataScreen() {
         if (this.floorPlanLoaded()) this.updateFloorPlan();
         else if (this.videoLoaded()) this.updateVideoFrame();
-        if (this.sketchIsInfoShowing) this.sk.drawIntroScreen();
+        if (this.isInfoShowing) this.sk.drawIntroScreen();
     }
 
     // If info screen showing, redraw all data first, then the info screen
@@ -85,9 +85,9 @@ class Mediator {
     }
 
     updateIntro() {
-        if (this.sketchIsInfoShowing && this.allDataLoaded()) this.updateAllData();
-        if (this.sketchIsInfoShowing) this.sketchIsInfoShowing = false;
-        else this.sketchIsInfoShowing = true;
+        if (this.isInfoShowing && this.allDataLoaded()) this.updateAllData();
+        if (this.isInfoShowing) this.isInfoShowing = false;
+        else this.isInfoShowing = true;
     }
 
     updateAllData() {
@@ -122,7 +122,7 @@ class Mediator {
         const rewindToTime = this.path.curPathEndPoint.tPos - this.videoPlayer.videoJumpValue;
         this.path.rewind(rewindToTime);
         this.videoPlayer.rewind(rewindToTime);
-        if (this.sketchIsRecording) this.playPauseRecording(); // pause recording and video if currently recording
+        if (this.isRecording) this.playPauseRecording(); // pause recording and video if currently recording
         this.updateAllData();
         if (this.path.curPath.pointArray.length > 0) this.sk.drawCurPathBug(this.path.curPathEndPoint.xPos, this.path.curPathEndPoint.yPos);
     }
@@ -139,18 +139,18 @@ class Mediator {
 
     stopRecording() {
         this.videoPlayer.stop();
-        this.sketchIsRecording = false;
+        this.isRecording = false;
     }
 
     playPauseRecording() {
-        if (this.sketchIsRecording) {
+        if (this.isRecording) {
             this.videoPlayer.pause();
-            this.sketchIsRecording = false;
+            this.isRecording = false;
             if (this.path.curPath.pointArray.length > 0) this.sk.drawCurPathBug(this.path.curPathEndPoint.xPos, this.path.curPathEndPoint.yPos);
         } else if (this.testVideoTimeForRecording()) {
             this.updateAllData(); // update all data to erase curPathBug
             this.videoPlayer.play();
-            this.sketchIsRecording = true;
+            this.isRecording = true;
         }
     }
 
@@ -240,21 +240,5 @@ class Mediator {
 
     get floorPlanHeight() {
         return this.floorPlan.height;
-    }
-
-    get sketchIsRecording() {
-        return this.isRecording;
-    }
-
-    set sketchIsRecording(value) {
-        this.isRecording = value;
-    }
-
-    get sketchIsInfoShowing() {
-        return this.isInfoShowing;
-    }
-
-    set sketchIsInfoShowing(value) {
-        this.isInfoShowing = value;
     }
 }
