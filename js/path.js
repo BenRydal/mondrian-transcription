@@ -44,7 +44,7 @@
       * @param  {Integer/Number} amountInSeconds
       */
      fastForward(amountInSeconds) {
-         const point = this.curPath.pointArray[this.curPath.pointArray.length - 1]; // IMPORTANT: get this value before loop
+         const point = this.curPathEndPoint; // IMPORTANT: get last value before loop
          for (let i = 1; i <= amountInSeconds; i++) { // only tPos is different with each added point
              this.curPath.pointArray.push(this.createPoint(point.mouseXPos, point.mouseYPos, point.fpXPos, point.fpYPos, +(point.tPos + i).toFixed(2)));
          }
