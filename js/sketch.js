@@ -43,8 +43,6 @@ const mondrian = new p5((sk) => {
 
     /**
      * Draws circle for last index in current path being recorded
-     * @param  {Float/Number} xPos
-     * @param  {Float/Number} yPos
      */
     sk.drawCurPathBug = function (point) {
         this.noStroke();

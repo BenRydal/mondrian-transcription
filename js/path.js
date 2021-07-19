@@ -21,12 +21,12 @@
      /**
       * Point has Float/Number mouse x/y positions, scaled x/y positions to floor plan image file and time position derived from video
       */
-     createPoint(mouseXPos, mouseYPos, xPos, yPos, tPos) {
+     createPoint(mouseXPos, mouseYPos, fpXPos, fpYPos, tPos) {
          return {
              mouseXPos, // array of mouse positions to display paths in floor plan container, provides ability to draw paths while program runs
              mouseYPos,
-             xPos,
-             yPos,
+             fpXPos,
+             fpYPos,
              tPos,
          };
      }
@@ -35,8 +35,8 @@
          this.paths.push(this.createPath(this.curPath.pointArray, this.colorList[this.paths.length % this.colorList.length], 5));
      }
 
-     addPointToCurPath(mouseXPos, mouseYPos, xPos, yPos, time) {
-         this.curPath.pointArray.push(this.createPoint(mouseXPos, mouseYPos, xPos, yPos, time));
+     addPointToCurPath(mouseXPos, mouseYPos, fpXPos, fpYPos, time) {
+         this.curPath.pointArray.push(this.createPoint(mouseXPos, mouseYPos, fpXPos, fpYPos, time));
      }
 
      /**
@@ -46,7 +46,7 @@
      fastForward(amountInSeconds) {
          const point = this.curPath.pointArray[this.curPath.pointArray.length - 1]; // IMPORTANT: get this value before loop
          for (let i = 1; i <= amountInSeconds; i++) { // only tPos is different with each added point
-             this.curPath.pointArray.push(this.createPoint(point.mouseXPos, point.mouseYPos, point.xPos, point.yPos, +(point.tPos + i).toFixed(2)));
+             this.curPath.pointArray.push(this.createPoint(point.mouseXPos, point.mouseYPos, point.fpXPos, point.fpYPos, +(point.tPos + i).toFixed(2)));
          }
      }
 
@@ -82,8 +82,8 @@
          for (const point of this.curPath.pointArray) {
              let newRow = table.addRow();
              newRow.setNum(FILEHEADERS[0], point.tPos);
-             newRow.setNum(FILEHEADERS[1], point.xPos);
-             newRow.setNum(FILEHEADERS[2], point.yPos);
+             newRow.setNum(FILEHEADERS[1], point.fpXPos);
+             newRow.setNum(FILEHEADERS[2], point.fpYPos);
          }
          return table;
      }
