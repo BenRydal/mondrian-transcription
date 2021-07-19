@@ -231,14 +231,4 @@ class Mediator {
     testVideoTimeForFastForward() {
         return this.videoPlayer.movieDiv.time() > 0 && (this.videoPlayer.movieDiv.time() < this.videoPlayer.movieDiv.duration() - this.jumpInSeconds);
     }
-
-    // ** ** ** ** GETTERS/SETTERS ** ** ** **
-
-    get floorPlanWidth() {
-        return this.floorPlan.width;
-    }
-
-    get floorPlanHeight() {
-        return this.floorPlan.height;
-    }
 }
