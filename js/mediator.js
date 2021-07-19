@@ -44,7 +44,7 @@ class Mediator {
     updateCurPath() {
         const [xPos, yPos] = this.sk.getScaledMousePos(this.floorPlan);
         const time = +this.videoPlayer.movieDiv.time().toFixed(2);
-        this.path.addPoint(xPos, yPos, time);
+        this.path.addPointToCurPath(xPos, yPos, time);
     }
 
     updateIntro() {

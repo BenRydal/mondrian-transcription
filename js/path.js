@@ -33,7 +33,7 @@
          this.paths.push(this.createPath(this.curPath.pointArray, this.colorList[this.paths.length % this.colorList.length], 5));
      }
 
-     addPoint(xPos, yPos, time) {
+     addPointToCurPath(xPos, yPos, time) {
          this.curPath.pointArray.push(this.createPoint(xPos, yPos, time));
      }
 
