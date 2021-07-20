@@ -107,7 +107,7 @@ class Mediator {
         if (this.isRecording) {
             this.videoPlayer.pause();
             this.isRecording = false;
-            if (this.path.curPath.pointArray.length > 0) this.sk.drawCurPathBug(this.path.curPathEndPoint);
+            if (this.path.curPath.pointArray.length > 0) this.sk.drawCurPathEndPoint(this.path.curPathEndPoint);
         } else if (this.testVideoTimeForRecording()) {
             this.updateAllData(); // update all data to erase curPathBug
             this.videoPlayer.play();
@@ -130,7 +130,7 @@ class Mediator {
         else this.videoPlayer.rewind(0);
         if (this.isRecording) this.playPauseRecording(); // pause recording and video if currently recording
         this.updateAllData();
-        if (this.path.curPath.pointArray.length > 0) this.sk.drawCurPathBug(this.path.curPathEndPoint);
+        if (this.path.curPath.pointArray.length > 0) this.sk.drawCurPathEndPoint(this.path.curPathEndPoint);
     }
 
     /**
