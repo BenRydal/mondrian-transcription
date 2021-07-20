@@ -57,7 +57,7 @@
      rewind(rewindToTime) {
          // IMPORTANT: Start at end of x or y list (NOT t) and delete up to newEndTime
          for (let i = this.curPath.pointArray.length - 1; i >= 0; i--) {
-             if (this.curPath.pointArray[i].tPos > rewindToTime) {
+             if (this.curPath.pointArray[i].tPos >= rewindToTime) {
                  this.curPath.pointArray.pop();
              } else break;
          }

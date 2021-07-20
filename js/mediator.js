@@ -121,13 +121,17 @@ class Mediator {
     }
 
     /**
-     * Coordinates rewinding of video and erasing of curPath data and updating display
+     * Coordinates rewinding of video, erasing of curPath data and updating display
      */
     rewind() {
-        const rewindToTime = this.path.curPathEndPoint.tPos - this.jumpInSeconds; // set time to rewind to based on last value in list
-        this.path.rewind(rewindToTime);
-        if (this.testVideoForRewind()) this.videoPlayer.rewind(rewindToTime);
-        else this.videoPlayer.rewind(0);
+        if (this.testVideoForRewind()) {
+            const rewindToTime = this.path.curPathEndPoint.tPos - this.jumpInSeconds; // set time to rewind to based on last value in list
+            this.path.rewind(rewindToTime);
+            this.videoPlayer.rewind(rewindToTime);
+        } else {
+            this.path.rewind(0);
+            this.videoPlayer.rewind(0);
+        }
         if (this.isRecording) this.playPauseRecording(); // pause recording and video if currently recording
         this.updateAllData();
         if (this.path.curPath.pointArray.length > 0) this.sk.drawCurPathEndPoint(this.path.curPathEndPoint);
