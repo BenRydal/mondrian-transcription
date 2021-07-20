@@ -1,7 +1,6 @@
-/*
-Mediator class coordinates calls to 4 other classes including P5 sk
-Contains methods for procedural updates, testing data, getters/setters, and loading data (called from Controller)
-*/
+/**
+ * Mediator class coordinates calls to 4 other classes including P5 sk
+ */
 class Mediator {
 
     constructor(sketch) {
@@ -9,9 +8,9 @@ class Mediator {
         this.path = new Path();
         this.videoPlayer = null;
         this.floorPlan = null;
-        this.isRecording = false; // Boolean to indicate recording
-        this.isInfoShowing = true; // Boolean to show/hide intro message
-        this.jumpInSeconds = 5; // Integer value in seconds to ff or rewind
+        this.isRecording = false; // indicates recording mode
+        this.isInfoShowing = true; // indicates if intro message showing
+        this.jumpInSeconds = 5; // seconds value to fast forward and rewind path/video data
     }
 
     handleKeyPressed(keyValue) {
@@ -28,8 +27,6 @@ class Mediator {
         }
     }
 
-    // ** ** ** ** UPDATE METHODS ** ** ** **
-
     updateDrawLoop() {
         if (this.allDataLoaded()) {
             if (this.isRecording) this.updateRecording();
@@ -42,7 +39,7 @@ class Mediator {
 
     updateLoadDataScreen() {
         if (this.floorPlanLoaded()) this.sk.drawFloorPlan(this.floorPlan);
-        else if (this.videoLoaded()) this.updateVideoFrame();
+        else if (this.videoLoaded()) this.sk.drawVideoFrame(this.videoPlayer, this.videoPlayer.movieDiv.time());
         if (this.isInfoShowing) this.sk.drawIntroScreen();
     }
 
@@ -55,7 +52,7 @@ class Mediator {
      * Coordinates video and line segment drawing in display. Decides whether to record data point based on sampling rate method
      */
     updateRecording() {
-        this.updateVideoFrame();
+        this.sk.drawVideoFrame(this.videoPlayer, this.videoPlayer.movieDiv.time());
         this.sk.drawLineSegment(this.path.curPath); // Don't call this within testSampleRate block
         if (this.testSampleRate()) this.updateCurPath();
     }
@@ -92,14 +89,9 @@ class Mediator {
 
     updateAllData() {
         this.sk.drawFloorPlan(this.floorPlan);
-        this.updateVideoFrame();
+        this.sk.drawVideoFrame(this.videoPlayer, this.videoPlayer.movieDiv.time());
         for (const path of this.path.paths) this.sk.drawPath(path); // update all recorded paths
         this.sk.drawPath(this.path.curPath); // update current path last
-    }
-
-    updateVideoFrame() {
-        this.sk.drawVideoFrame(this.videoPlayer);
-        this.sk.drawVideoTimeLabel(this.videoPlayer.movieDiv.time());
     }
 
     resetCurRecording() {
@@ -108,6 +100,23 @@ class Mediator {
             this.path.clearCurPath();
             this.updateAllData();
         }
+    }
+
+    playPauseRecording() {
+        if (this.isRecording) {
+            this.videoPlayer.pause();
+            this.isRecording = false;
+            if (this.path.curPath.pointArray.length > 0) this.sk.drawCurPathBug(this.path.curPathEndPoint);
+        } else if (this.testVideoTimeForRecording()) {
+            this.updateAllData(); // update all data to erase curPathBug
+            this.videoPlayer.play();
+            this.isRecording = true;
+        }
+    }
+
+    stopRecording() {
+        this.videoPlayer.stop();
+        this.isRecording = false;
     }
 
     /**
@@ -132,37 +141,19 @@ class Mediator {
         }
     }
 
-    stopRecording() {
-        this.videoPlayer.stop();
-        this.isRecording = false;
-    }
-
-    playPauseRecording() {
-        if (this.isRecording) {
-            this.videoPlayer.pause();
-            this.isRecording = false;
-            if (this.path.curPath.pointArray.length > 0) this.sk.drawCurPathBug(this.path.curPathEndPoint);
-        } else if (this.testVideoTimeForRecording()) {
-            this.updateAllData(); // update all data to erase curPathBug
-            this.videoPlayer.play();
-            this.isRecording = true;
-        }
-    }
-
-    // ** ** ** ** LOAD DATA METHODS ** ** ** **
-
     loadVideo(fileLocation) {
         if (this.videoLoaded()) this.videoPlayer.destroy(); // if a video exists, destroy it
         this.videoPlayer = new VideoPlayer(fileLocation, this.sk); // create new videoPlayer
     }
+
     /**
-     * Tests if new video has a duration (additional formatting test) and updates all data/views if so or destroys video and alerts user if not
+     * Called from VideoPlayer Class, updates all data/views after video is loaded
      */
     newVideoLoaded() {
         console.log("New Video Loaded");
         this.path.clearAllPaths();
         this.stopRecording(); // necessary to be able to draw starting frame before playing the video
-        this.updateVideoFrame(); // after video loaded, draw first frame to display it
+        this.sk.drawVideoFrame(this.videoPlayer, this.videoPlayer.movieDiv.time()); // after video loaded, draw first frame to display it
         if (this.floorPlanLoaded()) this.sk.drawFloorPlan(this.floorPlan);
     }
 
@@ -183,7 +174,7 @@ class Mediator {
         this.sk.drawFloorPlan(this.floorPlan);
         if (this.videoLoaded()) {
             this.stopRecording();
-            this.updateVideoFrame();
+            this.sk.drawVideoFrame(this.videoPlayer, this.videoPlayer.movieDiv.time());
         }
     }
 

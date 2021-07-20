@@ -72,19 +72,24 @@ const mondrian = new p5((sk) => {
     /**
      * Draw current movie frame image and white background to GUI in video display
      */
-    sk.drawVideoFrame = function (vp) {
+    sk.drawVideoFrame = function (vp, curVideoTime) {
+        sk.drawVideoImage(vp);
+        sk.drawVideoTimeLabel(curVideoTime);
+    }
+
+    sk.drawVideoImage = function (vp) {
         this.fill(255);
         this.stroke(255);
         this.rect(this.videoContainer.xPos, this.videoContainer.yPos, this.videoContainer.width, this.videoContainer.height);
         this.image(vp.movieDiv, this.videoContainer.xPos, this.videoContainer.yPos, vp.reScaledMovieWidth, vp.reScaledMovieHeight);
     }
 
-    sk.drawVideoTimeLabel = function (curMovieTime) {
+    sk.drawVideoTimeLabel = function (curVideoTime) {
         this.fill(0);
         this.noStroke();
         const labelSpacing = 30;
-        const minutes = Math.floor(curMovieTime / 60);
-        const seconds = Math.floor(curMovieTime - minutes * 60);
+        const minutes = Math.floor(curVideoTime / 60);
+        const seconds = Math.floor(curVideoTime - minutes * 60);
         const label = minutes + " minutes  " + seconds + " seconds";
         this.text(label, this.videoContainer.xPos + labelSpacing / 2, this.videoContainer.yPos + labelSpacing);
     }
