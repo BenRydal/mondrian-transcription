@@ -38,12 +38,12 @@ class Mediator {
                 this.sk.drawIntroScreen();
             }
         } else {
-            this.sk.drawLoadDataBackground();
-            if (this.isInfoShowing) this.updateLoadDataScreen();
+            this.updateLoadDataScreen();
         }
     }
 
     updateLoadDataScreen() {
+        this.sk.drawLoadDataBackground();
         if (this.floorPlanLoaded()) this.sk.drawFloorPlan(this.floorPlan);
         else if (this.videoLoaded()) this.sk.drawVideoFrame(this.videoPlayer, this.videoPlayer.curTime);
         if (this.isInfoShowing) this.sk.drawIntroScreen();
