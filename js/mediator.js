@@ -27,6 +27,9 @@ class Mediator {
         }
     }
 
+    /**
+     * Handles program flow/method calls based on what data has been loaded
+     */
     updateDrawLoop() {
         if (this.allDataLoaded()) {
             if (this.isRecording) this.updateRecording();
