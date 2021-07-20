@@ -38,32 +38,16 @@ const mondrian = new p5((sk) => {
      * Program loop organizes two drawing modes based on whether data is loaded
      */
     sk.draw = function () {
-        if (sk.mediator.allDataLoaded()) {
-            if (sk.mediator.getIsRecording()) sk.mediator.updateRecording(); // records data and updates visualization if in record mode
-            else sk.mediator.updateCurPathBug();
-            // If info screen showing, redraw current screen first, then drawKeys
-            if (sk.mediator.getIsInfoShowing()) {
-                sk.mediator.updateAllData();
-                sk.drawIntroScreen();
-            }
-        } else {
-            sk.drawLoadDataGUI();
-            if (sk.mediator.floorPlanLoaded()) sk.mediator.updateFloorPlan();
-            else if (sk.mediator.videoLoaded()) sk.mediator.updateVideoFrame();
-            if (sk.mediator.getIsInfoShowing()) sk.drawIntroScreen();
-        }
+        sk.mediator.updateDrawLoop();
     }
 
     /**
      * Draws circle for last index in current path being recorded
-     * @param  {Float/Number} xPos
-     * @param  {Float/Number} yPos
      */
-    sk.drawCurPathBug = function (xPos, yPos) {
-        const rewindBugSize = 25;
+    sk.drawCurPathEndPoint = function (point) {
         this.noStroke();
         this.fill(255, 0, 0);
-        this.circle(this.scaleXposToDisplay(xPos), this.scaleYposToDisplay(yPos), rewindBugSize);
+        this.circle(point.mouseXPos, point.mouseYPos, 25);
     }
 
     sk.drawLineSegment = function (curPath) {
@@ -77,43 +61,35 @@ const mondrian = new p5((sk) => {
         this.line(xPos, yPos, pXPos, pYPos);
     }
 
-    sk.drawAllPaths = function (pathsList, curPath) {
-        for (const path of pathsList) this.drawPath(path);
-        this.drawPath(curPath); // draw current path last
-    }
-
-    sk.drawPath = function (p) {
-        this.stroke(p.pColor);
-        this.strokeWeight(p.weight);
-        for (let i = 1; i < p.xPos.length; i++) {
-            this.line(this.scaleXposToDisplay(p.xPos[i]), this.scaleYposToDisplay(p.yPos[i]), this.scaleXposToDisplay(p.xPos[i - 1]), this.scaleYposToDisplay(p.yPos[i - 1]));
+    sk.drawPath = function (path) {
+        this.stroke(path.pColor);
+        this.strokeWeight(path.weight);
+        for (let i = 1; i < path.pointArray.length; i++) {
+            this.line(path.pointArray[i].mouseXPos, path.pointArray[i].mouseYPos, path.pointArray[i - 1].mouseXPos, path.pointArray[i - 1].mouseYPos);
         }
-    }
-
-    sk.scaleXposToDisplay = function (xPos) {
-        return this.floorPlanContainer.xPos + (xPos / (sk.mediator.getFloorPlanWidth() / this.floorPlanContainer.width));
-    }
-
-    sk.scaleYposToDisplay = function (yPos) {
-        return this.floorPlanContainer.yPos + (yPos / (sk.mediator.getFloorPlanHeight() / this.floorPlanContainer.height));
     }
 
     /**
      * Draw current movie frame image and white background to GUI in video display
      */
-    sk.drawVideoFrame = function (vp) {
+    sk.drawVideoFrame = function (vp, curVideoTime) {
+        sk.drawVideoImage(vp);
+        sk.drawVideoTimeLabel(curVideoTime);
+    }
+
+    sk.drawVideoImage = function (vp) {
         this.fill(255);
         this.stroke(255);
         this.rect(this.videoContainer.xPos, this.videoContainer.yPos, this.videoContainer.width, this.videoContainer.height);
         this.image(vp.movieDiv, this.videoContainer.xPos, this.videoContainer.yPos, vp.reScaledMovieWidth, vp.reScaledMovieHeight);
     }
 
-    sk.drawVideoTimeLabel = function (curMovieTime) {
+    sk.drawVideoTimeLabel = function (curVideoTime) {
         this.fill(0);
         this.noStroke();
         const labelSpacing = 30;
-        const minutes = Math.floor(curMovieTime / 60);
-        const seconds = Math.floor(curMovieTime - minutes * 60);
+        const minutes = Math.floor(curVideoTime / 60);
+        const seconds = Math.floor(curVideoTime - minutes * 60);
         const label = minutes + " minutes  " + seconds + " seconds";
         this.text(label, this.videoContainer.xPos + labelSpacing / 2, this.videoContainer.yPos + labelSpacing);
     }
@@ -125,10 +101,7 @@ const mondrian = new p5((sk) => {
         this.image(floorPlan, this.floorPlanContainer.xPos, this.floorPlanContainer.yPos, this.floorPlanContainer.width, this.floorPlanContainer.height);
     }
 
-    /**
-     * Draws floor plan, video, and key windows
-     */
-    sk.drawLoadDataGUI = function () {
+    sk.drawLoadDataBackground = function () {
         this.noStroke();
         this.fill(225);
         this.rect(this.floorPlanContainer.xPos, this.floorPlanContainer.yPos, this.floorPlanContainer.width, this.floorPlanContainer.height);
@@ -151,36 +124,48 @@ const mondrian = new p5((sk) => {
     }
 
     /**
-     * Returns scaled mouse x/y position to input floorPlan image file
+     * NOTE: First, constrain mouse x/y pos to floor plan display container
+     * then, subtract floorPlan container from constrained mouse x/y pos to set to 0,0 origin and scale x/y positions to input floor plan width / height 
      */
-    sk.getScaledMousePos = function (floorPlan) {
-        // Constrain mouse to floor plan display and subtract floorPlan display x/y positions to set data to 0, 0 origin/coordinate system
-        const x = (this.constrain(this.mouseX, this.floorPlanContainer.xPos, this.floorPlanContainer.xPos + this.floorPlanContainer.width)) - this.floorPlanContainer.xPos;
-        const y = (this.constrain(this.mouseY, this.floorPlanContainer.yPos, this.floorPlanContainer.yPos + this.floorPlanContainer.height)) - this.floorPlanContainer.yPos;
-        // Scale x,y positions to input floor plan width/height
-        const xPos = +(x * (floorPlan.width / this.floorPlanContainer.width)).toFixed(2);
-        const yPos = +(y * (floorPlan.height / this.floorPlanContainer.height)).toFixed(2);
-        return [xPos, yPos];
+    sk.getPositioningData = function (floorPlan) {
+        const mouseXPos = (this.constrain(this.mouseX, this.floorPlanContainer.xPos, this.floorPlanContainer.xPos + this.floorPlanContainer.width));
+        const mouseYPos = (this.constrain(this.mouseY, this.floorPlanContainer.yPos, this.floorPlanContainer.yPos + this.floorPlanContainer.height));
+        const pointXPos = (mouseXPos - this.floorPlanContainer.xPos) * (floorPlan.width / this.floorPlanContainer.width);
+        const pointYPos = (mouseYPos - this.floorPlanContainer.yPos) * (floorPlan.height / this.floorPlanContainer.height);
+        return [mouseXPos, mouseYPos, pointXPos, pointYPos];
     }
 
     /**
-     * While wrapped in a P5 instance, this P5 method operates globally on the window (there can't be two of these methods)
+     * While wrapped in a P5 instance, keyPressed and mousePressed P5 methods operate globally on the window (there can't be two of these methods)
      */
     sk.keyPressed = function () {
-        if (sk.mediator.allDataLoaded()) {
-            if (sk.key === 'r' || sk.key === 'R') sk.mediator.rewind();
-            else if (sk.key === 'f' || sk.key === 'F') sk.mediator.fastForward();
-        }
+        sk.mediator.handleKeyPressed(sk.key);
     }
 
     sk.mousePressed = function () {
-        if (sk.mediator.allDataLoaded() && sk.overRect(this.floorPlanContainer.xPos, this.floorPlanContainer.yPos, this.floorPlanContainer.width, this.floorPlanContainer.height)) {
-            sk.mediator.playPauseRecording();
-            if (sk.mediator.getIsInfoShowing()) sk.mediator.updateIntro(); // prevent info screen from showing while recording for smooth user interaction
-        }
+        if (sk.overFloorPlan()) sk.mediator.handleMousePressed();
     }
 
     sk.overRect = function (x, y, boxWidth, boxHeight) {
         return sk.mouseX >= x && sk.mouseX <= x + boxWidth && sk.mouseY >= y && sk.mouseY <= y + boxHeight;
+    }
+
+    sk.overFloorPlan = function () {
+        return sk.overRect(this.floorPlanContainer.xPos, this.floorPlanContainer.yPos, this.floorPlanContainer.width, this.floorPlanContainer.height);
+    }
+
+    sk.writeTable = function (pointArray) {
+        const headers = ["time", "x", "y"]; // Column headers for outputted .CSV movement files
+        let table = new p5.Table();
+        table.addColumn(headers[0]);
+        table.addColumn(headers[1]);
+        table.addColumn(headers[2]);
+        for (const point of pointArray) {
+            let newRow = table.addRow();
+            newRow.setNum(headers[0], point.tPos);
+            newRow.setNum(headers[1], point.fpXPos);
+            newRow.setNum(headers[2], point.fpYPos);
+        }
+        return table;
     }
 });

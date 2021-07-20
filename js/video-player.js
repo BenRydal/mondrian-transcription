@@ -6,19 +6,18 @@ class VideoPlayer {
      */
 
     constructor(fileLocation, sketch) {
-        this.videoJumpValue = 5; // Integer value in seconds to ff or rewind
         this.inputMovieWidth = null; // Original pixel size of video   
         this.inputMovieHeight = null;
         this.reScaledMovieWidth = null; // Rescaled pixel size of video to fit display container
         this.reScaledMovieHeight = null;
         this.movieDiv = sketch.createVideo(fileLocation, () => {
-            // ADD VIDEO DURATION TEST HERE? console.log(movieDiv.duration());
+            // TODO: ADD VIDEO DURATION TEST HERE: console.log(movieDiv.duration());
             this.movieDiv.id('moviePlayer');
             this.movieDiv.hide();
             this.setInputMovieSize(); // set global movie size constants
             this.setDisplayMovieSize(sketch.videoContainer.width, sketch.videoContainer.height);
             this.movieDiv.onload = () => URL.revokeObjectURL(fileLocation);
-            document.getElementById('moviePlayer').onended = () => sketch.mediator.setIsRecording(false); // end program recording when movie ends
+            document.getElementById('moviePlayer').onended = () => sketch.mediator.isRecording = false; // end program recording when movie ends
             sketch.mediator.newVideoLoaded();
         });
     }
@@ -69,20 +68,30 @@ class VideoPlayer {
         this.movieDiv.pause();
     }
 
-    fastForward() {
-        this.movieDiv.time(this.movieDiv.time() + this.videoJumpValue); // ff by videoJumpValue
+    /**
+     * @param  {Float/Number} jumpInSeconds
+     */
+    fastForward(jumpInSeconds) {
+        const curTime = this.movieDiv.time();
+        this.movieDiv.time(curTime + jumpInSeconds);
     }
 
     /**
-     * Rewind movie to parameter rewindToTime or 0 if it is too close to start of video
      * @param  {Float/Number} rewindToTime
      */
     rewind(rewindToTime) {
-        if (this.movieDiv.time() > this.videoJumpValue) this.movieDiv.time(rewindToTime);
-        else this.movieDiv.time(0);
+        this.movieDiv.time(rewindToTime);
     }
 
     destroy() {
         this.movieDiv.remove(); // remove div element
+    }
+
+    get curTime() {
+        return this.movieDiv.time();
+    }
+
+    get duration() {
+        return this.movieDiv.duration();
     }
 }

@@ -1,7 +1,6 @@
-/*
-Mediator class coordinates calls to 4 other classes including P5 sk
-Contains methods for procedural updates, testing data, getters/setters, and loading data (called from Controller)
-*/
+/**
+ * Mediator class coordinates calls to 4 other classes including P5 sk
+ */
 class Mediator {
 
     constructor(sketch) {
@@ -9,67 +8,87 @@ class Mediator {
         this.path = new Path();
         this.videoPlayer = null;
         this.floorPlan = null;
-        this.isRecording = false; // Boolean to indicate recording
-        this.isInfoShowing = true; // Boolean to show/hide intro message
+        this.isRecording = false; // indicates recording mode
+        this.isInfoShowing = true; // indicates if intro message showing
+        this.jumpInSeconds = 5; // seconds value to fast forward and rewind path/video data
     }
 
-    // ** ** ** ** UPDATE METHODS ** ** ** **
+    handleKeyPressed(keyValue) {
+        if (this.allDataLoaded()) {
+            if (keyValue === 'r' || keyValue === 'R') this.rewind();
+            else if (keyValue === 'f' || keyValue === 'F') this.fastForward();
+        }
+    }
+
+    handleMousePressed() {
+        if (this.allDataLoaded()) {
+            this.playPauseRecording();
+            if (this.isInfoShowing) this.updateIntro(); // prevent info screen from showing while recording for smooth user interaction
+        }
+    }
+
+    /**
+     * Handles program flow/method calls based on what data has been loaded
+     */
+    updateDrawLoop() {
+        if (this.allDataLoaded()) {
+            if (this.isRecording) this.updateRecording();
+            if (this.isInfoShowing) {
+                this.updateAllData(); // redraw all data first, then the info screen
+                this.sk.drawIntroScreen();
+            }
+        } else {
+            this.updateLoadDataScreen();
+        }
+    }
+
+    updateLoadDataScreen() {
+        this.sk.drawLoadDataBackground();
+        if (this.floorPlanLoaded()) this.sk.drawFloorPlan(this.floorPlan);
+        else if (this.videoLoaded()) this.sk.drawVideoFrame(this.videoPlayer, this.videoPlayer.curTime);
+        if (this.isInfoShowing) this.sk.drawIntroScreen();
+    }
+
     /**
      * Coordinates video and line segment drawing in display. Decides whether to record data point based on sampling rate method
      */
     updateRecording() {
-        this.updateVideoFrame();
-        this.sk.drawLineSegment(this.path.curPath); // Apparently, this should not be called within testSampleRate block
-        if (this.testSampleRate()) this.updateCurPath();
+        this.sk.drawVideoFrame(this.videoPlayer, this.videoPlayer.curTime);
+        this.sk.drawLineSegment(this.path.curPath); // Don't call this within testSampleRate block
+        if (this.sampleData()) this.updateCurPath();
     }
 
     /**
      * Method to sample data in 2 ways
-     * (1) if mouse moves sample at rate of 2 decimal points
-     * (2) if stopped sample at rate of 0 decimal points, approximately every 1 second in movie
+     * (1) if mouse moves compare based on rounding decimal value for paths
+     * (2) if stopped compare based on Math.round method, approximately every 1 second in movie
      */
-    testSampleRate() {
-        if (this.path.curPath.tPos.length === 0) return true;
-        else if (this.sk.mouseX !== this.sk.pmouseX || this.sk.mouseY !== this.sk.pmouseY) return +(this.path.curPath.tPos[this.path.curPath.tPos.length - 1].toFixed(2)) < +(this.videoPlayer.movieDiv.time().toFixed(2));
-        else return +(this.path.curPath.tPos[this.path.curPath.tPos.length - 1].toFixed(0)) < +(this.videoPlayer.movieDiv.time().toFixed(0));
-    }
-
-    updateCurPathBug() {
-        if (this.path.curPath.xPos.length > 0) this.sk.drawCurPathBug(this.path.curPath.xPos[this.path.curPath.xPos.length - 1], this.path.curPath.yPos[this.path.curPath.yPos.length - 1]);
+    sampleData() {
+        if (this.path.curPath.pointArray.length === 0) return true; // always return true if first data point
+        else if (this.sk.mouseX !== this.sk.pmouseX || this.sk.mouseY !== this.sk.pmouseY) return this.path.round(this.path.curPathEndPoint.tPos) < this.path.round(this.videoPlayer.curTime);
+        else return Math.round(this.path.curPathEndPoint.tPos) < Math.round(this.videoPlayer.curTime);
     }
 
     /**
-     * Adds properly scaled data point from input floorPlan to current path
+     * Add correctly scaled positioning data to current path
      */
     updateCurPath() {
-        const [xPos, yPos] = this.sk.getScaledMousePos(this.floorPlan);
-        const time = +this.videoPlayer.movieDiv.time().toFixed(2);
-        this.path.addPoint({
-            xPos,
-            yPos,
-            time
-        });
+        const [mouseXPos, mouseYPos, pointXPos, pointYPos] = this.sk.getPositioningData(this.floorPlan);
+        const time = this.videoPlayer.curTime;
+        this.path.addPointToCurPath(mouseXPos, mouseYPos, pointXPos, pointYPos, time);
     }
 
     updateIntro() {
-        if (this.getIsInfoShowing() && this.allDataLoaded()) this.updateAllData();
-        if (this.getIsInfoShowing()) this.setIsInfoShowing(false);
-        else this.setIsInfoShowing(true);
+        if (this.isInfoShowing && this.allDataLoaded()) this.updateAllData();
+        if (this.isInfoShowing) this.isInfoShowing = false;
+        else this.isInfoShowing = true;
     }
 
     updateAllData() {
-        this.updateFloorPlan();
-        this.updateVideoFrame();
-        this.sk.drawAllPaths(this.path.paths, this.path.curPath);
-    }
-
-    updateFloorPlan() {
         this.sk.drawFloorPlan(this.floorPlan);
-    }
-
-    updateVideoFrame() {
-        this.sk.drawVideoFrame(this.videoPlayer);
-        this.sk.drawVideoTimeLabel(this.videoPlayer.movieDiv.time());
+        this.sk.drawVideoFrame(this.videoPlayer, this.videoPlayer.curTime);
+        for (const path of this.path.paths) this.sk.drawPath(path); // update all recorded paths
+        this.sk.drawPath(this.path.curPath); // update current path last
     }
 
     resetCurRecording() {
@@ -80,59 +99,64 @@ class Mediator {
         }
     }
 
+    playPauseRecording() {
+        if (this.isRecording) {
+            this.videoPlayer.pause();
+            this.isRecording = false;
+            if (this.path.curPath.pointArray.length > 0) this.sk.drawCurPathEndPoint(this.path.curPathEndPoint);
+        } else if (this.testVideoTimeForRecording()) {
+            this.updateAllData(); // update all data to erase curPathBug
+            this.videoPlayer.play();
+            this.isRecording = true;
+        }
+    }
+
+    stopRecording() {
+        this.videoPlayer.stop();
+        this.isRecording = false;
+    }
+
     /**
-     * Coordinates rewinding of video and erasing of curPath data and updating display
+     * Coordinates rewinding of video, erasing of curPath data and updating display
      */
     rewind() {
-        // Set time to rewind to base on last time value in list - videoPlayer.videoJumpValue
-        const rewindToTime = this.path.curPath.tPos[this.path.curPath.tPos.length - 1] - this.videoPlayer.videoJumpValue;
-        this.path.rewind(rewindToTime);
-        this.videoPlayer.rewind(rewindToTime);
-        if (this.getIsRecording()) this.playPauseRecording(); // pause recording and video if currently recording
+        if (this.testVideoForRewind()) {
+            const rewindToTime = this.path.curPathEndPoint.tPos - this.jumpInSeconds; // set time to rewind to based on last value in list
+            this.path.rewind(rewindToTime);
+            this.videoPlayer.rewind(rewindToTime);
+        } else {
+            this.path.rewind(0);
+            this.videoPlayer.rewind(0);
+        }
+        if (this.isRecording) this.playPauseRecording(); // pause recording and video if currently recording
         this.updateAllData();
+        if (this.path.curPath.pointArray.length > 0) this.sk.drawCurPathEndPoint(this.path.curPathEndPoint);
     }
 
     /**
      * Coordinates fast forwarding of movie and path data, if movie not right at start or near end
      */
     fastForward() {
-        if (this.videoPlayer.movieDiv.time() > 0 && (this.videoPlayer.movieDiv.time() < this.videoPlayer.movieDiv.duration() - this.videoPlayer.videoJumpValue)) {
-            this.videoPlayer.fastForward();
-            this.path.fastForward(this.videoPlayer.videoJumpValue);
+        if (this.testVideoTimeForFastForward()) {
+            this.videoPlayer.fastForward(this.jumpInSeconds);
+            this.path.fastForward(this.jumpInSeconds);
         }
     }
-
-    stopRecording() {
-        this.videoPlayer.stop();
-        this.setIsRecording(false);
-    }
-
-    playPauseRecording() {
-        if (this.getIsRecording()) {
-            this.videoPlayer.pause();
-            this.setIsRecording(false);
-        } else {
-            this.updateAllData(); // update all data to erase rewind bug
-            this.videoPlayer.play();
-            this.setIsRecording(true);
-        }
-    }
-
-    // ** ** ** ** DATA LOADING METHODS ** ** ** **
 
     loadVideo(fileLocation) {
         if (this.videoLoaded()) this.videoPlayer.destroy(); // if a video exists, destroy it
         this.videoPlayer = new VideoPlayer(fileLocation, this.sk); // create new videoPlayer
     }
+
     /**
-     * Tests if new video has a duration (additional formatting test) and updates all data/views if so or destroys video and alerts user if not
+     * Called from VideoPlayer Class, updates all data/views after video is loaded
      */
     newVideoLoaded() {
         console.log("New Video Loaded");
         this.path.clearAllPaths();
         this.stopRecording(); // necessary to be able to draw starting frame before playing the video
-        this.updateVideoFrame(); // after video loaded, draw first frame to display it
-        if (this.floorPlanLoaded()) this.updateFloorPlan();
+        this.sk.drawVideoFrame(this.videoPlayer, this.videoPlayer.curTime); // after video loaded, draw first frame to display it
+        if (this.floorPlanLoaded()) this.sk.drawFloorPlan(this.floorPlan);
     }
 
     loadFloorPlan(fileLocation) {
@@ -149,25 +173,23 @@ class Mediator {
         console.log("New Floor Plan Loaded");
         this.floorPlan = img;
         this.path.clearAllPaths();
-        this.updateFloorPlan();
+        this.sk.drawFloorPlan(this.floorPlan);
         if (this.videoLoaded()) {
             this.stopRecording();
-            this.updateVideoFrame();
+            this.sk.drawVideoFrame(this.videoPlayer, this.videoPlayer.curTime);
         }
     }
 
     writeFile() {
-        if (this.allDataLoaded() && this.path.curPath.xPos.length > 0) {
-            this.sk.saveTable(this.path.getTable(), "Path_" + this.path.curFileToOutput, "csv");
+        if (this.allDataLoaded() && this.path.curPath.pointArray.length > 0) {
+            this.sk.saveTable(this.sk.writeTable(this.path.curPath.pointArray), "Path_" + this.path.curFileToOutput, "csv");
             this.path.curFileToOutput++;
-            this.path.addPath();
+            this.path.addCurPathToList();
             this.path.clearCurPath();
             this.stopRecording();
             this.updateAllData();
         }
     }
-
-    // ** ** ** ** TEST DATA METHODS ** ** ** **
 
     /**
      * @param  {Any Type} data
@@ -188,29 +210,15 @@ class Mediator {
         return this.dataIsLoaded(this.floorPlan) && this.dataIsLoaded(this.videoPlayer);
     }
 
-    // ** ** ** ** GETTERS/SETTERS ** ** ** **
-
-    getFloorPlanWidth() {
-        return this.floorPlan.width;
+    testVideoTimeForRecording() {
+        return this.videoPlayer.curTime < this.videoPlayer.duration;
     }
 
-    getFloorPlanHeight() {
-        return this.floorPlan.height;
+    testVideoTimeForFastForward() {
+        return this.videoPlayer.curTime > 0 && (this.videoPlayer.curTime < this.videoPlayer.duration - this.jumpInSeconds);
     }
 
-    getIsRecording() {
-        return this.isRecording;
-    }
-
-    setIsRecording(value) {
-        this.isRecording = value;
-    }
-
-    getIsInfoShowing() {
-        return this.isInfoShowing;
-    }
-
-    setIsInfoShowing(value) {
-        this.isInfoShowing = value;
+    testVideoForRewind() {
+        return this.videoPlayer.curTime > this.jumpInSeconds;
     }
 }
