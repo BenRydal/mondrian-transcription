@@ -31,12 +31,14 @@
          };
      }
 
-     addPath() {
+     addCurPathToList() {
          this.paths.push(this.createPath(this.curPath.pointArray, this.colorList[this.paths.length % this.colorList.length], 5));
      }
-
+     /**
+      * NOTE: Make sure to round all values
+      */
      addPointToCurPath(mouseXPos, mouseYPos, fpXPos, fpYPos, time) {
-         this.curPath.pointArray.push(this.createPoint(mouseXPos, mouseYPos, fpXPos, fpYPos, time));
+         this.curPath.pointArray.push(this.createPoint(this.round(mouseXPos), this.round(mouseYPos), this.round(fpXPos), this.round(fpYPos), this.round(time)));
      }
 
      /**
@@ -46,7 +48,7 @@
      fastForward(amountInSeconds) {
          const point = this.curPathEndPoint; // IMPORTANT: get last value before loop
          for (let i = 1; i <= amountInSeconds; i++) { // only tPos is different with each added point
-             this.curPath.pointArray.push(this.createPoint(point.mouseXPos, point.mouseYPos, point.fpXPos, point.fpYPos, +(point.tPos + i).toFixed(2)));
+             this.curPath.pointArray.push(this.createPoint(point.mouseXPos, point.mouseYPos, point.fpXPos, point.fpYPos, this.round(point.tPos + i)));
          }
      }
 
@@ -71,6 +73,14 @@
      clearAllPaths() {
          this.clearCurPath();
          this.paths = [];
+     }
+
+     /**
+      * Used to round numbers when saving data and also to compare path/video time to sample data
+      * @param  {Number/Float} value
+      */
+     round(value) {
+         return +(value.toFixed(2));
      }
 
      get curPathEndPoint() {

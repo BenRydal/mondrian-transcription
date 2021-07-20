@@ -55,22 +55,18 @@ class Mediator {
     updateRecording() {
         this.sk.drawVideoFrame(this.videoPlayer, this.videoPlayer.curTime);
         this.sk.drawLineSegment(this.path.curPath); // Don't call this within testSampleRate block
-        if (this.testSampleRate()) this.updateCurPath();
+        if (this.sampleData()) this.updateCurPath();
     }
 
     /**
      * Method to sample data in 2 ways
-     * (1) if mouse moves sample at rate of 2 decimal points
-     * (2) if stopped sample at rate of 0 decimal points, approximately every 1 second in movie
+     * (1) if mouse moves compare based on rounding decimal value for paths
+     * (2) if stopped compare based on Math.round method, approximately every 1 second in movie
      */
-    testSampleRate() {
+    sampleData() {
         if (this.path.curPath.pointArray.length === 0) return true; // always return true if first data point
-        else if (this.sk.mouseX !== this.sk.pmouseX || this.sk.mouseY !== this.sk.pmouseY) return this.sampleAtRate(2);
-        else return this.sampleAtRate(0);
-    }
-
-    sampleAtRate(rate) {
-        return +(this.path.curPathEndPoint.tPos.toFixed(rate)) < +(this.videoPlayer.curTime.toFixed(rate));
+        else if (this.sk.mouseX !== this.sk.pmouseX || this.sk.mouseY !== this.sk.pmouseY) return this.path.round(this.path.curPathEndPoint.tPos) < this.path.round(this.videoPlayer.curTime);
+        else return Math.round(this.path.curPathEndPoint.tPos) < Math.round(this.videoPlayer.curTime);
     }
 
     /**
@@ -78,7 +74,7 @@ class Mediator {
      */
     updateCurPath() {
         const [mouseXPos, mouseYPos, pointXPos, pointYPos] = this.sk.getPositioningData(this.floorPlan);
-        const time = +this.videoPlayer.curTime.toFixed(2);
+        const time = this.videoPlayer.curTime;
         this.path.addPointToCurPath(mouseXPos, mouseYPos, pointXPos, pointYPos, time);
     }
 
@@ -188,7 +184,7 @@ class Mediator {
         if (this.allDataLoaded() && this.path.curPath.pointArray.length > 0) {
             this.sk.saveTable(this.sk.writeTable(this.path.curPath.pointArray), "Path_" + this.path.curFileToOutput, "csv");
             this.path.curFileToOutput++;
-            this.path.addPath();
+            this.path.addCurPathToList();
             this.path.clearCurPath();
             this.stopRecording();
             this.updateAllData();

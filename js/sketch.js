@@ -130,8 +130,8 @@ const mondrian = new p5((sk) => {
     sk.getPositioningData = function (floorPlan) {
         const mouseXPos = (this.constrain(this.mouseX, this.floorPlanContainer.xPos, this.floorPlanContainer.xPos + this.floorPlanContainer.width));
         const mouseYPos = (this.constrain(this.mouseY, this.floorPlanContainer.yPos, this.floorPlanContainer.yPos + this.floorPlanContainer.height));
-        const pointXPos = +((mouseXPos - this.floorPlanContainer.xPos) * (floorPlan.width / this.floorPlanContainer.width)).toFixed(2);
-        const pointYPos = +((mouseYPos - this.floorPlanContainer.yPos) * (floorPlan.height / this.floorPlanContainer.height)).toFixed(2);
+        const pointXPos = (mouseXPos - this.floorPlanContainer.xPos) * (floorPlan.width / this.floorPlanContainer.width);
+        const pointYPos = (mouseYPos - this.floorPlanContainer.yPos) * (floorPlan.height / this.floorPlanContainer.height);
         return [mouseXPos, mouseYPos, pointXPos, pointYPos];
     }
 
