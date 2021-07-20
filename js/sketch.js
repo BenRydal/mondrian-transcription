@@ -153,4 +153,19 @@ const mondrian = new p5((sk) => {
     sk.overFloorPlan = function () {
         return sk.overRect(this.floorPlanContainer.xPos, this.floorPlanContainer.yPos, this.floorPlanContainer.width, this.floorPlanContainer.height);
     }
+
+    sk.writeTable = function (pointArray) {
+        const headers = ["time", "x", "y"]; // Column headers for outputted .CSV movement files
+        let table = new p5.Table();
+        table.addColumn(headers[0]);
+        table.addColumn(headers[1]);
+        table.addColumn(headers[2]);
+        for (const point of pointArray) {
+            let newRow = table.addRow();
+            newRow.setNum(headers[0], point.tPos);
+            newRow.setNum(headers[1], point.fpXPos);
+            newRow.setNum(headers[2], point.fpYPos);
+        }
+        return table;
+    }
 });
