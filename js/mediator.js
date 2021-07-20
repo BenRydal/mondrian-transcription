@@ -125,7 +125,8 @@ class Mediator {
     rewind() {
         const rewindToTime = this.path.curPathEndPoint.tPos - this.jumpInSeconds; // set time to rewind to based on last value in list
         this.path.rewind(rewindToTime);
-        this.videoPlayer.rewind(rewindToTime, this.jumpInSeconds);
+        if (this.testVideoForRewind()) this.videoPlayer.rewind(rewindToTime);
+        else this.videoPlayer.rewind(0);
         if (this.isRecording) this.playPauseRecording(); // pause recording and video if currently recording
         this.updateAllData();
         if (this.path.curPath.pointArray.length > 0) this.sk.drawCurPathBug(this.path.curPathEndPoint);
@@ -229,5 +230,9 @@ class Mediator {
 
     testVideoTimeForFastForward() {
         return this.videoPlayer.curTime > 0 && (this.videoPlayer.curTime < this.videoPlayer.duration - this.jumpInSeconds);
+    }
+
+    testVideoForRewind() {
+        return this.videoPlayer.curTime > this.jumpInSeconds;
     }
 }

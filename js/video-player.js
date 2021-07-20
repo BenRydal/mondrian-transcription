@@ -68,18 +68,19 @@ class VideoPlayer {
         this.movieDiv.pause();
     }
 
+    /**
+     * @param  {Float/Number} jumpInSeconds
+     */
     fastForward(jumpInSeconds) {
         const curTime = this.movieDiv.time();
         this.movieDiv.time(curTime + jumpInSeconds);
     }
 
     /**
-     * Rewind movie to parameter rewindToTime or 0 if it is too close to start of video
      * @param  {Float/Number} rewindToTime
      */
-    rewind(rewindToTime, jumpInSeconds) {
-        if (this.movieDiv.time() > jumpInSeconds) this.movieDiv.time(rewindToTime);
-        else this.movieDiv.time(0);
+    rewind(rewindToTime) {
+        this.movieDiv.time(rewindToTime);
     }
 
     destroy() {
