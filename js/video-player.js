@@ -11,7 +11,7 @@ class VideoPlayer {
         this.reScaledMovieWidth = null; // Rescaled pixel size of video to fit display container
         this.reScaledMovieHeight = null;
         this.movieDiv = sketch.createVideo(fileLocation, () => {
-            // ADD VIDEO DURATION TEST HERE? console.log(movieDiv.duration());
+            // TODO: ADD VIDEO DURATION TEST HERE: console.log(movieDiv.duration());
             this.movieDiv.id('moviePlayer');
             this.movieDiv.hide();
             this.setInputMovieSize(); // set global movie size constants
@@ -84,5 +84,13 @@ class VideoPlayer {
 
     destroy() {
         this.movieDiv.remove(); // remove div element
+    }
+
+    get curTime() {
+        return this.movieDiv.time();
+    }
+
+    get duration() {
+        return this.movieDiv.duration();
     }
 }

@@ -39,7 +39,7 @@ class Mediator {
 
     updateLoadDataScreen() {
         if (this.floorPlanLoaded()) this.sk.drawFloorPlan(this.floorPlan);
-        else if (this.videoLoaded()) this.sk.drawVideoFrame(this.videoPlayer, this.videoPlayer.movieDiv.time());
+        else if (this.videoLoaded()) this.sk.drawVideoFrame(this.videoPlayer, this.videoPlayer.curTime);
         if (this.isInfoShowing) this.sk.drawIntroScreen();
     }
 
@@ -52,7 +52,7 @@ class Mediator {
      * Coordinates video and line segment drawing in display. Decides whether to record data point based on sampling rate method
      */
     updateRecording() {
-        this.sk.drawVideoFrame(this.videoPlayer, this.videoPlayer.movieDiv.time());
+        this.sk.drawVideoFrame(this.videoPlayer, this.videoPlayer.curTime);
         this.sk.drawLineSegment(this.path.curPath); // Don't call this within testSampleRate block
         if (this.testSampleRate()) this.updateCurPath();
     }
@@ -69,7 +69,7 @@ class Mediator {
     }
 
     sampleAtRate(rate) {
-        return +(this.path.curPathEndPoint.tPos.toFixed(rate)) < +(this.videoPlayer.movieDiv.time().toFixed(rate));
+        return +(this.path.curPathEndPoint.tPos.toFixed(rate)) < +(this.videoPlayer.curTime.toFixed(rate));
     }
 
     /**
@@ -77,7 +77,7 @@ class Mediator {
      */
     updateCurPath() {
         const [mouseXPos, mouseYPos, pointXPos, pointYPos] = this.sk.getPositioningData(this.floorPlan);
-        const time = +this.videoPlayer.movieDiv.time().toFixed(2);
+        const time = +this.videoPlayer.curTime.toFixed(2);
         this.path.addPointToCurPath(mouseXPos, mouseYPos, pointXPos, pointYPos, time);
     }
 
@@ -89,7 +89,7 @@ class Mediator {
 
     updateAllData() {
         this.sk.drawFloorPlan(this.floorPlan);
-        this.sk.drawVideoFrame(this.videoPlayer, this.videoPlayer.movieDiv.time());
+        this.sk.drawVideoFrame(this.videoPlayer, this.videoPlayer.curTime);
         for (const path of this.path.paths) this.sk.drawPath(path); // update all recorded paths
         this.sk.drawPath(this.path.curPath); // update current path last
     }
@@ -153,7 +153,7 @@ class Mediator {
         console.log("New Video Loaded");
         this.path.clearAllPaths();
         this.stopRecording(); // necessary to be able to draw starting frame before playing the video
-        this.sk.drawVideoFrame(this.videoPlayer, this.videoPlayer.movieDiv.time()); // after video loaded, draw first frame to display it
+        this.sk.drawVideoFrame(this.videoPlayer, this.videoPlayer.curTime); // after video loaded, draw first frame to display it
         if (this.floorPlanLoaded()) this.sk.drawFloorPlan(this.floorPlan);
     }
 
@@ -174,7 +174,7 @@ class Mediator {
         this.sk.drawFloorPlan(this.floorPlan);
         if (this.videoLoaded()) {
             this.stopRecording();
-            this.sk.drawVideoFrame(this.videoPlayer, this.videoPlayer.movieDiv.time());
+            this.sk.drawVideoFrame(this.videoPlayer, this.videoPlayer.curTime);
         }
     }
 
@@ -224,10 +224,10 @@ class Mediator {
     }
 
     testVideoTimeForRecording() {
-        return this.videoPlayer.movieDiv.time() < this.videoPlayer.movieDiv.duration();
+        return this.videoPlayer.curTime < this.videoPlayer.duration;
     }
 
     testVideoTimeForFastForward() {
-        return this.videoPlayer.movieDiv.time() > 0 && (this.videoPlayer.movieDiv.time() < this.videoPlayer.movieDiv.duration() - this.jumpInSeconds);
+        return this.videoPlayer.curTime > 0 && (this.videoPlayer.curTime < this.videoPlayer.duration - this.jumpInSeconds);
     }
 }
