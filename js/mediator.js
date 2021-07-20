@@ -30,7 +30,10 @@ class Mediator {
     updateDrawLoop() {
         if (this.allDataLoaded()) {
             if (this.isRecording) this.updateRecording();
-            if (this.isInfoShowing) this.updateIntroScreen();
+            if (this.isInfoShowing) {
+                this.updateAllData(); // redraw all data first, then the info screen
+                this.sk.drawIntroScreen();
+            }
         } else {
             this.sk.drawLoadDataBackground();
             if (this.isInfoShowing) this.updateLoadDataScreen();
@@ -41,11 +44,6 @@ class Mediator {
         if (this.floorPlanLoaded()) this.sk.drawFloorPlan(this.floorPlan);
         else if (this.videoLoaded()) this.sk.drawVideoFrame(this.videoPlayer, this.videoPlayer.curTime);
         if (this.isInfoShowing) this.sk.drawIntroScreen();
-    }
-
-    updateIntroScreen() {
-        this.updateAllData(); // redraw all data first, then the info screen
-        this.sk.drawIntroScreen();
     }
 
     /**
