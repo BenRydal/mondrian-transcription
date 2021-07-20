@@ -46,9 +46,8 @@ class Mediator {
         if (this.isInfoShowing) this.sk.drawIntroScreen();
     }
 
-    // If info screen showing, redraw all data first, then the info screen
     updateIntroScreen() {
-        this.updateAllData();
+        this.updateAllData(); // redraw all data first, then the info screen
         this.sk.drawIntroScreen();
     }
 
@@ -57,7 +56,7 @@ class Mediator {
      */
     updateRecording() {
         this.updateVideoFrame();
-        this.sk.drawLineSegment(this.path.curPath); // Apparently, this should not be called within testSampleRate block
+        this.sk.drawLineSegment(this.path.curPath); // Don't call this within testSampleRate block
         if (this.testSampleRate()) this.updateCurPath();
     }
 
@@ -77,7 +76,7 @@ class Mediator {
     }
 
     /**
-     * Adds properly scaled data point from input floorPlan to current path
+     * Add correctly scaled positioning data to current path
      */
     updateCurPath() {
         const [mouseXPos, mouseYPos, pointXPos, pointYPos] = this.sk.getPositioningData(this.floorPlan);
@@ -198,8 +197,6 @@ class Mediator {
             this.updateAllData();
         }
     }
-
-    // ** ** ** ** TEST HELPER METHODS ** ** ** **
 
     /**
      * @param  {Any Type} data
