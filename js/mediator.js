@@ -41,7 +41,7 @@ class Mediator {
     }
 
     updateLoadDataScreen() {
-        if (this.floorPlanLoaded()) this.updateFloorPlan();
+        if (this.floorPlanLoaded()) this.sk.drawFloorPlan(this.floorPlan);
         else if (this.videoLoaded()) this.updateVideoFrame();
         if (this.isInfoShowing) this.sk.drawIntroScreen();
     }
@@ -92,14 +92,10 @@ class Mediator {
     }
 
     updateAllData() {
-        this.updateFloorPlan();
+        this.sk.drawFloorPlan(this.floorPlan);
         this.updateVideoFrame();
         for (const path of this.path.paths) this.sk.drawPath(path); // update all recorded paths
         this.sk.drawPath(this.path.curPath); // update current path last
-    }
-
-    updateFloorPlan() {
-        this.sk.drawFloorPlan(this.floorPlan);
     }
 
     updateVideoFrame() {
@@ -168,7 +164,7 @@ class Mediator {
         this.path.clearAllPaths();
         this.stopRecording(); // necessary to be able to draw starting frame before playing the video
         this.updateVideoFrame(); // after video loaded, draw first frame to display it
-        if (this.floorPlanLoaded()) this.updateFloorPlan();
+        if (this.floorPlanLoaded()) this.sk.drawFloorPlan(this.floorPlan);
     }
 
     loadFloorPlan(fileLocation) {
@@ -185,7 +181,7 @@ class Mediator {
         console.log("New Floor Plan Loaded");
         this.floorPlan = img;
         this.path.clearAllPaths();
-        this.updateFloorPlan();
+        this.sk.drawFloorPlan(this.floorPlan);
         if (this.videoLoaded()) {
             this.stopRecording();
             this.updateVideoFrame();
