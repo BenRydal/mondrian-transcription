@@ -153,6 +153,7 @@ class Mediator {
      */
     newVideoLoaded() {
         console.log("New Video Loaded");
+        console.log(this.videoPlayer.duration);
         this.path.clearAllPaths();
         this.stopRecording(); // necessary to be able to draw starting frame before playing the video
         this.sk.drawVideoFrame(this.videoPlayer, this.videoPlayer.curTime); // after video loaded, draw first frame to display it
@@ -203,11 +204,11 @@ class Mediator {
     }
 
     videoLoaded() {
-        return this.dataIsLoaded(this.videoPlayer);
+        return (this.dataIsLoaded(this.videoPlayer) && this.dataIsLoaded(this.videoPlayer.movieDiv));
     }
 
     allDataLoaded() {
-        return this.dataIsLoaded(this.floorPlan) && this.dataIsLoaded(this.videoPlayer);
+        return this.floorPlanLoaded() && this.videoLoaded();
     }
 
     testVideoTimeForRecording() {
