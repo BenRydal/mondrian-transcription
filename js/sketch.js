@@ -81,7 +81,7 @@ const mondrian = new p5((sk) => {
         this.fill(255);
         this.stroke(255);
         this.rect(this.videoContainer.xPos, this.videoContainer.yPos, this.videoContainer.width, this.videoContainer.height);
-        this.image(vp.movieDiv, this.videoContainer.xPos, this.videoContainer.yPos, vp.reScaledMovieWidth, vp.reScaledMovieHeight);
+        this.image(vp.movieDiv, this.videoContainer.xPos, this.videoContainer.yPos, vp.scaledWidth, vp.scaledHeight);
     }
 
     sk.drawVideoTimeLabel = function (curVideoTime) {

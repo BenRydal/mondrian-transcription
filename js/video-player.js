@@ -6,8 +6,8 @@ class VideoPlayer {
      */
 
     constructor(fileLocation, sketch) {
-        this.reScaledMovieWidth = null; // Rescaled pixel size of video to fit display container
-        this.reScaledMovieHeight = null;
+        this.scaledWidth = null; // Rescaled pixel size of video to fit display container
+        this.scaledHeight = null;
         this.movieDiv = sketch.createVideo(fileLocation, () => {
             this.movieDiv.id('moviePlayer');
             this.movieDiv.hide();
@@ -26,21 +26,21 @@ class VideoPlayer {
      */
     setDisplayMovieSize(containerWidth, containerHeight) {
         let ratio = 0; // Used for aspect ratio
-        this.reScaledMovieWidth = this.movieDiv.width; // set to equal input size in case first conditional is not triggered
-        this.reScaledMovieHeight = this.movieDiv.height;
+        this.scaledWidth = this.movieDiv.width; // set to equal input size in case first conditional is not triggered
+        this.scaledHeight = this.movieDiv.height;
         // Check if input video pixel height is larger than display container, scale down if it is
         if (this.movieDiv.height > containerHeight) {
             ratio = containerHeight / this.movieDiv.height; // get ratio for scaling image, use tempHeight
-            this.reScaledMovieHeight = this.movieDiv.height * ratio; // Reset height to match scaled image
-            this.reScaledMovieWidth = this.movieDiv.width * ratio; // Reset width to match scaled image
+            this.scaledHeight = this.movieDiv.height * ratio; // Reset height to match scaled image
+            this.scaledWidth = this.movieDiv.width * ratio; // Reset width to match scaled image
         }
         // Then check if input/display video pixel width is still larger than display container, scale down if it is
-        if (this.reScaledMovieWidth > containerWidth) {
-            ratio = containerWidth / this.reScaledMovieWidth; // get ratio for scaling image
-            this.reScaledMovieHeight = this.reScaledMovieHeight * ratio; // Reset height to match scaled image
-            this.reScaledMovieWidth = this.reScaledMovieWidth * ratio; // Reset width to match scaled image
+        if (this.scaledWidth > containerWidth) {
+            ratio = containerWidth / this.scaledWidth; // get ratio for scaling image
+            this.scaledHeight = this.scaledHeight * ratio; // Reset height to match scaled image
+            this.scaledWidth = this.scaledWidth * ratio; // Reset width to match scaled image
         }
-        this.movieDiv.size(this.reScaledMovieWidth, this.reScaledMovieHeight); // set the element to the new width and height
+        this.movieDiv.size(this.scaledWidth, this.scaledHeight); // set the element to the new width and height
     }
 
     stop() {
