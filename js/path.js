@@ -66,7 +66,6 @@
      }
 
      clearCurPath() {
-         this.curPath.mousePosArray = [];
          this.curPath.pointArray = [];
      }
 
