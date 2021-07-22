@@ -32,28 +32,21 @@ class Mediator {
      */
     updateDrawLoop() {
         if (this.allDataLoaded()) {
-            if (this.isRecording) this.updateRecording();
-            if (this.isInfoShowing) {
-                this.updateAllData(); // redraw all data first, then the info screen
-                this.sk.drawIntroScreen();
-            }
+            this.sk.drawVideoFrame(this.videoPlayer, this.videoPlayer.curTime);
+            if (this.isRecording) this.updateTranscription();
+            if (this.isInfoShowing) this.sk.drawIntroScreen();
         } else {
-            this.updateLoadDataScreen();
+            this.sk.drawLoadDataBackground();
+            if (this.floorPlanLoaded()) this.sk.drawFloorPlan(this.floorPlan);
+            else if (this.videoLoaded()) this.sk.drawVideoFrame(this.videoPlayer, this.videoPlayer.curTime);
+            if (this.isInfoShowing) this.sk.drawIntroScreen();
         }
-    }
-
-    updateLoadDataScreen() {
-        this.sk.drawLoadDataBackground();
-        if (this.floorPlanLoaded()) this.sk.drawFloorPlan(this.floorPlan);
-        else if (this.videoLoaded()) this.sk.drawVideoFrame(this.videoPlayer, this.videoPlayer.curTime);
-        if (this.isInfoShowing) this.sk.drawIntroScreen();
     }
 
     /**
      * Coordinates video and line segment drawing in display. Decides whether to record data point based on sampling rate method
      */
-    updateRecording() {
-        this.sk.drawVideoFrame(this.videoPlayer, this.videoPlayer.curTime);
+    updateTranscription() {
         this.sk.drawLineSegment(this.path.curPath); // Don't call this within testSampleRate block
         if (this.sampleData()) this.updateCurPath();
     }
@@ -153,10 +146,9 @@ class Mediator {
      */
     newVideoLoaded() {
         console.log("New Video Loaded");
-        this.path.clearAllPaths();
         this.stopRecording(); // necessary to be able to draw starting frame before playing the video
-        this.sk.drawVideoFrame(this.videoPlayer, this.videoPlayer.curTime); // after video loaded, draw first frame to display it
-        if (this.floorPlanLoaded()) this.sk.drawFloorPlan(this.floorPlan);
+        this.path.clearAllPaths();
+        if (this.floorPlanLoaded()) this.sk.drawFloorPlan(this.floorPlan); // clear floor plan drawing area
     }
 
     loadFloorPlan(fileLocation) {
@@ -174,10 +166,7 @@ class Mediator {
         this.floorPlan = img;
         this.path.clearAllPaths();
         this.sk.drawFloorPlan(this.floorPlan);
-        if (this.videoLoaded()) {
-            this.stopRecording();
-            this.sk.drawVideoFrame(this.videoPlayer, this.videoPlayer.curTime);
-        }
+        if (this.videoLoaded()) this.stopRecording();
     }
 
     writeFile() {
