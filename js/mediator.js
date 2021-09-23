@@ -195,7 +195,7 @@ class Mediator {
     }
 
     videoLoaded() {
-        return this.dataIsLoaded(this.videoPlayer) && this.videoPlayer.isLoaded;
+        return this.dataIsLoaded(this.videoPlayer) && this.dataIsLoaded(this.videoPlayer.movieDiv);
     }
 
     allDataLoaded() {
