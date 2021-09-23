@@ -8,12 +8,14 @@ class VideoPlayer {
     constructor(fileLocation, sketch) {
         this.scaledWidth = null; // Rescaled pixel size of video to fit display container
         this.scaledHeight = null;
+        this.movieIsLoaded = false;
         this.movieDiv = sketch.createVideo(fileLocation, () => {
             this.movieDiv.id('moviePlayer');
             this.movieDiv.hide();
             this.setDisplayMovieSize(sketch.videoContainer.width, sketch.videoContainer.height);
             this.movieDiv.onload = () => URL.revokeObjectURL(fileLocation);
             document.getElementById('moviePlayer').onended = () => sketch.mediator.isRecording = false; // end program recording when movie ends
+            this.movieIsLoaded = true;
             sketch.mediator.newVideoLoaded();
         });
     }
@@ -80,5 +82,9 @@ class VideoPlayer {
 
     get duration() {
         return this.movieDiv.duration();
+    }
+
+    get isLoaded() {
+        return this.movieIsLoaded;
     }
 }
