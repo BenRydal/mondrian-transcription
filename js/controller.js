@@ -5,7 +5,9 @@ class Controller {
     }
 
     handleIntroButton() {
-        this.mediator.updateIntro();
+        let element = document.querySelector('.introContainer');
+        if (element.style.display === 'none') element.style.display = 'block';
+        else element.style.display = 'none';
     }
 
     handleSaveButton() {
