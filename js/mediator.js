@@ -33,10 +33,10 @@ class Mediator {
             this.sk.drawVideoFrame(this.videoPlayer, this.videoPlayer.curTime);
             if (this.isRecording) this.updateTranscription();
         } else {
-            this.sk.drawLoadDataBackground();
             if (this.floorPlanLoaded()) this.sk.drawFloorPlan(this.floorPlan);
             else if (this.videoLoaded()) this.sk.drawVideoFrame(this.videoPlayer, this.videoPlayer.curTime);
         }
+        this.sk.drawCenterLine();
     }
 
     /**

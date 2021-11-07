@@ -11,9 +11,14 @@ https://etd.library.vanderbilt.edu/available/etd-03212018-140140/unrestricted/Sh
 
 const mondrian = new p5((sk) => {
 
+    sk.preload = function () {
+        sk.font_Lato = sk.loadFont("data/fonts/Lato-Light.ttf");
+    }
+
     sk.setup = function () {
         sk.canvas = sk.createCanvas(window.innerWidth, window.innerHeight);
         sk.canvas.parent('sketch-holder');
+        sk.textFont(sk.font_Lato, 20);
         sk.mediator = new Mediator(sk);
         sk.controller = new Controller(sk.mediator);
         sk.floorPlanContainer = {
@@ -97,12 +102,10 @@ const mondrian = new p5((sk) => {
         this.image(floorPlan, this.floorPlanContainer.xPos, this.floorPlanContainer.yPos, this.floorPlanContainer.width, this.floorPlanContainer.height);
     }
 
-    sk.drawLoadDataBackground = function () {
-        this.noStroke();
-        this.fill(225);
-        this.rect(this.floorPlanContainer.xPos, this.floorPlanContainer.yPos, this.floorPlanContainer.width, this.floorPlanContainer.height);
-        this.fill(200);
-        this.rect(this.videoContainer.xPos, this.videoContainer.yPos, this.videoContainer.width, this.videoContainer.height);
+    sk.drawCenterLine = function () {
+        this.stroke(0);
+        this.strokeWeight(1);
+        this.line(this.floorPlanContainer.width, 0, this.floorPlanContainer.width, this.floorPlanContainer.height);
     }
 
     /**
