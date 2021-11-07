@@ -17,7 +17,8 @@ const mondrian = new p5((sk) => {
 
     sk.setup = function () {
         sk.canvas = sk.createCanvas(window.innerWidth, window.innerHeight);
-        sk.infoMsg = "MONDRIAN TRANSCRIPTION SOFTWARE\n\nby Ben Rydal Shapiro & contributors\nbuilt with p5.js & JavaScript\n\nHi there! This is a tool to transcribe fine-grained movement data from video. To get started, use the top buttons to load a floor plan image and a video. Then, click anywhere on the floor plan to start recording movement data synchronized to the video. As you move your cursor over the floor plan, positioning data is recorded. Play/pause recording by clicking on the floor plan. Press ‘f’ to fast forward and ‘r’ to rewind video and data recording in 5 second intervals. Use the top buttons to clear or save your recording data as a CSV file. For more information, see: https://www.benrydal.com/software/mondrian-transcription";
+        sk.canvas.parent('sketch-holder');
+        sk.textFont(sk.font_Lato, 20);
         sk.mediator = new Mediator(sk);
         sk.controller = new Controller(sk.mediator);
         sk.floorPlanContainer = {
@@ -101,26 +102,10 @@ const mondrian = new p5((sk) => {
         this.image(floorPlan, this.floorPlanContainer.xPos, this.floorPlanContainer.yPos, this.floorPlanContainer.width, this.floorPlanContainer.height);
     }
 
-    sk.drawLoadDataBackground = function () {
-        this.noStroke();
-        this.fill(225);
-        this.rect(this.floorPlanContainer.xPos, this.floorPlanContainer.yPos, this.floorPlanContainer.width, this.floorPlanContainer.height);
-        this.fill(200);
-        this.rect(this.videoContainer.xPos, this.videoContainer.yPos, this.videoContainer.width, this.videoContainer.height);
-    }
-
-    sk.drawIntroScreen = function () {
-        const introKeySpacing = 50; // Integer, general spacing variable
-        const introTextSize = this.width / 75;
-        this.rectMode(this.CENTER);
+    sk.drawCenterLine = function () {
         this.stroke(0);
-        this.strokeWeight(1);
-        this.fill(255, 180);
-        this.rect(this.width / 2, this.height / 2, this.width / 2 + introKeySpacing, this.height / 2 + introKeySpacing);
-        this.fill(0);
-        this.textFont(this.font_Lato, introTextSize);
-        this.text(this.infoMsg, this.width / 2, this.height / 2, this.width / 2, this.height / 2);
-        this.rectMode(this.CORNER);
+        this.strokeWeight(2);
+        this.line(this.floorPlanContainer.width, 0, this.floorPlanContainer.width, this.floorPlanContainer.height);
     }
 
     /**

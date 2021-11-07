@@ -9,7 +9,6 @@ class Mediator {
         this.videoPlayer = null; // holds videoPlayer object instantiated/updated in loadVideo method
         this.floorPlan = null; // holds p5 image of floor plan
         this.isRecording = false; // indicates recording mode
-        this.isInfoShowing = true; // indicates if intro message showing
         this.jumpInSeconds = 5; // seconds value to fast forward and rewind path/video data
     }
 
@@ -23,7 +22,6 @@ class Mediator {
     handleMousePressed() {
         if (this.allDataLoaded()) {
             this.playPauseRecording();
-            if (this.isInfoShowing) this.updateIntro(); // prevent info screen from showing while recording for smooth user interaction
         }
     }
 
@@ -34,13 +32,11 @@ class Mediator {
         if (this.allDataLoaded()) {
             this.sk.drawVideoFrame(this.videoPlayer, this.videoPlayer.curTime);
             if (this.isRecording) this.updateTranscription();
-            if (this.isInfoShowing) this.sk.drawIntroScreen();
         } else {
-            this.sk.drawLoadDataBackground();
             if (this.floorPlanLoaded()) this.sk.drawFloorPlan(this.floorPlan);
             else if (this.videoLoaded()) this.sk.drawVideoFrame(this.videoPlayer, this.videoPlayer.curTime);
-            if (this.isInfoShowing) this.sk.drawIntroScreen();
         }
+        this.sk.drawCenterLine();
     }
 
     /**
@@ -69,12 +65,6 @@ class Mediator {
         const [mouseXPos, mouseYPos, pointXPos, pointYPos] = this.sk.getPositioningData(this.floorPlan);
         const time = this.videoPlayer.curTime;
         this.path.addPointToCurPath(mouseXPos, mouseYPos, pointXPos, pointYPos, time);
-    }
-
-    updateIntro() {
-        if (this.isInfoShowing && this.allDataLoaded()) this.updateAllData();
-        if (this.isInfoShowing) this.isInfoShowing = false;
-        else this.isInfoShowing = true;
     }
 
     updateAllData() {

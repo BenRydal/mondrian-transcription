@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <head>
     <title>Mondrian Transcription Software: Transcribing Movement from Video</title>
@@ -22,7 +23,8 @@
 <body>
     <div class="introBar">
         <form action="/action_page.php">
-            <button type="button" id="introButton" class="inputfile" onclick="mondrian.controller.handleIntroButton(this)"></button>
+            <button type="button" id="introButton" class="inputfile"
+                onclick="mondrian.controller.handleIntroButton(this)"></button>
             <label for="introButton">HOW TO USE</label>
             <input type="file" name="file" id="inputFloorPlan" name="file" class="inputfile" accept=".png, .jpg, .jpeg"
                 onchange="mondrian.controller.handleFloorPlanButton(this)">
@@ -30,11 +32,38 @@
             <input type="file" name="file" id="inputVideo" name="file" class="inputfile" accept=".mp4"
                 onchange="mondrian.controller.handleVideoButton(this)">
             <label for="inputVideo">LOAD VIDEO (MP4)</label>
-            <button type="button" id="saveButton" class="inputfile" onclick="mondrian.controller.handleSaveButton(this)"></button>
+            <button type="button" id="saveButton" class="inputfile"
+                onclick="mondrian.controller.handleSaveButton(this)"></button>
             <label for="saveButton">SAVE MOVEMENT PATH (CSV)</label>
-            <button type="button" id="resetButton" class="inputfile" onclick="mondrian.controller.handleResetButton(this)"></button>
+            <button type="button" id="resetButton" class="inputfile"
+                onclick="mondrian.controller.handleResetButton(this)"></button>
             <label for="resetButton">CLEAR RECORDING</label>
         </form>
+    </div>
+    <div class="container" id="sketch-holder">
+        <div class="introContainer">
+            <h1 class="introTitle">Mondrian Transcription Software</h1>
+            <p class="introMsg">
+                Hello! This is a tool to transcribe fine-grained movement data from video. To get started, use the top
+                buttons to load a floor plan formatted as a PNG/JPG image and video formatted as a MP4 file.
+            </p>
+            <p class="introMsg">
+                Then, <u>click</u> anywhere on the floor plan to start recording movement data synchronized to the video. As
+                you move your cursor over the floor plan, positioning data is recorded. Play/pause recording by clicking
+                on the floor plan. Press the 'f' key to fast forward and the 'r' key to rewind video and data recording in 5 second
+                intervals. Use the top buttons to clear or save your recording data as a CSV file.
+            </p>
+            <p class="introMsg">
+                For further information on how to use this tool click <a
+                    href="https://benrydal.com/software/mondrian-transcription">here</a>
+            </p>
+            <p class="introMsgCredits">
+                Mondrian Transcription software is an open-source project licensed under the GNU General Public License Version 2.0. It is
+                written in p5.js and JavaScript and developed by Ben Rydal Shapiro and contributors with support from
+                the National Science Foundation. For additional credits and to contribute to the project please see the
+                GitHub repository linked <a href="https://github.com/BenRydal/mondrian-transcription">here</a>
+            </p>
+        </div>
     </div>
 </body>
 
