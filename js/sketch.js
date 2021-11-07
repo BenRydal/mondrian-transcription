@@ -104,7 +104,7 @@ const mondrian = new p5((sk) => {
 
     sk.drawCenterLine = function () {
         this.stroke(0);
-        this.strokeWeight(1);
+        this.strokeWeight(2);
         this.line(this.floorPlanContainer.width, 0, this.floorPlanContainer.width, this.floorPlanContainer.height);
     }
 
