@@ -81,7 +81,7 @@ const mondrian = new p5((sk) => {
     sk.drawVideoImage = function (vp) {
         this.fill(255);
         this.stroke(255);
-        this.rect(this.videoContainer.xPos, this.videoContainer.yPos, this.videoContainer.width, this.videoContainer.height);
+        this.rect(this.videoContainer.xPos, this.videoContainer.yPos, this.videoContainer.width, this.videoContainer.height); // erases previous video frames from other loaded videos that can be different size than current frames
         this.image(vp.movieDiv, this.videoContainer.xPos, this.videoContainer.yPos, vp.scaledWidth, vp.scaledHeight);
     }
 
