@@ -171,13 +171,28 @@ class Mediator {
 
     writeFile() {
         if (this.allDataLoaded() && this.path.curPath.pointArray.length > 0) {
-            this.sk.saveTable(this.sk.writeTable(this.path.curPath.pointArray), "Path_" + this.path.curFileToOutput, "csv");
+            this.sk.saveTable(this.writeTable(this.path.curPath.pointArray), "Path_" + this.path.curFileToOutput, "csv");
             this.path.curFileToOutput++;
             this.path.addCurPathToList();
             this.path.clearCurPath();
             this.stopRecording();
             this.updateAllData();
         }
+    }
+
+    writeTable = function (pointArray) {
+        const headers = ["time", "x", "y"]; // Column headers for outputted .CSV movement files
+        let table = new p5.Table();
+        table.addColumn(headers[0]);
+        table.addColumn(headers[1]);
+        table.addColumn(headers[2]);
+        for (const point of pointArray) {
+            let newRow = table.addRow();
+            newRow.setNum(headers[0], point.tPos);
+            newRow.setNum(headers[1], point.fpXPos);
+            newRow.setNum(headers[2], point.fpYPos);
+        }
+        return table;
     }
 
     /**
