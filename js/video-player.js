@@ -31,6 +31,10 @@ class VideoPlayer {
         else return [rect.width * (bounds.height / rect.height), bounds.height]; // Fit to height if rect is more portrait than bounds
     }
 
+    setScaledValues(bounds) {
+        [this.scaledWidth, this.scaledHeight] = this.scaleRectToBounds(this.movieDiv, bounds);
+    }
+
     stop() {
         this.movieDiv.stop(); // sets movie time to 0
     }

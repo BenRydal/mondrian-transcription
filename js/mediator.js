@@ -12,6 +12,13 @@ class Mediator {
         this.jumpInSeconds = 5; // seconds value to fast forward and rewind path/video data
     }
 
+    // TODO: need to add conditionals for no video loaded yet AND updatealldata/path data
+    updateForResize(videoContainer) {
+        if (this.videoLoaded()) this.videoPlayer.setScaledValues(videoContainer);
+        if (this.allDataLoaded()) this.updateAllData();
+        if (this.arrayIsLoaded(this.path.curPath.pointArray)) this.sk.drawCurPathEndPoint(this.path.curPathEndPoint);
+    }
+
     handleKeyPressed(keyValue) {
         if (this.allDataLoaded()) {
             if (keyValue === 'r' || keyValue === 'R') this.rewind();
@@ -62,9 +69,9 @@ class Mediator {
      * Add correctly scaled positioning data to current path
      */
     updateCurPath() {
-        const [mouseXPos, mouseYPos, pointXPos, pointYPos] = this.sk.getPositioningData(this.floorPlan);
+        const [fpXPos, fpYPos] = this.sk.getPositioningData(this.floorPlan);
         const time = this.videoPlayer.curTime;
-        this.path.addPointToCurPath(mouseXPos, mouseYPos, pointXPos, pointYPos, time);
+        this.path.addPointToCurPath(fpXPos, fpYPos, time);
     }
 
     updateAllData() {
@@ -86,7 +93,7 @@ class Mediator {
         if (this.isRecording) {
             this.videoPlayer.pause();
             this.isRecording = false;
-            if (this.path.curPath.pointArray.length > 0) this.sk.drawCurPathEndPoint(this.path.curPathEndPoint);
+            if (this.arrayIsLoaded(this.path.curPath.pointArray)) this.sk.drawCurPathEndPoint(this.path.curPathEndPoint);
         } else if (this.testVideoTimeForRecording()) {
             this.updateAllData(); // update all data to erase curPathBug
             this.videoPlayer.play();
@@ -113,7 +120,7 @@ class Mediator {
         }
         if (this.isRecording) this.playPauseRecording(); // pause recording and video if currently recording
         this.updateAllData();
-        if (this.path.curPath.pointArray.length > 0) this.sk.drawCurPathEndPoint(this.path.curPathEndPoint);
+        if (this.arrayIsLoaded(this.path.curPath.pointArray)) this.sk.drawCurPathEndPoint(this.path.curPathEndPoint);
     }
 
     /**
@@ -190,6 +197,13 @@ class Mediator {
 
     allDataLoaded() {
         return this.floorPlanLoaded() && this.videoLoaded();
+    }
+
+    /**
+     * @param  {Any Type} data
+     */
+    arrayIsLoaded = function (data) {
+        return Array.isArray(data) && data.length;
     }
 
     testVideoTimeForRecording() {

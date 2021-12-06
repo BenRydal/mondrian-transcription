@@ -21,18 +21,9 @@ const mondrian = new p5((sk) => {
         sk.textFont(sk.font_Lato, 20);
         sk.mediator = new Mediator(sk);
         sk.controller = new Controller(sk.mediator);
-        sk.floorPlanContainer = {
-            width: sk.width / 2,
-            height: sk.height,
-            xPos: sk.width / 2,
-            yPos: 0
-        };
-        sk.videoContainer = {
-            width: sk.width / 2,
-            height: sk.height,
-            xPos: 0,
-            yPos: 0
-        };
+        sk.floorPlanContainer = sk.createFloorPlanContainer(sk.width / 2, sk.width / 2);
+        sk.videoContainer = sk.createVideoContainer(sk.width / 2);
+        sk.isSelected = false;
     }
 
     /**
@@ -40,6 +31,13 @@ const mondrian = new p5((sk) => {
      */
     sk.draw = function () {
         sk.mediator.updateDrawLoop();
+        if (sk.overSelector()) sk.cursor(sk.MOVE);
+        else sk.cursor(sk.ARROW);
+    }
+
+    sk.overSelector = function () {
+        const selectorSpacing = 3;
+        return sk.overRect(sk.videoContainer.width - selectorSpacing, 0, selectorSpacing * 2, sk.videoContainer.height);
     }
 
     /**
@@ -48,7 +46,9 @@ const mondrian = new p5((sk) => {
     sk.drawCurPathEndPoint = function (point) {
         this.noStroke();
         this.fill(255, 0, 0);
-        this.circle(point.mouseXPos, point.mouseYPos, 25);
+        const x1 = point.fpXPos * (this.floorPlanContainer.width / this.mediator.floorPlan.width);
+        const y1 = point.fpYPos * (this.floorPlanContainer.height / this.mediator.floorPlan.height);
+        this.circle(x1 + this.floorPlanContainer.xPos, y1 + this.floorPlanContainer.yPos, 25);
     }
 
     sk.drawLineSegment = function (curPath) {
@@ -66,7 +66,11 @@ const mondrian = new p5((sk) => {
         this.stroke(path.pColor);
         this.strokeWeight(path.weight);
         for (let i = 1; i < path.pointArray.length; i++) {
-            this.line(path.pointArray[i].mouseXPos, path.pointArray[i].mouseYPos, path.pointArray[i - 1].mouseXPos, path.pointArray[i - 1].mouseYPos);
+            const x1 = path.pointArray[i].fpXPos * (this.floorPlanContainer.width / this.mediator.floorPlan.width);
+            const x2 = path.pointArray[i - 1].fpXPos * (this.floorPlanContainer.width / this.mediator.floorPlan.width);
+            const y1 = path.pointArray[i].fpYPos * (this.floorPlanContainer.height / this.mediator.floorPlan.height);
+            const y2 = path.pointArray[i - 1].fpYPos * (this.floorPlanContainer.height / this.mediator.floorPlan.height);
+            this.line(x1 + this.floorPlanContainer.xPos, y1 + this.floorPlanContainer.yPos, x2 + this.floorPlanContainer.xPos, y2 + this.floorPlanContainer.yPos);
         }
     }
 
@@ -105,7 +109,7 @@ const mondrian = new p5((sk) => {
     sk.drawCenterLine = function () {
         this.stroke(0);
         this.strokeWeight(2);
-        this.line(this.floorPlanContainer.width, 0, this.floorPlanContainer.width, this.floorPlanContainer.height);
+        this.line(this.videoContainer.width, 0, this.videoContainer.width, this.videoContainer.height);
     }
 
     /**
@@ -115,9 +119,9 @@ const mondrian = new p5((sk) => {
     sk.getPositioningData = function (floorPlan) {
         const mouseXPos = (this.constrain(this.mouseX, this.floorPlanContainer.xPos, this.floorPlanContainer.xPos + this.floorPlanContainer.width));
         const mouseYPos = (this.constrain(this.mouseY, this.floorPlanContainer.yPos, this.floorPlanContainer.yPos + this.floorPlanContainer.height));
-        const pointXPos = (mouseXPos - this.floorPlanContainer.xPos) * (floorPlan.width / this.floorPlanContainer.width);
-        const pointYPos = (mouseYPos - this.floorPlanContainer.yPos) * (floorPlan.height / this.floorPlanContainer.height);
-        return [mouseXPos, mouseYPos, pointXPos, pointYPos];
+        const fpXPos = (mouseXPos - this.floorPlanContainer.xPos) * (floorPlan.width / this.floorPlanContainer.width);
+        const fpYPos = (mouseYPos - this.floorPlanContainer.yPos) * (floorPlan.height / this.floorPlanContainer.height);
+        return [fpXPos, fpYPos];
     }
 
     /**
@@ -128,7 +132,16 @@ const mondrian = new p5((sk) => {
     }
 
     sk.mousePressed = function () {
-        if (sk.overFloorPlan()) sk.mediator.handleMousePressed();
+        if (!sk.overSelector() && sk.overFloorPlan()) sk.mediator.handleMousePressed();
+        else if (sk.overSelector()) sk.isSelected = true;
+    }
+
+    sk.mouseDragged = function () {
+        if (sk.isSelected) sk.resizeScreen(); // TODO: not recording? add else
+    }
+
+    sk.mouseReleased = function () {
+        sk.isSelected = false;
     }
 
     sk.overRect = function (x, y, boxWidth, boxHeight) {
@@ -137,6 +150,37 @@ const mondrian = new p5((sk) => {
 
     sk.overFloorPlan = function () {
         return sk.overRect(this.floorPlanContainer.xPos, this.floorPlanContainer.yPos, this.floorPlanContainer.width, this.floorPlanContainer.height);
+    }
+
+    sk.windowResized = function () {
+        this.videoContainer = sk.createVideoContainer(window.innerWidth * (sk.videoContainer.width / sk.width));
+        sk.floorPlanContainer = sk.createFloorPlanContainer(window.innerWidth * (sk.floorPlanContainer.xPos / sk.width), window.innerWidth * (sk.floorPlanContainer.width / sk.width));
+        sk.resizeCanvas(window.innerWidth, window.innerHeight);
+        sk.mediator.updateForResize(sk.videoContainer);
+    }
+
+    sk.resizeScreen = function () {
+        sk.floorPlanContainer = sk.createFloorPlanContainer(sk.mouseX, sk.width - sk.mouseX);
+        this.videoContainer = sk.createVideoContainer(sk.mouseX);
+        sk.mediator.updateForResize(sk.videoContainer);
+    }
+
+    sk.createFloorPlanContainer = function (xPos, width) {
+        return {
+            width: width,
+            height: sk.height,
+            xPos: xPos,
+            yPos: 0
+        }
+    }
+
+    sk.createVideoContainer = function (width) {
+        return {
+            width: width,
+            height: sk.height,
+            xPos: 0,
+            yPos: 0
+        }
     }
 
     sk.writeTable = function (pointArray) {

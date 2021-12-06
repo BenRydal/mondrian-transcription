@@ -19,12 +19,10 @@
      }
 
      /**
-      * Point has Float/Number mouse x/y positions, scaled x/y positions to floor plan image file and time position derived from video
+      * Point has Float/Number scaled x/y positions to floor plan image file and time position derived from video
       */
-     createPoint(mouseXPos, mouseYPos, fpXPos, fpYPos, tPos) {
+     createPoint(fpXPos, fpYPos, tPos) {
          return {
-             mouseXPos, // array of mouse positions to display paths in floor plan container, provides ability to draw paths while program runs
-             mouseYPos,
              fpXPos,
              fpYPos,
              tPos,
@@ -37,8 +35,8 @@
      /**
       * NOTE: Make sure to round all values
       */
-     addPointToCurPath(mouseXPos, mouseYPos, fpXPos, fpYPos, time) {
-         this.curPath.pointArray.push(this.createPoint(this.round(mouseXPos), this.round(mouseYPos), this.round(fpXPos), this.round(fpYPos), this.round(time)));
+     addPointToCurPath(fpXPos, fpYPos, time) {
+         this.curPath.pointArray.push(this.createPoint(this.round(fpXPos), this.round(fpYPos), this.round(time)));
      }
 
      /**
@@ -48,7 +46,7 @@
      fastForward(amountInSeconds) {
          const point = this.curPathEndPoint; // IMPORTANT: get last value before loop
          for (let i = 1; i <= amountInSeconds; i++) { // only tPos is different with each added point
-             this.curPath.pointArray.push(this.createPoint(point.mouseXPos, point.mouseYPos, point.fpXPos, point.fpYPos, this.round(point.tPos + i)));
+             this.curPath.pointArray.push(this.createPoint(point.fpXPos, point.fpYPos, this.round(point.tPos + i)));
          }
      }
 
