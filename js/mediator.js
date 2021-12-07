@@ -94,7 +94,7 @@ class Mediator {
             this.videoPlayer.pause();
             this.isRecording = false;
             if (this.arrayIsLoaded(this.path.curPath.pointArray)) this.sk.drawCurPathEndPoint(this.path.curPathEndPoint);
-        } else if (this.testVideoTimeForRecording()) {
+        } else if (this.videoPlayer.notEnded(0)) {
             this.updateAllData(); // update all data to erase curPathBug
             this.videoPlayer.play();
             this.isRecording = true;
@@ -110,7 +110,7 @@ class Mediator {
      * Coordinates rewinding of video, erasing of curPath data and updating display
      */
     rewind() {
-        if (this.testVideoForRewind()) {
+        if (this.videoPlayer.notBeginning(this.jumpInSeconds)) {
             const rewindToTime = this.path.curPathEndPoint.tPos - this.jumpInSeconds; // set time to rewind to based on last value in list
             this.path.rewind(rewindToTime);
             this.videoPlayer.rewind(rewindToTime);
@@ -127,7 +127,7 @@ class Mediator {
      * Coordinates fast forwarding of movie and path data, if movie not right at start or near end
      */
     fastForward() {
-        if (this.testVideoTimeForFastForward()) {
+        if (this.videoPlayer.notEnded(this.jumpInSeconds)) {
             this.videoPlayer.fastForward(this.jumpInSeconds);
             this.path.fastForward(this.jumpInSeconds);
         }
@@ -219,17 +219,5 @@ class Mediator {
      */
     arrayIsLoaded = function (data) {
         return Array.isArray(data) && data.length;
-    }
-
-    testVideoTimeForRecording() {
-        return this.videoPlayer.curTime < this.videoPlayer.duration;
-    }
-
-    testVideoTimeForFastForward() {
-        return this.videoPlayer.curTime > 0 && (this.videoPlayer.curTime < this.videoPlayer.duration - this.jumpInSeconds);
-    }
-
-    testVideoForRewind() {
-        return this.videoPlayer.curTime > this.jumpInSeconds;
     }
 }

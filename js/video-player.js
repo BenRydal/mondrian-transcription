@@ -66,6 +66,18 @@ class VideoPlayer {
         this.movieDiv.remove(); // remove div element
     }
 
+    /**
+     * Param allows to adjust test for different fast forward rates
+     * @param  {Number} timeInSeconds
+     */
+    notEnded(timeInSeconds) {
+        return this.movieDiv.time() < (this.movieDiv.duration() - timeInSeconds);
+    }
+
+    notBeginning(timeInSeconds) {
+        return this.movieDiv.time() > timeInSeconds;
+    }
+
     get curTime() {
         return this.movieDiv.time();
     }
