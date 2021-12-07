@@ -1,10 +1,53 @@
  class Path {
 
-     constructor() {
+     constructor(sketch) {
+         this.sk = sketch;
          this.paths = []; // List to hold all path objects created
          this.colorList = ['#6a3d9a', '#ff7f00', '#33a02c', '#1f78b4', '#e31a1c', '#ffff99', '#b15928', '#cab2d6', '#fdbf6f', '#b2df8a', '#a6cee3', '#fb9a99'];
          this.curPath = this.createPath([], 0, 7); // initialize Path with empty point array, color black (0), path strokeWeight
          this.curFileToOutput = 0; // Integer counter to mark current file number to write to output
+     }
+
+     /**
+      * Draws circle for last index in current path being recorded
+      */
+     drawCurPathEndPoint(floorPlanContainer, floorPlanImg) {
+         const point = this.curPathEndPoint;
+         this.sk.noStroke();
+         this.sk.fill(255, 0, 0);
+         const x1 = point.fpXPos * (floorPlanContainer.width / floorPlanImg.width);
+         const y1 = point.fpYPos * (floorPlanContainer.height / floorPlanImg.height);
+         this.sk.circle(x1 + floorPlanContainer.xPos, y1 + floorPlanContainer.yPos, 25);
+     }
+
+     // TODO: rename
+     drawLineSegment(floorPlanContainer) {
+         // Constrain mouse to floor plan display
+         const xPos = this.sk.constrain(this.sk.mouseX, floorPlanContainer.xPos, floorPlanContainer.xPos + floorPlanContainer.width);
+         const yPos = this.sk.constrain(this.sk.mouseY, floorPlanContainer.yPos, floorPlanContainer.yPos + floorPlanContainer.height);
+         const pXPos = this.sk.constrain(this.sk.pmouseX, floorPlanContainer.xPos, floorPlanContainer.xPos + floorPlanContainer.width);
+         const pYPos = this.sk.constrain(this.sk.pmouseY, floorPlanContainer.yPos, floorPlanContainer.yPos + floorPlanContainer.height);
+         this.sk.strokeWeight(this.curPath.weight);
+         this.sk.stroke(this.curPath.pColor);
+         this.sk.line(xPos, yPos, pXPos, pYPos);
+     }
+
+     // TODO: refactor these two methods
+     drawAllPaths(floorPlanContainer, floorPlanImg) {
+         for (const path of this.paths) this.drawPath(path, floorPlanContainer, floorPlanImg); // update all recorded paths
+         this.drawPath(this.curPath, floorPlanContainer, floorPlanImg); // update current path last
+     }
+
+     drawPath(path, floorPlanContainer, floorPlanImg) {
+         this.sk.stroke(path.pColor);
+         this.sk.strokeWeight(path.weight);
+         for (let i = 1; i < path.pointArray.length; i++) {
+             const x1 = path.pointArray[i].fpXPos * (floorPlanContainer.width / floorPlanImg.width);
+             const x2 = path.pointArray[i - 1].fpXPos * (floorPlanContainer.width / floorPlanImg.width);
+             const y1 = path.pointArray[i].fpYPos * (floorPlanContainer.height / floorPlanImg.height);
+             const y2 = path.pointArray[i - 1].fpYPos * (floorPlanContainer.height / floorPlanImg.height);
+             this.sk.line(x1 + floorPlanContainer.xPos, y1 + floorPlanContainer.yPos, x2 + floorPlanContainer.xPos, y2 + floorPlanContainer.yPos);
+         }
      }
 
      /**
@@ -80,6 +123,7 @@
          return +(value.toFixed(2));
      }
 
+     // RETITLE getter TODO:
      get curPathEndPoint() {
          if (this.curPath.pointArray.length > 0) return this.curPath.pointArray[this.curPath.pointArray.length - 1];
          else return 0;

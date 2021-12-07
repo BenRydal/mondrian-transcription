@@ -5,13 +5,14 @@ class VideoPlayer {
      * @param  {P5 Instance} sketch
      */
 
-    constructor(fileLocation, sketch) {
+    constructor(fileLocation, sketch, videoContainer) {
+        this.sk = sketch;
         this.scaledWidth = null; // Rescaled pixel size of video to fit display container
         this.scaledHeight = null;
-        this.movieDiv = sketch.createVideo(fileLocation, () => {
+        this.movieDiv = this.sk.createVideo(fileLocation, () => {
             this.movieDiv.id('moviePlayer');
             this.movieDiv.hide(); // hide html5 video element as program use p5 image drawing methods to draw video frames
-            [this.scaledWidth, this.scaledHeight] = this.scaleRectToBounds(this.movieDiv, sketch.videoContainer);
+            [this.scaledWidth, this.scaledHeight] = this.scaleRectToBounds(this.movieDiv, videoContainer);
             this.movieDiv.onload = () => URL.revokeObjectURL(fileLocation);
             document.getElementById('moviePlayer').onended = () => sketch.mediator.isRecording = false; // end program recording when movie ends
             sketch.mediator.newVideoLoaded();
@@ -78,6 +79,33 @@ class VideoPlayer {
         return this.movieDiv.time() > timeInSeconds;
     }
 
+    /**
+     * Draw current movie frame image and white background to GUI in video display
+     */
+    drawVideoFrame(videoContainer) {
+        this.drawVideoImage(videoContainer);
+        this.drawVideoTimeLabel(videoContainer);
+    }
+
+    drawVideoImage(videoContainer) {
+        this.sk.fill(255);
+        this.sk.stroke(255);
+        this.sk.rect(videoContainer.xPos, videoContainer.yPos, videoContainer.width, videoContainer.height); // erases previous video frames from other loaded videos that can be different size than current frames
+        this.sk.image(this.movieDiv, videoContainer.xPos, videoContainer.yPos, this.scaledWidth, this.scaledHeight);
+    }
+
+    drawVideoTimeLabel(videoContainer) {
+        const curVideoTime = this.curTime;
+        this.sk.fill(0);
+        this.sk.noStroke();
+        const labelSpacing = 30;
+        const minutes = Math.floor(curVideoTime / 60);
+        const seconds = Math.floor(curVideoTime - minutes * 60);
+        const label = minutes + " minutes  " + seconds + " seconds";
+        this.sk.text(label, videoContainer.xPos + labelSpacing / 2, videoContainer.yPos + labelSpacing);
+    }
+
+    // TODO: retitle these stupid getters
     get curTime() {
         return this.movieDiv.time();
     }

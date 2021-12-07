@@ -5,18 +5,30 @@ class Mediator {
 
     constructor(sketch) {
         this.sk = sketch;
-        this.path = new Path();
+        this.path = new Path(sketch);
+        this.gui = new GUI(sketch);
         this.videoPlayer = null; // holds videoPlayer object instantiated/updated in loadVideo method
         this.floorPlan = null;
         this.isRecording = false; // indicates recording mode
         this.jumpInSeconds = 5; // seconds value to fast forward and rewind path/video data
     }
 
+    updateWindowResize() {
+        this.gui.updateWindowResize();
+        this.sk.resizeCanvas(window.innerWidth, window.innerHeight);
+        this.updateForResize(this.gui.getVideoContainer());
+    }
+
+    updateSelectResize() {
+        this.gui.updateSelectResize();
+        this.updateForResize(this.gui.getVideoContainer());
+    }
+
     // TODO: need to add conditionals for no video loaded yet AND updatealldata/path data
     updateForResize(videoContainer) {
         if (this.videoLoaded()) this.videoPlayer.setScaledValues(videoContainer);
         if (this.allDataLoaded()) this.updateAllData();
-        if (this.arrayIsLoaded(this.path.curPath.pointArray)) this.sk.drawCurPathEndPoint(this.path.curPathEndPoint);
+        if (this.arrayIsLoaded(this.path.curPath.pointArray)) this.path.drawCurPathEndPoint(this.gui.getFloorPlanContainer(), this.floorPlan.getImg());
     }
 
     handleKeyPressed(keyValue) {
@@ -27,30 +39,31 @@ class Mediator {
     }
 
     handleMousePressed() {
-        if (this.allDataLoaded()) {
-            this.playPauseRecording();
-        }
+        if (this.gui.overSelector()) this.sk.isSelected = true;
+        else if (this.gui.overFloorPlan() && this.allDataLoaded()) this.playPauseRecording();
     }
 
     /**
      * Handles program flow/method calls based on what data has been loaded
      */
     updateDrawLoop() {
+        if (this.gui.overSelector()) this.sk.cursor(this.sk.MOVE);
+        else this.sk.cursor(this.sk.ARROW);
         if (this.allDataLoaded()) {
-            this.sk.drawVideoFrame(this.videoPlayer, this.videoPlayer.curTime);
+            this.videoPlayer.drawVideoFrame(this.gui.getVideoContainer());
             if (this.isRecording) this.updateTranscription();
         } else {
-            if (this.floorPlanLoaded()) this.sk.drawFloorPlan(this.floorPlan.img);
-            else if (this.videoLoaded()) this.sk.drawVideoFrame(this.videoPlayer, this.videoPlayer.curTime);
+            if (this.floorPlanLoaded()) this.floorPlan.drawFloorPlan(this.gui.getFloorPlanContainer());
+            else if (this.videoLoaded()) this.videoPlayer.drawVideoFrame(this.gui.getVideoContainer());
         }
-        this.sk.drawCenterLine();
+        this.gui.drawCenterLine();
     }
 
     /**
      * Coordinates video and line segment drawing in display. Decides whether to record data point based on sampling rate method
      */
     updateTranscription() {
-        this.sk.drawLineSegment(this.path.curPath); // Don't call this within testSampleRate block
+        this.path.drawLineSegment(this.gui.getFloorPlanContainer()); // Don't call this within testSampleRate block
         if (this.sampleData()) this.updateCurPath();
     }
 
@@ -69,16 +82,15 @@ class Mediator {
      * Add correctly scaled positioning data to current path
      */
     updateCurPath() {
-        const [fpXPos, fpYPos] = this.sk.getPositioningData(this.floorPlan.img);
+        const [fpXPos, fpYPos] = this.floorPlan.getPositioningData(this.gui.getFloorPlanContainer());
         const time = this.videoPlayer.curTime;
         this.path.addPointToCurPath(fpXPos, fpYPos, time);
     }
 
     updateAllData() {
-        this.sk.drawFloorPlan(this.floorPlan.img);
-        this.sk.drawVideoFrame(this.videoPlayer, this.videoPlayer.curTime);
-        for (const path of this.path.paths) this.sk.drawPath(path); // update all recorded paths
-        this.sk.drawPath(this.path.curPath); // update current path last
+        this.floorPlan.drawFloorPlan(this.gui.getFloorPlanContainer());
+        this.videoPlayer.drawVideoFrame(this.gui.getVideoContainer());
+        this.path.drawAllPaths(this.gui.getFloorPlanContainer(), this.floorPlan.getImg());
     }
 
     resetCurRecording() {
@@ -93,7 +105,7 @@ class Mediator {
         if (this.isRecording) {
             this.videoPlayer.pause();
             this.isRecording = false;
-            if (this.arrayIsLoaded(this.path.curPath.pointArray)) this.sk.drawCurPathEndPoint(this.path.curPathEndPoint);
+            if (this.arrayIsLoaded(this.path.curPath.pointArray)) this.path.drawCurPathEndPoint(this.gui.getFloorPlanContainer(), this.floorPlan.getImg());
         } else if (this.videoPlayer.notEnded(0)) {
             this.updateAllData(); // update all data to erase curPathBug
             this.videoPlayer.play();
@@ -120,7 +132,7 @@ class Mediator {
         }
         if (this.isRecording) this.playPauseRecording(); // pause recording and video if currently recording
         this.updateAllData();
-        if (this.arrayIsLoaded(this.path.curPath.pointArray)) this.sk.drawCurPathEndPoint(this.path.curPathEndPoint);
+        if (this.arrayIsLoaded(this.path.curPath.pointArray)) this.path.drawCurPathEndPoint(this.gui.getFloorPlanContainer(), this.floorPlan.getImg());
     }
 
     /**
@@ -143,7 +155,7 @@ class Mediator {
             this.videoPlayer.destroy(); // if a video exists, destroy it
             this.videoPlayer = null;
         }
-        this.videoPlayer = new VideoPlayer(fileLocation, this.sk);
+        this.videoPlayer = new VideoPlayer(fileLocation, this.sk, this.gui.getVideoContainer());
     }
 
     /**
@@ -153,12 +165,12 @@ class Mediator {
         console.log("New Video Loaded");
         this.stopRecording(); // necessary to be able to draw starting frame before playing the video
         this.path.clearAllPaths();
-        if (this.floorPlanLoaded()) this.sk.drawFloorPlan(this.floorPlan.img); // clear floor plan drawing area
+        if (this.floorPlanLoaded()) this.floorPlan.drawFloorPlan(this.gui.getFloorPlanContainer()); // clear floor plan drawing area
     }
 
     newFloorPlanLoaded() {
         this.path.clearAllPaths();
-        this.sk.drawFloorPlan(this.floorPlan.img);
+        this.floorPlan.drawFloorPlan(this.gui.getFloorPlanContainer());
         if (this.videoLoaded()) this.stopRecording();
     }
 
