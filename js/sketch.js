@@ -46,8 +46,8 @@ const mondrian = new p5((sk) => {
     sk.drawCurPathEndPoint = function (point) {
         this.noStroke();
         this.fill(255, 0, 0);
-        const x1 = point.fpXPos * (this.floorPlanContainer.width / this.mediator.floorPlan.width);
-        const y1 = point.fpYPos * (this.floorPlanContainer.height / this.mediator.floorPlan.height);
+        const x1 = point.fpXPos * (this.floorPlanContainer.width / this.mediator.floorPlan.img.width);
+        const y1 = point.fpYPos * (this.floorPlanContainer.height / this.mediator.floorPlan.img.height);
         this.circle(x1 + this.floorPlanContainer.xPos, y1 + this.floorPlanContainer.yPos, 25);
     }
 
@@ -66,10 +66,10 @@ const mondrian = new p5((sk) => {
         this.stroke(path.pColor);
         this.strokeWeight(path.weight);
         for (let i = 1; i < path.pointArray.length; i++) {
-            const x1 = path.pointArray[i].fpXPos * (this.floorPlanContainer.width / this.mediator.floorPlan.width);
-            const x2 = path.pointArray[i - 1].fpXPos * (this.floorPlanContainer.width / this.mediator.floorPlan.width);
-            const y1 = path.pointArray[i].fpYPos * (this.floorPlanContainer.height / this.mediator.floorPlan.height);
-            const y2 = path.pointArray[i - 1].fpYPos * (this.floorPlanContainer.height / this.mediator.floorPlan.height);
+            const x1 = path.pointArray[i].fpXPos * (this.floorPlanContainer.width / this.mediator.floorPlan.img.width);
+            const x2 = path.pointArray[i - 1].fpXPos * (this.floorPlanContainer.width / this.mediator.floorPlan.img.width);
+            const y1 = path.pointArray[i].fpYPos * (this.floorPlanContainer.height / this.mediator.floorPlan.img.height);
+            const y2 = path.pointArray[i - 1].fpYPos * (this.floorPlanContainer.height / this.mediator.floorPlan.img.height);
             this.line(x1 + this.floorPlanContainer.xPos, y1 + this.floorPlanContainer.yPos, x2 + this.floorPlanContainer.xPos, y2 + this.floorPlanContainer.yPos);
         }
     }
