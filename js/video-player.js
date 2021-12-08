@@ -14,25 +14,12 @@ class VideoPlayer {
             this.movieDiv.hide(); // hide html5 video element as program use p5 image drawing methods to draw video frames
             [this.scaledWidth, this.scaledHeight] = this.scaleRectToBounds(this.movieDiv, videoContainer);
             this.movieDiv.onload = () => URL.revokeObjectURL(fileLocation);
-            document.getElementById('moviePlayer').onended = () => sketch.mediator.isRecording = false; // end program recording when movie ends
-            sketch.mediator.newVideoLoaded();
+            document.getElementById('moviePlayer').onended = () => this.sk.mediator.isRecording = false; // end program recording when movie ends
+            this.sk.mediator.newVideoLoaded();
         });
     }
 
-    /**
-     * Fits rectangle into another rectangle's bounds
-     * @param rect
-     * @param bounds
-     * @returns {width: Number, height: Number}
-     */
-    scaleRectToBounds(rect, bounds) {
-        const rectRatio = rect.width / rect.height;
-        const boundsRatio = bounds.width / bounds.height;
-        if (rectRatio > boundsRatio) return [bounds.width, rect.height * (bounds.width / rect.width)]; // Fit to width if rect is more landscape than bounds
-        else return [rect.width * (bounds.height / rect.height), bounds.height]; // Fit to height if rect is more portrait than bounds
-    }
-
-    setScaledValues(bounds) {
+    setScaledDimensions(bounds) {
         [this.scaledWidth, this.scaledHeight] = this.scaleRectToBounds(this.movieDiv, bounds);
     }
 
@@ -64,45 +51,52 @@ class VideoPlayer {
     }
 
     destroy() {
-        this.movieDiv.remove(); // remove div element
+        this.movieDiv.remove();
     }
 
     /**
      * Param allows to adjust test for different fast forward rates
      * @param  {Number} timeInSeconds
      */
-    notEnded(timeInSeconds) {
+    testEndTime(timeInSeconds) {
         return this.movieDiv.time() < (this.movieDiv.duration() - timeInSeconds);
     }
 
-    notBeginning(timeInSeconds) {
+    testStartTime(timeInSeconds) {
         return this.movieDiv.time() > timeInSeconds;
     }
 
     /**
      * Draw current movie frame image and white background to GUI in video display
      */
-    drawVideoFrame(videoContainer) {
-        this.drawVideoImage(videoContainer);
-        this.drawVideoTimeLabel(videoContainer);
+    draw(videoContainer) {
+        this.drawFrame(videoContainer);
+        this.drawTimeLabel(videoContainer);
     }
 
-    drawVideoImage(videoContainer) {
+    drawFrame(videoContainer) {
         this.sk.fill(255);
         this.sk.stroke(255);
         this.sk.rect(videoContainer.xPos, videoContainer.yPos, videoContainer.width, videoContainer.height); // erases previous video frames from other loaded videos that can be different size than current frames
         this.sk.image(this.movieDiv, videoContainer.xPos, videoContainer.yPos, this.scaledWidth, this.scaledHeight);
     }
 
-    drawVideoTimeLabel(videoContainer) {
+    drawTimeLabel(videoContainer) {
         const curVideoTime = this.curTime;
-        this.sk.fill(0);
-        this.sk.noStroke();
         const labelSpacing = 30;
         const minutes = Math.floor(curVideoTime / 60);
         const seconds = Math.floor(curVideoTime - minutes * 60);
         const label = minutes + " minutes  " + seconds + " seconds";
+        this.sk.fill(0);
+        this.sk.noStroke();
         this.sk.text(label, videoContainer.xPos + labelSpacing / 2, videoContainer.yPos + labelSpacing);
+    }
+
+    scaleRectToBounds(rect, bounds) {
+        const rectRatio = rect.width / rect.height;
+        const boundsRatio = bounds.width / bounds.height;
+        if (rectRatio > boundsRatio) return [bounds.width, rect.height * (bounds.width / rect.width)]; // Fit to width if rect is more landscape than bounds
+        else return [rect.width * (bounds.height / rect.height), bounds.height]; // Fit to height if rect is more portrait than bounds
     }
 
     // TODO: retitle these stupid getters

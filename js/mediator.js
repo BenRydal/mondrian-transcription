@@ -26,7 +26,7 @@ class Mediator {
 
     // TODO: need to add conditionals for no video loaded yet AND updatealldata/path data
     updateForResize(videoContainer) {
-        if (this.videoLoaded()) this.videoPlayer.setScaledValues(videoContainer);
+        if (this.videoLoaded()) this.videoPlayer.setScaledDimensions(videoContainer);
         if (this.allDataLoaded()) this.updateAllData();
         if (this.arrayIsLoaded(this.path.curPath.pointArray)) this.path.drawCurPathEndPoint(this.gui.getFloorPlanContainer(), this.floorPlan.getImg());
     }
@@ -50,11 +50,11 @@ class Mediator {
         if (this.gui.overSelector()) this.sk.cursor(this.sk.MOVE);
         else this.sk.cursor(this.sk.ARROW);
         if (this.allDataLoaded()) {
-            this.videoPlayer.drawVideoFrame(this.gui.getVideoContainer());
+            this.videoPlayer.draw(this.gui.getVideoContainer());
             if (this.isRecording) this.updateTranscription();
         } else {
             if (this.floorPlanLoaded()) this.floorPlan.drawFloorPlan(this.gui.getFloorPlanContainer());
-            else if (this.videoLoaded()) this.videoPlayer.drawVideoFrame(this.gui.getVideoContainer());
+            else if (this.videoLoaded()) this.videoPlayer.draw(this.gui.getVideoContainer());
         }
         this.gui.drawCenterLine();
     }
@@ -89,7 +89,7 @@ class Mediator {
 
     updateAllData() {
         this.floorPlan.drawFloorPlan(this.gui.getFloorPlanContainer());
-        this.videoPlayer.drawVideoFrame(this.gui.getVideoContainer());
+        this.videoPlayer.draw(this.gui.getVideoContainer());
         this.path.drawAllPaths(this.gui.getFloorPlanContainer(), this.floorPlan.getImg());
     }
 
@@ -106,7 +106,7 @@ class Mediator {
             this.videoPlayer.pause();
             this.isRecording = false;
             if (this.arrayIsLoaded(this.path.curPath.pointArray)) this.path.drawCurPathEndPoint(this.gui.getFloorPlanContainer(), this.floorPlan.getImg());
-        } else if (this.videoPlayer.notEnded(0)) {
+        } else if (this.videoPlayer.testEndTime(0)) {
             this.updateAllData(); // update all data to erase curPathBug
             this.videoPlayer.play();
             this.isRecording = true;
@@ -122,7 +122,7 @@ class Mediator {
      * Coordinates rewinding of video, erasing of curPath data and updating display
      */
     rewind() {
-        if (this.videoPlayer.notBeginning(this.jumpInSeconds)) {
+        if (this.videoPlayer.testStartTime(this.jumpInSeconds)) {
             const rewindToTime = this.path.curPathEndPoint.tPos - this.jumpInSeconds; // set time to rewind to based on last value in list
             this.path.rewind(rewindToTime);
             this.videoPlayer.rewind(rewindToTime);
@@ -139,7 +139,7 @@ class Mediator {
      * Coordinates fast forwarding of movie and path data, if movie not right at start or near end
      */
     fastForward() {
-        if (this.videoPlayer.notEnded(this.jumpInSeconds)) {
+        if (this.videoPlayer.testEndTime(this.jumpInSeconds)) {
             this.videoPlayer.fastForward(this.jumpInSeconds);
             this.path.fastForward(this.jumpInSeconds);
         }
