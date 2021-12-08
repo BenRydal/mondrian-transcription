@@ -25,7 +25,7 @@ const mondrian = new p5((sk) => {
     }
 
     /**
-     * Program loop organizes two drawing modes based on whether data is loaded
+     * Program loop
      */
     sk.draw = function () {
         sk.mediator.updateDrawLoop();

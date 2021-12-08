@@ -7,31 +7,6 @@
          this.colorList = ['#6a3d9a', '#ff7f00', '#33a02c', '#1f78b4', '#e31a1c', '#ffff99', '#b15928', '#cab2d6', '#fdbf6f', '#b2df8a', '#a6cee3', '#fb9a99'];
      }
 
-     /**
-      * Draws circle for last index in current path being recorded
-      */
-     drawCurPathEndPoint(floorPlanContainer, floorPlanImg) {
-         const point = this.curPathEndPoint;
-         this.sk.noStroke();
-         this.sk.fill(255, 0, 0);
-         const x1 = point.fpXPos * (floorPlanContainer.width / floorPlanImg.width);
-         const y1 = point.fpYPos * (floorPlanContainer.height / floorPlanImg.height);
-         this.sk.circle(x1 + floorPlanContainer.xPos, y1 + floorPlanContainer.yPos, 25);
-     }
-
-     // TODO: rename
-     drawLineSegment(floorPlanContainer) {
-         // Constrain mouse to floor plan display
-         const xPos = this.sk.constrain(this.sk.mouseX, floorPlanContainer.xPos, floorPlanContainer.xPos + floorPlanContainer.width);
-         const yPos = this.sk.constrain(this.sk.mouseY, floorPlanContainer.yPos, floorPlanContainer.yPos + floorPlanContainer.height);
-         const pXPos = this.sk.constrain(this.sk.pmouseX, floorPlanContainer.xPos, floorPlanContainer.xPos + floorPlanContainer.width);
-         const pYPos = this.sk.constrain(this.sk.pmouseY, floorPlanContainer.yPos, floorPlanContainer.yPos + floorPlanContainer.height);
-         this.sk.strokeWeight(this.curPath.weight);
-         this.sk.stroke(this.curPath.pColor);
-         this.sk.line(xPos, yPos, pXPos, pYPos);
-     }
-
-     // TODO: refactor these two methods
      drawAllPaths(floorPlanContainer, floorPlanImg) {
          for (const path of this.pathsArray) this.drawPath(path, floorPlanContainer, floorPlanImg); // update all recorded pathsArray
          this.drawPath(this.curPath, floorPlanContainer, floorPlanImg); // update current path last
@@ -47,6 +22,33 @@
              const y2 = path.pointArray[i - 1].fpYPos * (floorPlanContainer.height / floorPlanImg.height);
              this.sk.line(x1 + floorPlanContainer.xPos, y1 + floorPlanContainer.yPos, x2 + floorPlanContainer.xPos, y2 + floorPlanContainer.yPos);
          }
+     }
+
+     /**
+      * Draws circle for last index in current path being recorded
+      */
+     drawEndMarker(floorPlanContainer, floorPlanImg) {
+         const point = this.getCurEndPoint();
+         const x1 = point.fpXPos * (floorPlanContainer.width / floorPlanImg.width);
+         const y1 = point.fpYPos * (floorPlanContainer.height / floorPlanImg.height);
+         this.sk.noStroke();
+         this.sk.fill(255, 0, 0);
+         this.sk.circle(x1 + floorPlanContainer.xPos, y1 + floorPlanContainer.yPos, 25);
+     }
+
+     /**
+      * Draws line over floorPlan from current to previous mousePos
+      * NOTE: this line represents the data being currently being recorded as a path and matches weight and color of curPath
+      */
+     drawMousePosLine(floorPlanContainer) {
+         // Constrain mouse to floor plan display
+         const xPos = this.sk.constrain(this.sk.mouseX, floorPlanContainer.xPos, floorPlanContainer.xPos + floorPlanContainer.width);
+         const yPos = this.sk.constrain(this.sk.mouseY, floorPlanContainer.yPos, floorPlanContainer.yPos + floorPlanContainer.height);
+         const pXPos = this.sk.constrain(this.sk.pmouseX, floorPlanContainer.xPos, floorPlanContainer.xPos + floorPlanContainer.width);
+         const pYPos = this.sk.constrain(this.sk.pmouseY, floorPlanContainer.yPos, floorPlanContainer.yPos + floorPlanContainer.height);
+         this.sk.strokeWeight(this.curPath.weight);
+         this.sk.stroke(this.curPath.pColor);
+         this.sk.line(xPos, yPos, pXPos, pYPos);
      }
 
      /**
@@ -86,7 +88,7 @@
       * @param  {Integer/Number} amountInSeconds
       */
      fastForward(amountInSeconds) {
-         const point = this.curPathEndPoint; // IMPORTANT: get last value before loop
+         const point = this.getCurEndPoint(); // IMPORTANT: get last value before loop
          for (let i = 1; i <= amountInSeconds; i++) { // only tPos is different with each added point
              this.curPath.pointArray.push(this.createPoint(point.fpXPos, point.fpYPos, this.round(point.tPos + i)));
          }
@@ -122,9 +124,8 @@
          return +(value.toFixed(2));
      }
 
-     // RETITLE getter TODO:
-     get curPathEndPoint() {
-         if (this.curPath.pointArray.length > 0) return this.curPath.pointArray[this.curPath.pointArray.length - 1];
+     getCurEndPoint() {
+         if (this.curPath.pointArray.length) return this.curPath.pointArray[this.curPath.pointArray.length - 1];
          else return 0;
      }
  }
