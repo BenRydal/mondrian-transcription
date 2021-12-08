@@ -11,23 +11,7 @@ class Mediator {
         this.floorPlan = null;
         this.isRecording = false; // indicates recording mode
         this.jumpInSeconds = 5; // seconds value to fast forward and rewind path/video data
-    }
-
-    updateWindowResize() {
-        this.gui.updateWindowResize();
-        this.sk.resizeCanvas(window.innerWidth, window.innerHeight);
-        this.updateForResize(this.gui.getVideoContainer());
-    }
-
-    updateSelectResize() {
-        this.gui.updateSelectResize();
-        this.updateForResize(this.gui.getVideoContainer());
-    }
-
-    updateForResize(videoContainer) {
-        if (this.videoLoaded()) this.videoPlayer.setScaledDimensions(videoContainer);
-        if (this.allDataLoaded()) this.drawAllData();
-        if (this.path.curPath.pointArray.length) this.path.drawEndMarker(this.gui.getFloorPlanContainer(), this.floorPlan.getImg());
+        this.isSelectResize = false; // indicates if user is resizing screen using mouse
     }
 
     handleKeyPressed(keyValue) {
@@ -38,8 +22,31 @@ class Mediator {
     }
 
     handleMousePressed() {
-        if (this.gui.overSelector() && !this.isRecording) this.sk.isSelectResize = true;
+        if (this.gui.overSelector() && !this.isRecording) this.isSelectResize = true;
         else if (this.gui.overFloorPlan() && this.allDataLoaded()) this.playPauseRecording();
+    }
+
+    handleMouseDragged() {
+        if (this.isSelectResize) {
+            this.gui.updateSelectResize();
+            this.updateForResize(this.gui.getVideoContainer());
+        }
+    }
+
+    handleMouseReleased() {
+        this.isSelectResize = false;
+    }
+
+    updateWindowResize() {
+        this.gui.updateWindowResize();
+        this.sk.resizeCanvas(window.innerWidth, window.innerHeight);
+        this.updateForResize(this.gui.getVideoContainer());
+    }
+
+    updateForResize(videoContainer) {
+        if (this.videoLoaded()) this.videoPlayer.setScaledDimensions(videoContainer);
+        if (this.allDataLoaded()) this.drawAllData();
+        if (this.path.curPath.pointArray.length) this.path.drawEndMarker(this.gui.getFloorPlanContainer(), this.floorPlan.getImg());
     }
 
     /**
