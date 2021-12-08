@@ -7,12 +7,12 @@ class GUI {
     }
 
 
-    updateSelectResize() {
+    resizeByUser() {
         this.videoContainer = this.createVideoContainer(this.sk.mouseX);
         this.floorPlanContainer = this.createFloorPlanContainer(this.sk.mouseX, this.sk.width - this.sk.mouseX);
     }
 
-    updateWindowResize() {
+    resizeByWindow() {
         this.videoContainer = this.createVideoContainer(window.innerWidth * (this.videoContainer.width / this.sk.width));
         this.floorPlanContainer = this.createFloorPlanContainer(window.innerWidth * (this.floorPlanContainer.xPos / this.sk.width), window.innerWidth * (this.floorPlanContainer.width / this.sk.width));
     }

@@ -27,7 +27,7 @@ const mondrian = new p5((sk) => {
      * Program loop
      */
     sk.draw = function () {
-        sk.mediator.updateDrawLoop();
+        sk.mediator.updateProgram();
     }
 
     /**
@@ -50,6 +50,6 @@ const mondrian = new p5((sk) => {
     }
 
     sk.windowResized = function () {
-        sk.mediator.updateWindowResize();
+        sk.mediator.resizeByWindow();
     }
 });

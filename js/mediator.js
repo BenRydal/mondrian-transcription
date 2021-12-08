@@ -1,60 +1,24 @@
 /**
- * Mediator class coordinates calls to 4 other classes including P5 sk
+ * Mediator class coordinates calls from and across 4 other classes and P5 sketch
  */
 class Mediator {
 
     constructor(sketch) {
         this.sk = sketch;
-        this.path = new Path(sketch);
-        this.gui = new GUI(sketch);
-        this.videoPlayer = null; // holds videoPlayer object instantiated/updated in loadVideo method
-        this.floorPlan = null;
+        this.path = new Path(sketch); // holds methods for drawing and recording path objects/data
+        this.gui = new GUI(sketch); // holds interface containers and associated mouse over tests
+        this.videoPlayer = null; // instance of videoPlayer Class instantiated/updated in loadVideo method
+        this.floorPlan = null; // instance of FloorPlan Class instantiated/updated in loadFloorPlan method
         this.isRecording = false; // indicates recording mode
         this.jumpInSeconds = 5; // seconds value to fast forward and rewind path/video data
         this.isSelectResize = false; // indicates if user is resizing screen using mouse
     }
 
-    handleKeyPressed(keyValue) {
-        if (this.allDataLoaded()) {
-            if (keyValue === 'r' || keyValue === 'R') this.rewind();
-            else if (keyValue === 'f' || keyValue === 'F') this.fastForward();
-        }
-    }
-
-    handleMousePressed() {
-        if (this.gui.overSelector() && !this.isRecording) this.isSelectResize = true;
-        else if (this.gui.overFloorPlan() && this.allDataLoaded()) this.playPauseRecording();
-    }
-
-    handleMouseDragged() {
-        if (this.isSelectResize) {
-            this.gui.updateSelectResize();
-            this.updateForResize(this.gui.getVideoContainer());
-        }
-    }
-
-    handleMouseReleased() {
-        this.isSelectResize = false;
-    }
-
-    updateWindowResize() {
-        this.gui.updateWindowResize();
-        this.sk.resizeCanvas(window.innerWidth, window.innerHeight);
-        this.updateForResize(this.gui.getVideoContainer());
-    }
-
-    updateForResize(videoContainer) {
-        if (this.videoLoaded()) this.videoPlayer.setScaledDimensions(videoContainer);
-        if (this.allDataLoaded()) this.drawAllData();
-        if (this.path.curPath.pointArray.length) this.path.drawEndMarker(this.gui.getFloorPlanContainer(), this.floorPlan.getImg());
-    }
-
     /**
      * Handles program flow/method calls based on what data has been loaded
      */
-    updateDrawLoop() {
-        if (this.gui.overSelector() && !this.isRecording) this.sk.cursor(this.sk.MOVE);
-        else this.sk.cursor(this.sk.ARROW);
+    updateProgram() {
+        this.updateCursor();
         if (this.allDataLoaded()) {
             this.videoPlayer.draw(this.gui.getVideoContainer());
             if (this.isRecording) this.updateTranscription();
@@ -64,6 +28,11 @@ class Mediator {
             else if (this.videoLoaded()) this.videoPlayer.draw(this.gui.getVideoContainer());
         }
         this.gui.drawCenterLine();
+    }
+
+    updateCursor() {
+        if (this.cursorTest()) this.sk.cursor(this.sk.MOVE);
+        else this.sk.cursor(this.sk.ARROW);
     }
 
     /**
@@ -99,7 +68,7 @@ class Mediator {
         this.path.drawAllPaths(this.gui.getFloorPlanContainer(), this.floorPlan.getImg());
     }
 
-    resetCurRecording() {
+    resetRecording() {
         if (this.allDataLoaded()) {
             this.stopRecording();
             this.path.clearCurPath();
@@ -111,7 +80,7 @@ class Mediator {
         if (this.isRecording) {
             this.videoPlayer.pause();
             this.isRecording = false;
-            if (this.path.curPath.pointArray.length) this.path.drawEndMarker(this.gui.getFloorPlanContainer(), this.floorPlan.getImg());
+            this.updateEndMarker();
         } else if (this.videoPlayer.isBeforeEndTime(0)) {
             this.drawAllData(); // draw all data to erase end marker circle
             this.videoPlayer.play();
@@ -138,7 +107,7 @@ class Mediator {
         }
         if (this.isRecording) this.playPauseRecording(); // pause recording and video if currently recording
         this.drawAllData();
-        if (this.path.curPath.pointArray.length) this.path.drawEndMarker(this.gui.getFloorPlanContainer(), this.floorPlan.getImg());
+        this.updateEndMarker();
     }
 
     /**
@@ -149,6 +118,10 @@ class Mediator {
             this.videoPlayer.fastForward(this.jumpInSeconds);
             this.path.fastForward(this.jumpInSeconds);
         }
+    }
+
+    updateEndMarker() {
+        if (this.path.curPath.pointArray.length) this.path.drawEndMarker(this.gui.getFloorPlanContainer(), this.floorPlan.getImg());
     }
 
     loadFloorPlan(fileLocation) {
@@ -205,6 +178,41 @@ class Mediator {
         return table;
     }
 
+    handleKeyPressed(keyValue) {
+        if (this.allDataLoaded()) {
+            if (keyValue === 'r' || keyValue === 'R') this.rewind();
+            else if (keyValue === 'f' || keyValue === 'F') this.fastForward();
+        }
+    }
+
+    handleMousePressed() {
+        if (this.cursorTest()) this.isSelectResize = true;
+        else if (this.gui.overFloorPlan() && this.allDataLoaded()) this.playPauseRecording();
+    }
+
+    handleMouseDragged() {
+        if (this.isSelectResize) {
+            this.gui.resizeByUser();
+            this.updateForResize(this.gui.getVideoContainer());
+        }
+    }
+
+    handleMouseReleased() {
+        this.isSelectResize = false;
+    }
+
+    resizeByWindow() {
+        this.gui.resizeByWindow();
+        this.sk.resizeCanvas(window.innerWidth, window.innerHeight);
+        this.updateForResize(this.gui.getVideoContainer());
+    }
+
+    updateForResize(videoContainer) {
+        if (this.videoLoaded()) this.videoPlayer.setScaledDimensions(videoContainer);
+        if (this.allDataLoaded()) this.drawAllData();
+        this.updateEndMarker();
+    }
+
     /**
      * @param  {Any Type} data
      */
@@ -222,5 +230,9 @@ class Mediator {
 
     allDataLoaded() {
         return this.floorPlanLoaded() && this.videoLoaded();
+    }
+
+    cursorTest() {
+        return this.gui.overSelector() && !this.isRecording;
     }
 }
