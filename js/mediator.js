@@ -53,7 +53,7 @@ class Mediator {
      * Handles program flow/method calls based on what data has been loaded
      */
     updateDrawLoop() {
-        if (this.gui.overSelector()) this.sk.cursor(this.sk.MOVE);
+        if (this.gui.overSelector() && !this.isRecording) this.sk.cursor(this.sk.MOVE);
         else this.sk.cursor(this.sk.ARROW);
         if (this.allDataLoaded()) {
             this.videoPlayer.draw(this.gui.getVideoContainer());
@@ -217,7 +217,7 @@ class Mediator {
     }
 
     videoLoaded() {
-        return this.dataIsLoaded(this.videoPlayer) && this.dataIsLoaded(this.videoPlayer.movieDiv);
+        return this.dataIsLoaded(this.videoPlayer) && this.dataIsLoaded(this.videoPlayer.movieDiv); // must test both player and actual div
     }
 
     allDataLoaded() {
