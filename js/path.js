@@ -54,9 +54,9 @@
       */
      createPath(pointArray, pColor, weight) {
          return {
-             pointArray, // array of point objects
-             pColor, // path color
-             weight // path strokeWeight
+             pointArray, // Point Objects
+             pColor,
+             weight // strokeWeight
          };
      }
 
