@@ -43,7 +43,7 @@ const mondrian = new p5((sk) => {
     }
 
     sk.mouseDragged = function () {
-        if (sk.isSelectResize) sk.selectResize(); // TODO: not recording? add else
+        if (sk.isSelectResize) sk.selectResize();
     }
 
     sk.mouseReleased = function () {

@@ -23,6 +23,11 @@ class GUI {
         this.sk.line(this.videoContainer.width, 0, this.videoContainer.width, this.videoContainer.height);
     }
 
+    drawWhiteBackground() {
+        this.sk.fill(255);
+        this.sk.stroke(255);
+        this.sk.rect(0, 0, this.sk.width, this.sk.height);
+    }
 
     createFloorPlanContainer(xPos, width) {
         return {

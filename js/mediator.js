@@ -27,7 +27,7 @@ class Mediator {
     updateForResize(videoContainer) {
         if (this.videoLoaded()) this.videoPlayer.setScaledDimensions(videoContainer);
         if (this.allDataLoaded()) this.drawAllData();
-        if (this.arrayIsLoaded(this.path.curPath.pointArray)) this.path.drawEndMarker(this.gui.getFloorPlanContainer(), this.floorPlan.getImg());
+        if (this.path.curPath.pointArray.length) this.path.drawEndMarker(this.gui.getFloorPlanContainer(), this.floorPlan.getImg());
     }
 
     handleKeyPressed(keyValue) {
@@ -38,7 +38,7 @@ class Mediator {
     }
 
     handleMousePressed() {
-        if (this.gui.overSelector()) this.sk.isSelectResize = true;
+        if (this.gui.overSelector() && !this.isRecording) this.sk.isSelectResize = true;
         else if (this.gui.overFloorPlan() && this.allDataLoaded()) this.playPauseRecording();
     }
 
@@ -52,6 +52,7 @@ class Mediator {
             this.videoPlayer.draw(this.gui.getVideoContainer());
             if (this.isRecording) this.updateTranscription();
         } else {
+            this.gui.drawWhiteBackground(); // to display centerline properly
             if (this.floorPlanLoaded()) this.floorPlan.drawFloorPlan(this.gui.getFloorPlanContainer());
             else if (this.videoLoaded()) this.videoPlayer.draw(this.gui.getVideoContainer());
         }
@@ -63,7 +64,7 @@ class Mediator {
      */
     updateTranscription() {
         this.path.drawMousePosLine(this.gui.getFloorPlanContainer()); // Don't call this within testSampleRate block
-        if (this.sampleData()) this.updateCurPath();
+        if (this.sampleData()) this.recordPoint();
     }
 
     /**
@@ -78,12 +79,11 @@ class Mediator {
     }
 
     /**
-     * Add correctly scaled positioning data to current path
+     * Add correctly scaled positioning data for point to current path
      */
-    updateCurPath() {
+    recordPoint() {
         const [fpXPos, fpYPos] = this.floorPlan.getPositioningData(this.gui.getFloorPlanContainer());
-        const time = this.videoPlayer.getCurTime();
-        this.path.addPointToCurPath(fpXPos, fpYPos, time);
+        this.path.addPointToCurPath(fpXPos, fpYPos, this.videoPlayer.getCurTime());
     }
 
     drawAllData() {
@@ -104,9 +104,9 @@ class Mediator {
         if (this.isRecording) {
             this.videoPlayer.pause();
             this.isRecording = false;
-            if (this.arrayIsLoaded(this.path.curPath.pointArray)) this.path.drawEndMarker(this.gui.getFloorPlanContainer(), this.floorPlan.getImg());
+            if (this.path.curPath.pointArray.length) this.path.drawEndMarker(this.gui.getFloorPlanContainer(), this.floorPlan.getImg());
         } else if (this.videoPlayer.isBeforeEndTime(0)) {
-            this.drawAllData(); // update all data to erase curPathBug
+            this.drawAllData(); // draw all data to erase end marker circle
             this.videoPlayer.play();
             this.isRecording = true;
         }
@@ -131,7 +131,7 @@ class Mediator {
         }
         if (this.isRecording) this.playPauseRecording(); // pause recording and video if currently recording
         this.drawAllData();
-        if (this.arrayIsLoaded(this.path.curPath.pointArray)) this.path.drawEndMarker(this.gui.getFloorPlanContainer(), this.floorPlan.getImg());
+        if (this.path.curPath.pointArray.length) this.path.drawEndMarker(this.gui.getFloorPlanContainer(), this.floorPlan.getImg());
     }
 
     /**
@@ -215,12 +215,5 @@ class Mediator {
 
     allDataLoaded() {
         return this.floorPlanLoaded() && this.videoLoaded();
-    }
-
-    /**
-     * @param  {Any Type} data
-     */
-    arrayIsLoaded = function (data) {
-        return Array.isArray(data) && data.length;
     }
 }
