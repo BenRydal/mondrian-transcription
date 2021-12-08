@@ -12,6 +12,7 @@ class VideoPlayer {
             this.movieDiv.id('moviePlayer');
             this.movieDiv.hide(); // hide html5 video element as program use p5 image drawing methods to draw video frames
             [this.scaledWidth, this.scaledHeight] = this.scaleRectToBounds(this.movieDiv, sketch.videoContainer);
+            this.movieDiv.size(this.scaledWidth, this.scaledHeight); // set the element to the new width and height
             this.movieDiv.onload = () => URL.revokeObjectURL(fileLocation);
             document.getElementById('moviePlayer').onended = () => sketch.mediator.isRecording = false; // end program recording when movie ends
             sketch.mediator.newVideoLoaded();
