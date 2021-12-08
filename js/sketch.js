@@ -21,7 +21,7 @@ const mondrian = new p5((sk) => {
         sk.textFont(sk.font_Lato, 20);
         sk.mediator = new Mediator(sk);
         sk.controller = new Controller(sk.mediator);
-        sk.isSelected = false; // TODO: move to mediator?
+        sk.isSelectResize = false; // TODO: move to mediator?
     }
 
     /**
@@ -43,11 +43,11 @@ const mondrian = new p5((sk) => {
     }
 
     sk.mouseDragged = function () {
-        if (sk.isSelected) sk.selectResize(); // TODO: not recording? add else
+        if (sk.isSelectResize) sk.selectResize(); // TODO: not recording? add else
     }
 
     sk.mouseReleased = function () {
-        sk.isSelected = false;
+        sk.isSelectResize = false;
     }
 
     sk.windowResized = function () {

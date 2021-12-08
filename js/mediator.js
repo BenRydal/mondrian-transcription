@@ -24,10 +24,9 @@ class Mediator {
         this.updateForResize(this.gui.getVideoContainer());
     }
 
-    // TODO: need to add conditionals for no video loaded yet AND updatealldata/path data
     updateForResize(videoContainer) {
         if (this.videoLoaded()) this.videoPlayer.setScaledDimensions(videoContainer);
-        if (this.allDataLoaded()) this.updateAllData();
+        if (this.allDataLoaded()) this.drawAllData();
         if (this.arrayIsLoaded(this.path.curPath.pointArray)) this.path.drawEndMarker(this.gui.getFloorPlanContainer(), this.floorPlan.getImg());
     }
 
@@ -39,7 +38,7 @@ class Mediator {
     }
 
     handleMousePressed() {
-        if (this.gui.overSelector()) this.sk.isSelected = true;
+        if (this.gui.overSelector()) this.sk.isSelectResize = true;
         else if (this.gui.overFloorPlan() && this.allDataLoaded()) this.playPauseRecording();
     }
 
@@ -87,7 +86,7 @@ class Mediator {
         this.path.addPointToCurPath(fpXPos, fpYPos, time);
     }
 
-    updateAllData() {
+    drawAllData() {
         this.floorPlan.drawFloorPlan(this.gui.getFloorPlanContainer());
         this.videoPlayer.draw(this.gui.getVideoContainer());
         this.path.drawAllPaths(this.gui.getFloorPlanContainer(), this.floorPlan.getImg());
@@ -97,7 +96,7 @@ class Mediator {
         if (this.allDataLoaded()) {
             this.stopRecording();
             this.path.clearCurPath();
-            this.updateAllData();
+            this.drawAllData();
         }
     }
 
@@ -107,7 +106,7 @@ class Mediator {
             this.isRecording = false;
             if (this.arrayIsLoaded(this.path.curPath.pointArray)) this.path.drawEndMarker(this.gui.getFloorPlanContainer(), this.floorPlan.getImg());
         } else if (this.videoPlayer.isBeforeEndTime(0)) {
-            this.updateAllData(); // update all data to erase curPathBug
+            this.drawAllData(); // update all data to erase curPathBug
             this.videoPlayer.play();
             this.isRecording = true;
         }
@@ -131,7 +130,7 @@ class Mediator {
             this.videoPlayer.rewind(0);
         }
         if (this.isRecording) this.playPauseRecording(); // pause recording and video if currently recording
-        this.updateAllData();
+        this.drawAllData();
         if (this.arrayIsLoaded(this.path.curPath.pointArray)) this.path.drawEndMarker(this.gui.getFloorPlanContainer(), this.floorPlan.getImg());
     }
 
@@ -180,7 +179,7 @@ class Mediator {
             this.path.addCurPathToList();
             this.path.clearCurPath();
             this.stopRecording();
-            this.updateAllData();
+            this.drawAllData();
         }
     }
 
