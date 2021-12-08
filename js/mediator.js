@@ -176,8 +176,7 @@ class Mediator {
 
     writeFile() {
         if (this.allDataLoaded() && this.path.curPath.pointArray.length > 0) {
-            this.sk.saveTable(this.writeTable(this.path.curPath.pointArray), "Path_" + this.path.curFileToOutput, "csv");
-            this.path.curFileToOutput++;
+            this.sk.saveTable(this.writeTable(this.path.curPath.pointArray), "transcript", "csv");
             this.path.addCurPathToList();
             this.path.clearCurPath();
             this.stopRecording();
