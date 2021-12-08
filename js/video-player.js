@@ -3,6 +3,7 @@ class VideoPlayer {
     /**
      * @param  {String} fileLocation
      * @param  {P5 Instance} sketch
+     * @param  {VideoContainer} videoContainer
      */
 
     constructor(fileLocation, sketch, videoContainer) {
@@ -19,6 +20,7 @@ class VideoPlayer {
         });
     }
 
+    //////***** Public Methods *****//////
     setScaledDimensions(bounds) {
         [this.scaledWidth, this.scaledHeight] = this.scaleRectToBounds(this.movieDiv, bounds);
     }
@@ -55,34 +57,36 @@ class VideoPlayer {
     }
 
     /**
-     * Param allows to adjust test for different fast forward rates
+     * Param timeInSeconds allows to adjust test for different fast forward rates
      * @param  {Number} timeInSeconds
      */
-    testEndTime(timeInSeconds) {
+    isBeforeEndTime(timeInSeconds) {
         return this.movieDiv.time() < (this.movieDiv.duration() - timeInSeconds);
     }
 
-    testStartTime(timeInSeconds) {
+    isLessThanStartTime(timeInSeconds) {
         return this.movieDiv.time() > timeInSeconds;
     }
 
-    /**
-     * Draw current movie frame image and white background to GUI in video display
-     */
+    getCurTime() {
+        return this.movieDiv.time();
+    }
+
     draw(videoContainer) {
         this.drawFrame(videoContainer);
         this.drawTimeLabel(videoContainer);
     }
 
+    //////***** Private Methods *****//////
     drawFrame(videoContainer) {
-        this.sk.fill(255);
+        this.sk.fill(255); // first draw white background to hide any previous/older frames, then draw frame
         this.sk.stroke(255);
         this.sk.rect(videoContainer.xPos, videoContainer.yPos, videoContainer.width, videoContainer.height); // erases previous video frames from other loaded videos that can be different size than current frames
         this.sk.image(this.movieDiv, videoContainer.xPos, videoContainer.yPos, this.scaledWidth, this.scaledHeight);
     }
 
     drawTimeLabel(videoContainer) {
-        const curVideoTime = this.curTime;
+        const curVideoTime = this.getCurTime();
         const labelSpacing = 30;
         const minutes = Math.floor(curVideoTime / 60);
         const seconds = Math.floor(curVideoTime - minutes * 60);
@@ -97,14 +101,5 @@ class VideoPlayer {
         const boundsRatio = bounds.width / bounds.height;
         if (rectRatio > boundsRatio) return [bounds.width, rect.height * (bounds.width / rect.width)]; // Fit to width if rect is more landscape than bounds
         else return [rect.width * (bounds.height / rect.height), bounds.height]; // Fit to height if rect is more portrait than bounds
-    }
-
-    // TODO: retitle these stupid getters
-    get curTime() {
-        return this.movieDiv.time();
-    }
-
-    get duration() {
-        return this.movieDiv.duration();
     }
 }

@@ -74,8 +74,8 @@ class Mediator {
      */
     sampleData() {
         if (this.path.curPath.pointArray.length === 0) return true; // always return true if first data point
-        else if (this.sk.mouseX !== this.sk.pmouseX || this.sk.mouseY !== this.sk.pmouseY) return this.path.round(this.path.curPathEndPoint.tPos) < this.path.round(this.videoPlayer.curTime);
-        else return Math.round(this.path.curPathEndPoint.tPos) < Math.round(this.videoPlayer.curTime);
+        else if (this.sk.mouseX !== this.sk.pmouseX || this.sk.mouseY !== this.sk.pmouseY) return this.path.round(this.path.curPathEndPoint.tPos) < this.path.round(this.videoPlayer.getCurTime());
+        else return Math.round(this.path.curPathEndPoint.tPos) < Math.round(this.videoPlayer.getCurTime());
     }
 
     /**
@@ -83,7 +83,7 @@ class Mediator {
      */
     updateCurPath() {
         const [fpXPos, fpYPos] = this.floorPlan.getPositioningData(this.gui.getFloorPlanContainer());
-        const time = this.videoPlayer.curTime;
+        const time = this.videoPlayer.getCurTime();
         this.path.addPointToCurPath(fpXPos, fpYPos, time);
     }
 
@@ -106,7 +106,7 @@ class Mediator {
             this.videoPlayer.pause();
             this.isRecording = false;
             if (this.arrayIsLoaded(this.path.curPath.pointArray)) this.path.drawCurPathEndPoint(this.gui.getFloorPlanContainer(), this.floorPlan.getImg());
-        } else if (this.videoPlayer.testEndTime(0)) {
+        } else if (this.videoPlayer.isBeforeEndTime(0)) {
             this.updateAllData(); // update all data to erase curPathBug
             this.videoPlayer.play();
             this.isRecording = true;
@@ -122,7 +122,7 @@ class Mediator {
      * Coordinates rewinding of video, erasing of curPath data and updating display
      */
     rewind() {
-        if (this.videoPlayer.testStartTime(this.jumpInSeconds)) {
+        if (this.videoPlayer.isLessThanStartTime(this.jumpInSeconds)) {
             const rewindToTime = this.path.curPathEndPoint.tPos - this.jumpInSeconds; // set time to rewind to based on last value in list
             this.path.rewind(rewindToTime);
             this.videoPlayer.rewind(rewindToTime);
@@ -139,7 +139,7 @@ class Mediator {
      * Coordinates fast forwarding of movie and path data, if movie not right at start or near end
      */
     fastForward() {
-        if (this.videoPlayer.testEndTime(this.jumpInSeconds)) {
+        if (this.videoPlayer.isBeforeEndTime(this.jumpInSeconds)) {
             this.videoPlayer.fastForward(this.jumpInSeconds);
             this.path.fastForward(this.jumpInSeconds);
         }
