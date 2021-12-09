@@ -13,8 +13,7 @@ class VideoPlayer {
         this.movieDiv = this.sk.createVideo(fileLocation, () => {
             this.movieDiv.id('moviePlayer');
             this.movieDiv.hide(); // hide html5 video element as program use p5 image drawing methods to draw video frames
-            [this.scaledWidth, this.scaledHeight] = this.scaleRectToBounds(this.movieDiv, videoContainer);
-            this.movieDiv.onload = () => URL.revokeObjectURL(fileLocation);
+            this.setScaledDimensions(videoContainer);
             document.getElementById('moviePlayer').onended = () => this.sk.mediator.isRecording = false; // end program recording when movie ends
             this.sk.mediator.newVideoLoaded();
         });
