@@ -23,9 +23,6 @@ const mondrian = new p5((sk) => {
         sk.controller = new Controller(sk.mediator);
     }
 
-    /**
-     * Program loop
-     */
     sk.draw = function () {
         sk.mediator.updateProgram();
     }
