@@ -7,6 +7,7 @@ class Mediator {
         this.sk = sketch;
         this.path = new Path();
         this.videoPlayer = null; // holds videoPlayer object instantiated/updated in loadVideo method
+        this.videoIsLoaded = false;
         this.floorPlan = null; // holds p5 image of floor plan
         this.isRecording = false; // indicates recording mode
         this.jumpInSeconds = 5; // seconds value to fast forward and rewind path/video data
@@ -127,10 +128,9 @@ class Mediator {
     }
 
     loadVideo(fileLocation) {
-        if (this.videoLoaded()) {
-            this.videoPlayer.destroy(); // if a video exists, destroy it
-            this.videoPlayer = null;
-        }
+        if (this.videoLoaded()) this.videoPlayer.destroy(); // if a video exists, destroy it
+        this.videoPlayer = null;
+        this.videoIsLoaded = false;
         this.videoPlayer = new VideoPlayer(fileLocation, this.sk);
     }
 
@@ -139,6 +139,7 @@ class Mediator {
      */
     newVideoLoaded() {
         console.log("New Video Loaded");
+        this.videoIsLoaded = true;
         this.stopRecording(); // necessary to be able to draw starting frame before playing the video
         this.path.clearAllPaths();
         if (this.floorPlanLoaded()) this.sk.drawFloorPlan(this.floorPlan); // clear floor plan drawing area
@@ -185,7 +186,7 @@ class Mediator {
     }
 
     videoLoaded() {
-        return this.dataIsLoaded(this.videoPlayer) && this.dataIsLoaded(this.videoPlayer.movieDiv);
+        return this.dataIsLoaded(this.videoPlayer) && this.videoIsLoaded;
     }
 
     allDataLoaded() {
