@@ -11,7 +11,7 @@ class Mediator {
         this.floorPlan = null; // instance of FloorPlan Class instantiated/updated in loadFloorPlan method
         this.isRecording = false; // indicates recording mode
         this.jumpInSeconds = 5; // seconds value to fast forward and rewind path/video data
-        this.isSelectResize = false; // indicates if user is resizing screen using mouse
+        this.isResizing = false; // indicates if user is resizing screen using mouse
     }
 
     /**
@@ -185,19 +185,19 @@ class Mediator {
     }
 
     handleMousePressed() {
-        if (this.overResizeSelector()) this.isSelectResize = true;
+        if (this.overResizeSelector()) this.isResizing = true;
         else if (this.gui.overFloorPlan() && this.allDataLoaded()) this.playPauseRecording();
     }
 
     handleMouseDragged() {
-        if (this.isSelectResize) {
+        if (this.isResizing) {
             this.gui.resizeByUser();
             this.updateForResize(this.gui.getVideoContainer());
         }
     }
 
     handleMouseReleased() {
-        this.isSelectResize = false;
+        this.isResizing = false;
     }
 
     resizeByWindow() {
