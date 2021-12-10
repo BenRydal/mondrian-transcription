@@ -86,8 +86,7 @@
       * Add 1 new data point to curPath lists for amountInSeconds fastForwarded
       * @param  {Integer/Number} amountInSeconds
       */
-     fastForward(amountInSeconds) {
-         const point = this.getCurEndPoint(); // IMPORTANT: get last value before loop
+     fastForward(point, amountInSeconds) {
          for (let i = 1; i <= amountInSeconds; i++) { // only tPos is different with each added point
              this.curPath.pointArray.push(this.createPoint(point.fpXPos, point.fpYPos, this.round(point.tPos + i)));
          }

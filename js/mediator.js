@@ -118,7 +118,7 @@ class Mediator {
     fastForward() {
         if (this.videoPlayer.isBeforeEndTime(this.jumpInSeconds)) {
             this.videoPlayer.fastForward(this.jumpInSeconds);
-            this.path.fastForward(this.jumpInSeconds);
+            this.path.fastForward(this.path.getCurEndPoint(), this.jumpInSeconds);
         }
     }
 
