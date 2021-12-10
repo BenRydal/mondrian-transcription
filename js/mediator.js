@@ -31,7 +31,7 @@ class Mediator {
     }
 
     updateCursor() {
-        if (this.cursorTest()) this.sk.cursor(this.sk.MOVE);
+        if (this.overResizeSelector()) this.sk.cursor(this.sk.MOVE);
         else this.sk.cursor(this.sk.ARROW);
     }
 
@@ -185,7 +185,7 @@ class Mediator {
     }
 
     handleMousePressed() {
-        if (this.cursorTest()) this.isSelectResize = true;
+        if (this.overResizeSelector()) this.isSelectResize = true;
         else if (this.gui.overFloorPlan() && this.allDataLoaded()) this.playPauseRecording();
     }
 
@@ -231,7 +231,7 @@ class Mediator {
         return this.floorPlanLoaded() && this.videoLoaded();
     }
 
-    cursorTest() {
-        return this.gui.overSelector() && !this.isRecording;
+    overResizeSelector() {
+        return !this.isRecording && this.gui.overResizeSelector();
     }
 }

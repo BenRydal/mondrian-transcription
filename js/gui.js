@@ -47,7 +47,7 @@ class GUI {
         }
     }
 
-    overSelector() {
+    overResizeSelector() {
         const selectorSpacing = 3;
         return this.overRect(this.videoContainer.width - selectorSpacing, 0, selectorSpacing * 2, this.videoContainer.height);
     }
