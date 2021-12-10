@@ -123,7 +123,7 @@ class Mediator {
     }
 
     updateEndMarker() {
-        if (this.path.curPath.pointArray.length) this.path.drawEndMarker(this.gui.getFloorPlanContainer(), this.floorPlan.getImg());
+        if (this.path.curPath.pointArray.length) this.path.drawEndMarker(this.path.getCurEndPoint(), this.gui.getFloorPlanContainer(), this.floorPlan.getImg());
     }
 
     loadFloorPlan(fileLocation) {

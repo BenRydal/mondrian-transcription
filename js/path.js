@@ -27,8 +27,7 @@
      /**
       * Draws circle for last index in current path being recorded
       */
-     drawEndMarker(floorPlanContainer, floorPlanImg) {
-         const point = this.getCurEndPoint();
+     drawEndMarker(point, floorPlanContainer, floorPlanImg) {
          const x1 = point.fpXPos * (floorPlanContainer.width / floorPlanImg.width);
          const y1 = point.fpYPos * (floorPlanContainer.height / floorPlanImg.height);
          this.sk.noStroke();
