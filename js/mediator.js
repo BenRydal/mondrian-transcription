@@ -12,6 +12,7 @@ class Mediator {
         this.isRecording = false; // indicates recording mode
         this.jumpInSeconds = 5; // seconds value to fast forward and rewind path/video data
         this.isResizing = false; // indicates if user is resizing screen using mouse
+        this.isFastForwarding = false; // indicates if currently fastForwarding--deals with safari bug if fastForwarding to quickly
     }
 
     /**
@@ -178,7 +179,11 @@ class Mediator {
     }
 
     handleKeyPressed(keyValue) {
-        if (this.allDataLoaded()) {
+        if (this.allDataLoaded() && !this.isFastForwarding) {
+            this.isFastForwarding = true;
+            setTimeout(() => {
+                this.isFastForwarding = false;
+            }, 250);
             if (keyValue === 'r' || keyValue === 'R') this.rewind();
             else if (keyValue === 'f' || keyValue === 'F') this.fastForward();
         }
