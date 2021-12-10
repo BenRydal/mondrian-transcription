@@ -8,7 +8,7 @@ class Mediator {
         this.path = new Path(sketch); // holds methods for drawing and recording path objects/data
         this.gui = new GUI(sketch); // holds interface containers and associated mouse over tests
         this.videoPlayer = null; // instance of videoPlayer Class instantiated/updated in loadVideo method
-        this.videoIsLoaded = false;
+        this.videoIsLoaded = false; // additional boolean used to test if videoLoaded
         this.floorPlan = null; // instance of FloorPlan Class instantiated/updated in loadFloorPlan method
         this.isRecording = false; // indicates recording mode
         this.jumpInSeconds = 5; // seconds value to fast forward and rewind path/video data
@@ -38,6 +38,7 @@ class Mediator {
 
     /**
      * Coordinates video and line segment drawing in display. Decides whether to record data point based on sampling rate method
+     * NOTE: Always drawing mousePosLine creates smoother user experience when recording/drawing even when not recording actual data points
      */
     updateTranscription() {
         this.path.drawMousePosLine(this.gui.getFloorPlanContainer()); // Don't call this within testSampleRate block
@@ -46,7 +47,7 @@ class Mediator {
 
     /**
      * Method to sample data in 2 ways
-     * (1) if mouse moves compare based on rounding decimal value for paths
+     * (1) if mouse moves compare based on rounding to fixed decimal value for paths
      * (2) if stopped compare based on Math.round method, approximately every 1 second in movie
      */
     sampleData() {
