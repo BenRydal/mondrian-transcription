@@ -40,17 +40,17 @@ class Mediator {
      * NOTE: Always drawing mousePosLine creates smoother user experience when recording/drawing even when not recording actual data points
      */
     updateTranscription() {
-        const curVideoTime = this.videoPlayer.getCurTime();
         this.path.drawMousePosLine(this.gui.getFloorPlanContainer()); // Don't call this within testSampleRate block
-        if (this.path.curPath.pointArray.length === 0 || this.sampleData(curVideoTime, this.path.getCurEndPoint().tPos)) this.recordPoint(curVideoTime);
+        if (this.path.curPath.pointArray.length === 0 || this.sampleData()) this.recordPoint();
     }
 
     /**
-     * Method to sample data in 2 ways
+     * Method to sample data by comparing video to endPointPath time in 2 ways:
      * (1) if mouse moves compare based on rounding to fixed decimal value for paths
      * (2) if stopped compare based on Math.round method, approximately every 1 second in movie
      */
-    sampleData(curVideoTime, curEndPointTime) {
+    sampleData() {
+        const [curVideoTime, curEndPointTime] = [this.videoPlayer.getCurTime(), this.path.getCurEndPoint().tPos];
         if (this.sk.mouseX !== this.sk.pmouseX || this.sk.mouseY !== this.sk.pmouseY) return this.path.round(curEndPointTime) < this.path.round(curVideoTime);
         else return Math.round(curEndPointTime) < Math.round(curVideoTime);
     }
@@ -58,9 +58,9 @@ class Mediator {
     /**
      * Add correctly scaled positioning data for point to current path
      */
-    recordPoint(curVideoTime) {
+    recordPoint() {
         const [fpXPos, fpYPos] = this.floorPlan.getPositioningData(this.gui.getFloorPlanContainer());
-        this.path.addPointToCurPath(fpXPos, fpYPos, curVideoTime);
+        this.path.addPointToCurPath(fpXPos, fpYPos, this.videoPlayer.getCurTime());
     }
 
     drawAllData() {
