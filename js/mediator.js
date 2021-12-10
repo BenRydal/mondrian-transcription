@@ -37,12 +37,13 @@ class Mediator {
     }
 
     /**
-     * Coordinates video and line segment drawing in display. Decides whether to record data point based on sampling rate method
+     * Coordinates line segment drawing in display and path data recording. Decides whether to record data point based on sampling rate method
      * NOTE: Always drawing mousePosLine creates smoother user experience when recording/drawing even when not recording actual data points
      */
     updateTranscription() {
+        const curVideoTime = this.videoPlayer.getCurTime();
         this.path.drawMousePosLine(this.gui.getFloorPlanContainer()); // Don't call this within testSampleRate block
-        if (this.sampleData()) this.recordPoint();
+        if (this.path.curPath.pointArray.length === 0 || this.sampleData(curVideoTime, this.path.getCurEndPoint().tPos)) this.recordPoint(curVideoTime);
     }
 
     /**
@@ -50,18 +51,17 @@ class Mediator {
      * (1) if mouse moves compare based on rounding to fixed decimal value for paths
      * (2) if stopped compare based on Math.round method, approximately every 1 second in movie
      */
-    sampleData() {
-        if (this.path.curPath.pointArray.length === 0) return true; // always return true if first data point
-        else if (this.sk.mouseX !== this.sk.pmouseX || this.sk.mouseY !== this.sk.pmouseY) return this.path.round(this.path.getCurEndPoint().tPos) < this.path.round(this.videoPlayer.getCurTime());
-        else return Math.round(this.path.getCurEndPoint().tPos) < Math.round(this.videoPlayer.getCurTime());
+    sampleData(curVideoTime, curEndPointTime) {
+        if (this.sk.mouseX !== this.sk.pmouseX || this.sk.mouseY !== this.sk.pmouseY) return this.path.round(curEndPointTime) < this.path.round(curVideoTime);
+        else return Math.round(curEndPointTime) < Math.round(curVideoTime);
     }
 
     /**
      * Add correctly scaled positioning data for point to current path
      */
-    recordPoint() {
+    recordPoint(curVideoTime) {
         const [fpXPos, fpYPos] = this.floorPlan.getPositioningData(this.gui.getFloorPlanContainer());
-        this.path.addPointToCurPath(fpXPos, fpYPos, this.videoPlayer.getCurTime());
+        this.path.addPointToCurPath(fpXPos, fpYPos, curVideoTime);
     }
 
     drawAllData() {
