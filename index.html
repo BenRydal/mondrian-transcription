@@ -27,19 +27,19 @@
         <form action="/action_page.php">
             <button type="button" id="introButton" class="inputfile"
                 onclick="mondrian.controller.handleIntroButton(this)"></button>
-            <label for="introButton">HOW TO USE</label>
+            <label for="introButton" title="Learn About This Tool">HOW TO USE</label>
             <input type="file" name="file" id="inputFloorPlan" name="file" class="inputfile" accept=".png, .jpg, .jpeg"
                 onchange="mondrian.controller.handleFloorPlanButton(this)">
-            <label for="inputFloorPlan">LOAD FLOOR PLAN (PNG/JPG)</label>
+            <label for="inputFloorPlan" title="Load PNG/JPG Image">LOAD FLOOR PLAN</label>
             <input type="file" name="file" id="inputVideo" name="file" class="inputfile" accept=".mp4"
                 onchange="mondrian.controller.handleVideoButton(this)">
-            <label for="inputVideo">LOAD VIDEO (MP4)</label>
+            <label for="inputVideo" title="Load MP4 Video">LOAD VIDEO</label>
             <button type="button" id="saveButton" class="inputfile"
                 onclick="mondrian.controller.handleSaveButton(this)"></button>
-            <label for="saveButton">SAVE MOVEMENT PATH (CSV)</label>
+            <label for="saveButton" title="Save Movement Path as CSV file">SAVE PATH</label>
             <button type="button" id="resetButton" class="inputfile"
                 onclick="mondrian.controller.handleResetButton(this)"></button>
-            <label for="resetButton">CLEAR RECORDING</label>
+            <label for="resetButton" title="Clear Current Recording">CLEAR</label>
         </form>
     </div>
     <div class="container" id="sketch-holder">
