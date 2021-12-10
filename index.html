@@ -10,6 +10,8 @@
     <script src="js/path.js"></script>
     <script src="js/mediator.js"></script>
     <script src="js/video-player.js"></script>
+    <script src="js/floorplan.js"></script>
+    <script src="js/gui.js"></script>
     <link rel="stylesheet" type="text/css" href="css/input.css" />
     <link rel="apple-touch-icon" sizes="180x180" href="favicon/apple-touch-icon.png">
     <link rel="icon" type="image/png" sizes="32x32" href="favicon/favicon-32x32.png">
@@ -25,19 +27,19 @@
         <form action="/action_page.php">
             <button type="button" id="introButton" class="inputfile"
                 onclick="mondrian.controller.handleIntroButton(this)"></button>
-            <label for="introButton">HOW TO USE</label>
+            <label for="introButton" title="Learn About This Tool">HOW TO USE</label>
             <input type="file" name="file" id="inputFloorPlan" name="file" class="inputfile" accept=".png, .jpg, .jpeg"
                 onchange="mondrian.controller.handleFloorPlanButton(this)">
-            <label for="inputFloorPlan">LOAD FLOOR PLAN (PNG/JPG)</label>
+            <label for="inputFloorPlan" title="Load PNG/JPG Image">LOAD FLOOR PLAN</label>
             <input type="file" name="file" id="inputVideo" name="file" class="inputfile" accept=".mp4"
                 onchange="mondrian.controller.handleVideoButton(this)">
-            <label for="inputVideo">LOAD VIDEO (MP4)</label>
+            <label for="inputVideo" title="Load MP4 Video">LOAD VIDEO</label>
             <button type="button" id="saveButton" class="inputfile"
                 onclick="mondrian.controller.handleSaveButton(this)"></button>
-            <label for="saveButton">SAVE MOVEMENT PATH (CSV)</label>
+            <label for="saveButton" title="Save Movement Path as CSV file">SAVE PATH</label>
             <button type="button" id="resetButton" class="inputfile"
                 onclick="mondrian.controller.handleResetButton(this)"></button>
-            <label for="resetButton">CLEAR RECORDING</label>
+            <label for="resetButton" title="Clear Current Recording">CLEAR</label>
         </form>
     </div>
     <div class="container" id="sketch-holder">
@@ -48,9 +50,11 @@
                 buttons to load a floor plan formatted as a PNG/JPG image and video formatted as a MP4 file.
             </p>
             <p class="introMsg">
-                Then, <u>click</u> anywhere on the floor plan to start recording movement data synchronized to the video. As
+                Then, <u>click</u> anywhere on the floor plan to start recording movement data synchronized to the
+                video. As
                 you move your cursor over the floor plan, positioning data is recorded. Play/pause recording by clicking
-                on the floor plan. Press the 'f' key to fast forward and the 'r' key to rewind video and data recording in 5 second
+                on the floor plan. Press the 'f' key to fast forward and the 'r' key to rewind video and data recording
+                in 5 second
                 intervals. Use the top buttons to clear or save your recording data as a CSV file.
             </p>
             <p class="introMsg">
@@ -58,10 +62,11 @@
                     href="https://benrydal.com/software/mondrian-transcription">here</a>
             </p>
             <p class="introMsgCredits">
-                Mondrian Transcription software is an open-source project licensed under the GNU General Public License Version 2.0. It is
+                Mondrian Transcription software is an open-source project licensed under the GNU General Public License
+                Version 2.0. It is
                 written in p5.js and JavaScript and developed by Ben Rydal Shapiro and contributors with support from
                 the National Science Foundation. For additional credits and to contribute to the project please see the
-                GitHub repository linked <a href="https://github.com/BenRydal/mondrian-transcription">here</a>
+                <a href="https://github.com/BenRydal/mondrian-transcription">GitHub Repository</a> *** Tested with Google Chrome ***
             </p>
         </div>
     </div>

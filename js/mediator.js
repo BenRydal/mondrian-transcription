@@ -1,85 +1,80 @@
 /**
- * Mediator class coordinates calls to 4 other classes including P5 sk
+ * Mediator class coordinates calls from and across 4 other classes and P5 sketch
  */
 class Mediator {
 
     constructor(sketch) {
         this.sk = sketch;
-        this.path = new Path();
-        this.videoPlayer = null; // holds videoPlayer object instantiated/updated in loadVideo method
-        this.videoIsLoaded = false;
-        this.floorPlan = null; // holds p5 image of floor plan
+        this.path = new Path(sketch); // holds methods for drawing and recording path objects/data
+        this.gui = new GUI(sketch); // holds interface containers and associated mouse over tests
+        this.videoPlayer = null; // instance of videoPlayer Class instantiated/updated in loadVideo method
+        this.floorPlan = null; // instance of FloorPlan Class instantiated/updated in loadFloorPlan method
         this.isRecording = false; // indicates recording mode
         this.jumpInSeconds = 5; // seconds value to fast forward and rewind path/video data
-    }
-
-    handleKeyPressed(keyValue) {
-        if (this.allDataLoaded()) {
-            if (keyValue === 'r' || keyValue === 'R') this.rewind();
-            else if (keyValue === 'f' || keyValue === 'F') this.fastForward();
-        }
-    }
-
-    handleMousePressed() {
-        if (this.allDataLoaded()) {
-            this.playPauseRecording();
-        }
+        this.isResizing = false; // indicates if user is resizing screen using mouse
+        this.isFastForwarding = false; // indicates if currently fastForwarding--deals with safari bug if fastForwarding to quickly
     }
 
     /**
      * Handles program flow/method calls based on what data has been loaded
      */
-    updateDrawLoop() {
+    updateProgram() {
+        this.updateCursor();
         if (this.allDataLoaded()) {
-            this.sk.drawVideoFrame(this.videoPlayer, this.videoPlayer.curTime);
+            this.videoPlayer.draw(this.gui.getVideoContainer());
             if (this.isRecording) this.updateTranscription();
         } else {
-            if (this.floorPlanLoaded()) this.sk.drawFloorPlan(this.floorPlan);
-            else if (this.videoLoaded()) this.sk.drawVideoFrame(this.videoPlayer, this.videoPlayer.curTime);
+            this.gui.drawWhiteBackground(); // to display centerline properly
+            if (this.floorPlanLoaded()) this.floorPlan.drawFloorPlan(this.gui.getFloorPlanContainer());
+            else if (this.videoLoaded()) this.videoPlayer.draw(this.gui.getVideoContainer());
         }
-        this.sk.drawCenterLine();
+        this.gui.drawCenterLine();
+    }
+
+    updateCursor() {
+        if (this.overResizeSelector()) this.sk.cursor(this.sk.MOVE);
+        else this.sk.cursor(this.sk.ARROW);
     }
 
     /**
-     * Coordinates video and line segment drawing in display. Decides whether to record data point based on sampling rate method
+     * Coordinates line segment drawing in display and path data recording. Decides whether to record data point based on sampling rate method
+     * NOTE: Always drawing mousePosLine creates smoother user experience when recording/drawing even when not recording actual data points
      */
     updateTranscription() {
-        this.sk.drawLineSegment(this.path.curPath); // Don't call this within testSampleRate block
-        if (this.sampleData()) this.updateCurPath();
+        this.path.drawMousePosLine(this.gui.getFloorPlanContainer()); // Don't call this within testSampleRate block
+        if (this.path.curPath.pointArray.length === 0 || this.sampleData()) this.recordPoint();
     }
 
     /**
-     * Method to sample data in 2 ways
-     * (1) if mouse moves compare based on rounding decimal value for paths
+     * Method to sample data by comparing video to endPointPath time in 2 ways:
+     * (1) if mouse moves compare based on rounding to fixed decimal value for paths
      * (2) if stopped compare based on Math.round method, approximately every 1 second in movie
      */
     sampleData() {
-        if (this.path.curPath.pointArray.length === 0) return true; // always return true if first data point
-        else if (this.sk.mouseX !== this.sk.pmouseX || this.sk.mouseY !== this.sk.pmouseY) return this.path.round(this.path.curPathEndPoint.tPos) < this.path.round(this.videoPlayer.curTime);
-        else return Math.round(this.path.curPathEndPoint.tPos) < Math.round(this.videoPlayer.curTime);
+        const [curVideoTime, curEndPointTime] = [this.videoPlayer.getCurTime(), this.path.getCurEndPoint().tPos];
+        if (this.sk.mouseX !== this.sk.pmouseX || this.sk.mouseY !== this.sk.pmouseY) return this.path.round(curEndPointTime) < this.path.round(curVideoTime);
+        else return Math.round(curEndPointTime) < Math.round(curVideoTime);
     }
 
     /**
-     * Add correctly scaled positioning data to current path
+     * Add correctly scaled positioning data for point to current path
      */
-    updateCurPath() {
-        const [mouseXPos, mouseYPos, pointXPos, pointYPos] = this.sk.getPositioningData(this.floorPlan);
-        const time = this.videoPlayer.curTime;
-        this.path.addPointToCurPath(mouseXPos, mouseYPos, pointXPos, pointYPos, time);
+    recordPoint() {
+        const [fpXPos, fpYPos] = this.floorPlan.getPositioningData(this.gui.getFloorPlanContainer());
+        this.path.addPointToCurPath(fpXPos, fpYPos, this.videoPlayer.getCurTime());
     }
 
-    updateAllData() {
-        this.sk.drawFloorPlan(this.floorPlan);
-        this.sk.drawVideoFrame(this.videoPlayer, this.videoPlayer.curTime);
-        for (const path of this.path.paths) this.sk.drawPath(path); // update all recorded paths
-        this.sk.drawPath(this.path.curPath); // update current path last
+    drawAllData() {
+        this.floorPlan.drawFloorPlan(this.gui.getFloorPlanContainer());
+        this.videoPlayer.draw(this.gui.getVideoContainer());
+        this.path.drawAllPaths(this.gui.getFloorPlanContainer(), this.floorPlan.getImg());
     }
 
-    resetCurRecording() {
+    resetRecording() {
         if (this.allDataLoaded()) {
             this.stopRecording();
             this.path.clearCurPath();
-            this.updateAllData();
+            this.drawAllData();
         }
     }
 
@@ -87,9 +82,9 @@ class Mediator {
         if (this.isRecording) {
             this.videoPlayer.pause();
             this.isRecording = false;
-            if (this.path.curPath.pointArray.length > 0) this.sk.drawCurPathEndPoint(this.path.curPathEndPoint);
-        } else if (this.testVideoTimeForRecording()) {
-            this.updateAllData(); // update all data to erase curPathBug
+            this.updateEndMarker();
+        } else if (this.videoPlayer.isBeforeEndTime(0)) {
+            this.drawAllData(); // draw all data to erase end marker circle
             this.videoPlayer.play();
             this.isRecording = true;
         }
@@ -104,8 +99,8 @@ class Mediator {
      * Coordinates rewinding of video, erasing of curPath data and updating display
      */
     rewind() {
-        if (this.testVideoForRewind()) {
-            const rewindToTime = this.path.curPathEndPoint.tPos - this.jumpInSeconds; // set time to rewind to based on last value in list
+        if (this.videoPlayer.isLessThanStartTime(this.jumpInSeconds)) {
+            const rewindToTime = this.path.getCurEndPoint().tPos - this.jumpInSeconds; // set time to rewind to based on last value in list
             this.path.rewind(rewindToTime);
             this.videoPlayer.rewind(rewindToTime);
         } else {
@@ -113,25 +108,33 @@ class Mediator {
             this.videoPlayer.rewind(0);
         }
         if (this.isRecording) this.playPauseRecording(); // pause recording and video if currently recording
-        this.updateAllData();
-        if (this.path.curPath.pointArray.length > 0) this.sk.drawCurPathEndPoint(this.path.curPathEndPoint);
+        this.drawAllData();
+        this.updateEndMarker();
     }
 
     /**
      * Coordinates fast forwarding of movie and path data, if movie not right at start or near end
      */
     fastForward() {
-        if (this.testVideoTimeForFastForward()) {
+        if (this.videoPlayer.isBeforeEndTime(this.jumpInSeconds)) {
             this.videoPlayer.fastForward(this.jumpInSeconds);
-            this.path.fastForward(this.jumpInSeconds);
+            this.path.fastForward(this.path.getCurEndPoint(), this.jumpInSeconds);
         }
+    }
+
+    updateEndMarker() {
+        if (this.path.curPath.pointArray.length) this.path.drawEndMarker(this.path.getCurEndPoint(), this.gui.getFloorPlanContainer(), this.floorPlan.getImg());
+    }
+
+    loadFloorPlan(fileLocation) {
+        if (this.floorPlanLoaded) this.floorPlan = null;
+        this.floorPlan = new FloorPlan(this.sk, fileLocation);
     }
 
     loadVideo(fileLocation) {
         if (this.videoLoaded()) this.videoPlayer.destroy(); // if a video exists, destroy it
         this.videoPlayer = null;
-        this.videoIsLoaded = false;
-        this.videoPlayer = new VideoPlayer(fileLocation, this.sk);
+        this.videoPlayer = new VideoPlayer(fileLocation, this.sk, this.gui.getVideoContainer());
     }
 
     /**
@@ -142,36 +145,77 @@ class Mediator {
         this.videoIsLoaded = true;
         this.stopRecording(); // necessary to be able to draw starting frame before playing the video
         this.path.clearAllPaths();
-        if (this.floorPlanLoaded()) this.sk.drawFloorPlan(this.floorPlan); // clear floor plan drawing area
+        if (this.floorPlanLoaded()) this.floorPlan.drawFloorPlan(this.gui.getFloorPlanContainer()); // clear floor plan drawing area
     }
 
-    loadFloorPlan(fileLocation) {
-        this.sk.loadImage(fileLocation, (img) => {
-            this.newFloorPlanLoaded(img);
-            URL.revokeObjectURL(fileLocation);
-        }, e => {
-            alert("Error loading floor plan image file. Please make sure it is correctly formatted as a PNG or JPG image file.")
-            console.log(e);
-        });
-    }
-
-    newFloorPlanLoaded(img) {
-        console.log("New Floor Plan Loaded");
-        this.floorPlan = img;
+    newFloorPlanLoaded() {
         this.path.clearAllPaths();
-        this.sk.drawFloorPlan(this.floorPlan);
+        this.floorPlan.drawFloorPlan(this.gui.getFloorPlanContainer());
         if (this.videoLoaded()) this.stopRecording();
     }
 
     writeFile() {
         if (this.allDataLoaded() && this.path.curPath.pointArray.length > 0) {
-            this.sk.saveTable(this.sk.writeTable(this.path.curPath.pointArray), "Path_" + this.path.curFileToOutput, "csv");
-            this.path.curFileToOutput++;
+            this.sk.saveTable(this.writeTable(this.path.curPath.pointArray), "transcript", "csv");
             this.path.addCurPathToList();
             this.path.clearCurPath();
             this.stopRecording();
-            this.updateAllData();
+            this.drawAllData();
         }
+    }
+
+    writeTable = function (pointArray) {
+        const headers = ["time", "x", "y"]; // Column headers for outputted .CSV movement files
+        let table = new p5.Table();
+        table.addColumn(headers[0]);
+        table.addColumn(headers[1]);
+        table.addColumn(headers[2]);
+        for (const point of pointArray) {
+            let newRow = table.addRow();
+            newRow.setNum(headers[0], point.tPos);
+            newRow.setNum(headers[1], point.fpXPos);
+            newRow.setNum(headers[2], point.fpYPos);
+        }
+        return table;
+    }
+
+    handleKeyPressed(keyValue) {
+        if (this.allDataLoaded() && !this.isFastForwarding) {
+            this.isFastForwarding = true;
+            setTimeout(() => {
+                this.isFastForwarding = false;
+            }, 250);
+            if (keyValue === 'r' || keyValue === 'R') this.rewind();
+            else if (keyValue === 'f' || keyValue === 'F') this.fastForward();
+        }
+    }
+
+    handleMousePressed() {
+        if (this.overResizeSelector()) this.isResizing = true;
+        else if (this.gui.overFloorPlan() && this.allDataLoaded()) this.playPauseRecording();
+    }
+
+    handleMouseDragged() {
+        if (this.isResizing) {
+            this.gui.resizeByUser();
+            this.updateForResize(this.gui.getVideoContainer());
+        }
+    }
+
+    handleMouseReleased() {
+        this.isResizing = false;
+    }
+
+    resizeByWindow() {
+        this.gui.resizeByWindow();
+        this.sk.resizeCanvas(window.innerWidth, window.innerHeight);
+        this.updateForResize(this.gui.getVideoContainer());
+    }
+
+    updateForResize(videoContainer) {
+        if (this.videoLoaded()) this.videoPlayer.setScaledDimensions(videoContainer);
+        if (this.allDataLoaded()) this.drawAllData();
+        this.updateEndMarker();
     }
 
     /**
@@ -186,22 +230,14 @@ class Mediator {
     }
 
     videoLoaded() {
-        return this.dataIsLoaded(this.videoPlayer) && this.videoIsLoaded;
+        return this.dataIsLoaded(this.videoPlayer) && this.videoPlayer.isLoaded;
     }
 
     allDataLoaded() {
         return this.floorPlanLoaded() && this.videoLoaded();
     }
 
-    testVideoTimeForRecording() {
-        return this.videoPlayer.curTime < this.videoPlayer.duration;
-    }
-
-    testVideoTimeForFastForward() {
-        return this.videoPlayer.curTime > 0 && (this.videoPlayer.curTime < this.videoPlayer.duration - this.jumpInSeconds);
-    }
-
-    testVideoForRewind() {
-        return this.videoPlayer.curTime > this.jumpInSeconds;
+    overResizeSelector() {
+        return !this.isRecording && this.gui.overResizeSelector();
     }
 }

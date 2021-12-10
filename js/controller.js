@@ -33,6 +33,6 @@ class Controller {
     }
 
     handleResetButton() {
-        this.mediator.resetCurRecording();
+        this.mediator.resetRecording();
     }
 }
