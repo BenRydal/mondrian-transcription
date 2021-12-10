@@ -8,6 +8,7 @@ class VideoPlayer {
 
     constructor(fileLocation, sketch, videoContainer) {
         this.sk = sketch;
+        this.isLoaded = false; // IMPORTANT to use a boolean test later in program to deal with a safari bug
         this.scaledWidth = null; // Rescaled pixel size of video to fit display container
         this.scaledHeight = null;
         this.movieDiv = this.sk.createVideo(fileLocation, () => {
@@ -15,6 +16,7 @@ class VideoPlayer {
             this.movieDiv.hide(); // hide html5 video element as program use p5 image drawing methods to draw video frames
             this.setScaledDimensions(videoContainer);
             document.getElementById('moviePlayer').onended = () => this.sk.mediator.isRecording = false; // end program recording when movie ends
+            this.isLoaded = true;
             this.sk.mediator.newVideoLoaded();
         });
     }

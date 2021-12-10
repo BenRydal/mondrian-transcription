@@ -8,7 +8,6 @@ class Mediator {
         this.path = new Path(sketch); // holds methods for drawing and recording path objects/data
         this.gui = new GUI(sketch); // holds interface containers and associated mouse over tests
         this.videoPlayer = null; // instance of videoPlayer Class instantiated/updated in loadVideo method
-        this.videoIsLoaded = false; // additional boolean used to test if videoLoaded
         this.floorPlan = null; // instance of FloorPlan Class instantiated/updated in loadFloorPlan method
         this.isRecording = false; // indicates recording mode
         this.jumpInSeconds = 5; // seconds value to fast forward and rewind path/video data
@@ -134,7 +133,6 @@ class Mediator {
     loadVideo(fileLocation) {
         if (this.videoLoaded()) this.videoPlayer.destroy(); // if a video exists, destroy it
         this.videoPlayer = null;
-        this.videoIsLoaded = false;
         this.videoPlayer = new VideoPlayer(fileLocation, this.sk, this.gui.getVideoContainer());
     }
 
@@ -143,7 +141,6 @@ class Mediator {
      */
     newVideoLoaded() {
         console.log("New Video Loaded");
-        this.videoIsLoaded = true;
         this.stopRecording(); // necessary to be able to draw starting frame before playing the video
         this.path.clearAllPaths();
         if (this.floorPlanLoaded()) this.floorPlan.drawFloorPlan(this.gui.getFloorPlanContainer()); // clear floor plan drawing area
@@ -227,7 +224,7 @@ class Mediator {
     }
 
     videoLoaded() {
-        return this.videoIsLoaded;
+        return this.dataIsLoaded(this.videoPlayer) && this.videoPlayer.isLoaded;
     }
 
     allDataLoaded() {
