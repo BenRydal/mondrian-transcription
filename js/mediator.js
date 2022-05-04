@@ -116,7 +116,7 @@ class Mediator {
      * Coordinates fast forwarding of movie and path data, if movie not right at start or near end
      */
     fastForward() {
-        if (this.videoPlayer.isBeforeEndTime(this.jumpInSeconds)) {
+        if (this.videoPlayer.isLessThanStartTime(this.jumpInSeconds) && this.videoPlayer.isBeforeEndTime(this.jumpInSeconds)) {
             this.videoPlayer.fastForward(this.jumpInSeconds);
             this.path.fastForward(this.path.getCurEndPoint(), this.jumpInSeconds);
         }
