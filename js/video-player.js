@@ -58,14 +58,13 @@ class VideoPlayer {
     }
 
     /**
-     * Param timeInSeconds allows to adjust test for different fast forward rates
      * @param  {Number} timeInSeconds
      */
-    isBeforeEndTime(timeInSeconds) {
+    isCurTimeLessThanDurationMinusValue(timeInSeconds) {
         return this.movieDiv.time() < (this.movieDiv.duration() - timeInSeconds);
     }
 
-    isLessThanStartTime(timeInSeconds) {
+    isCurTimeGreaterThanValue(timeInSeconds) {
         return this.movieDiv.time() > timeInSeconds;
     }
 

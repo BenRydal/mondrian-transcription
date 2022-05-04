@@ -83,7 +83,7 @@ class Mediator {
             this.videoPlayer.pause();
             this.isRecording = false;
             this.updateEndMarker();
-        } else if (this.videoPlayer.isBeforeEndTime(0)) {
+        } else if (this.videoPlayer.isCurTimeLessThanDurationMinusValue(0)) {
             this.drawAllData(); // draw all data to erase end marker circle
             this.videoPlayer.play();
             this.isRecording = true;
@@ -99,7 +99,7 @@ class Mediator {
      * Coordinates rewinding of video, erasing of curPath data and updating display
      */
     rewind() {
-        if (this.videoPlayer.isLessThanStartTime(this.jumpInSeconds)) {
+        if (this.videoPlayer.isCurTimeGreaterThanValue(this.jumpInSeconds)) {
             const rewindToTime = this.path.getCurEndPoint().tPos - this.jumpInSeconds; // set time to rewind to based on last value in list
             this.path.rewind(rewindToTime);
             this.videoPlayer.rewind(rewindToTime);
@@ -116,7 +116,7 @@ class Mediator {
      * Coordinates fast forwarding of movie and path data, if movie not right at start or near end
      */
     fastForward() {
-        if (this.videoPlayer.isLessThanStartTime(this.jumpInSeconds) && this.videoPlayer.isBeforeEndTime(this.jumpInSeconds)) {
+        if (this.videoPlayer.isCurTimeGreaterThanValue(this.jumpInSeconds) && this.videoPlayer.isCurTimeLessThanDurationMinusValue(this.jumpInSeconds)) {
             this.videoPlayer.fastForward(this.jumpInSeconds);
             this.path.fastForward(this.path.getCurEndPoint(), this.jumpInSeconds);
         }
