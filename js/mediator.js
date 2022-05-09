@@ -143,7 +143,6 @@ class Mediator {
      */
     newVideoLoaded() {
         console.log("New Video Loaded");
-        this.videoIsLoaded = true;
         this.stopRecording(); // necessary to be able to draw starting frame before playing the video
         this.path.clearAllPaths();
         if (this.floorPlanLoaded()) this.floorPlan.drawFloorPlan(this.gui.getFloorPlanContainer()); // clear floor plan drawing area
