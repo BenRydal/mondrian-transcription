@@ -36,7 +36,7 @@ const mondrian = new p5((sk) => {
         document.getElementById("input-floorplan").addEventListener("change", sk.domHandler.handleFloorPlanButton.bind(this));
         document.getElementById("input-video").addEventListener("change", sk.domHandler.handleVideoButton.bind(this));
         document.getElementById("button-save").addEventListener("click", sk.domHandler.handleSaveButton.bind(this));
-        document.getElementById("button-clear").addEventListener("click", sk.domHandler.handleResetButton.bind(this));
+        document.getElementById("button-clear").addEventListener("click", sk.domHandler.handleClearButton.bind(this));
     }
 
     /**
