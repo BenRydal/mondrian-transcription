@@ -83,7 +83,7 @@ class Mediator {
             this.videoPlayer.pause();
             this.isRecording = false;
             this.updateEndMarker();
-        } else if (this.videoPlayer.isCurTimeLessThanDurationMinusValue(0)) {
+        } else if (this.videoPlayer.getCurTime() < this.videoPlayer.getDuration()) {
             this.drawAllData(); // draw all data to erase end marker circle
             this.videoPlayer.play();
             this.isRecording = true;
@@ -97,9 +97,10 @@ class Mediator {
 
     /**
      * Coordinates rewinding of video, erasing of curPath data and updating display
+     * If video has just started, rewind to 0
      */
     rewind() {
-        if (this.videoPlayer.isCurTimeGreaterThanValue(this.jumpInSeconds)) {
+        if (this.videoPlayer.getCurTime() > this.jumpInSeconds) {
             const rewindToTime = this.path.getCurEndPoint().tPos - this.jumpInSeconds; // set time to rewind to based on last value in list
             this.path.rewind(rewindToTime);
             this.videoPlayer.rewind(rewindToTime);
@@ -107,16 +108,16 @@ class Mediator {
             this.path.rewind(0);
             this.videoPlayer.rewind(0);
         }
-        if (this.isRecording) this.playPauseRecording(); // pause recording and video if currently recording
+        if (this.isRecording) this.playPauseRecording();
         this.drawAllData();
         this.updateEndMarker();
     }
 
     /**
-     * Coordinates fast forwarding of movie and path data, if movie not right at start or near end
+     * Fast forwards video and path data if not at beginning or end of video
      */
     fastForward() {
-        if (this.videoPlayer.isCurTimeGreaterThanValue(this.jumpInSeconds) && this.videoPlayer.isCurTimeLessThanDurationMinusValue(this.jumpInSeconds)) {
+        if ((this.videoPlayer.getCurTime() > 1) && (this.videoPlayer.getCurTime() < (this.videoPlayer.getDuration() - this.jumpInSeconds))) {
             this.videoPlayer.fastForward(this.jumpInSeconds);
             this.path.fastForward(this.path.getCurEndPoint(), this.jumpInSeconds);
         }
@@ -142,7 +143,6 @@ class Mediator {
      */
     newVideoLoaded() {
         console.log("New Video Loaded");
-        this.videoIsLoaded = true;
         this.stopRecording(); // necessary to be able to draw starting frame before playing the video
         this.path.clearAllPaths();
         if (this.floorPlanLoaded()) this.floorPlan.drawFloorPlan(this.gui.getFloorPlanContainer()); // clear floor plan drawing area

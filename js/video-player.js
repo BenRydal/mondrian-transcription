@@ -57,19 +57,12 @@ class VideoPlayer {
         this.movieDiv.remove();
     }
 
-    /**
-     * @param  {Number} timeInSeconds
-     */
-    isCurTimeLessThanDurationMinusValue(timeInSeconds) {
-        return this.movieDiv.time() < (this.movieDiv.duration() - timeInSeconds);
-    }
-
-    isCurTimeGreaterThanValue(timeInSeconds) {
-        return this.movieDiv.time() > timeInSeconds;
-    }
-
     getCurTime() {
         return this.movieDiv.time();
+    }
+
+    getDuration() {
+        return this.movieDiv.duration();
     }
 
     draw(videoContainer) {
