@@ -5,7 +5,7 @@ export class DomHandler {
     }
 
     handleIntroButton() {
-        let element = document.querySelector('.how-to-container');
+        const element = document.querySelector('.how-to-container');
         if (element.style.display === 'none') element.style.display = 'block';
         else element.style.display = 'none';
     }
@@ -34,7 +34,7 @@ export class DomHandler {
         input.value = ''; // reset input value so you can load same file again in browser
     }
 
-    handleResetButton() {
+    handleClearButton() {
         this.mediator.resetRecording();
     }
 }
