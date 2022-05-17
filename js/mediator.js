@@ -1,7 +1,20 @@
 /**
  * Mediator class coordinates calls from and across 4 other classes and P5 sketch
  */
-class Mediator {
+
+import {
+    Path
+} from './path.js';
+import {
+    GUI
+} from './gui.js';
+import {
+    FloorPlan
+} from './floorplan.js';
+import {
+    VideoPlayer
+} from './video-player.js';
+export class Mediator {
 
     constructor(sketch) {
         this.sk = sketch;

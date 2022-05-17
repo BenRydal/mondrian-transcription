@@ -9,6 +9,13 @@ To reference or read more about this work please see:
 https://etd.library.vanderbilt.edu/available/etd-03212018-140140/unrestricted/Shapiro_Dissertation.pdf
 */
 
+import {
+    Mediator
+} from './mediator.js';
+import {
+    Controller
+} from './controller.js';
+
 const mondrian = new p5((sk) => {
 
     sk.preload = function () {
