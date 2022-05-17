@@ -61,7 +61,7 @@ html, body {
     margin-bottom: 10px;
 }
 
-.inputfile {
+.main-menu-bar__input {
     width: 0.1px;
     height: 0.1px;
     opacity: 0;
@@ -70,7 +70,7 @@ html, body {
     z-index: -1;
 }
 
-.inputfile+label {
+.main-menu-bar__input+label {
     font-size: 1em;
     font-weight: 300;
     color: black;
@@ -78,13 +78,10 @@ html, body {
     display: inline-block;
     border: 1px solid black;
     padding: 5px;
-}
-
-.inputfile:focus+label,
-.inputfile+label:hover {
-    background-color: #999;
-}
-
-.inputfile+label {
     cursor: pointer;
+}
+
+.main-menu-bar__input:focus+label,
+.main-menu-bar__input+label:hover {
+    background-color: #999;
 }
