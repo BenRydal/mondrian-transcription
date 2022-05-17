@@ -19,7 +19,7 @@ export class DomHandler {
      * @param  {PNG/JPG File} input
      */
     handleFloorPlanButton() {
-        const input = document.getElementById("inputFloorPlan");
+        const input = document.getElementById("input-floorplan");
         this.mediator.loadFloorPlan(URL.createObjectURL(input.files[0]));
         input.value = ''; // reset input value so you can load same file again in browser
     }
@@ -29,7 +29,7 @@ export class DomHandler {
      * @param  {.MP4 File} input
      */
     handleVideoButton() {
-        const input = document.getElementById("inputVideo");
+        const input = document.getElementById("input-video");
         this.mediator.loadVideo(URL.createObjectURL(input.files[0]));
         input.value = ''; // reset input value so you can load same file again in browser
     }

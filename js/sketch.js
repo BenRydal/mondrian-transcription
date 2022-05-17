@@ -36,11 +36,11 @@ const mondrian = new p5((sk) => {
     }
 
     sk.addListeners = function () {
-        document.getElementById("introButton").addEventListener("click", sk.domHandler.handleIntroButton);
-        document.getElementById("inputFloorPlan").addEventListener("change", sk.domHandler.handleFloorPlanButton.bind(this));
-        document.getElementById("inputVideo").addEventListener("change", sk.domHandler.handleVideoButton.bind(this));
-        document.getElementById("saveButton").addEventListener("click", sk.domHandler.handleSaveButton.bind(this));
-        document.getElementById("resetButton").addEventListener("click", sk.domHandler.handleResetButton.bind(this));
+        document.getElementById("button-intro").addEventListener("click", sk.domHandler.handleIntroButton);
+        document.getElementById("input-floorplan").addEventListener("change", sk.domHandler.handleFloorPlanButton.bind(this));
+        document.getElementById("input-video").addEventListener("change", sk.domHandler.handleVideoButton.bind(this));
+        document.getElementById("button-save").addEventListener("click", sk.domHandler.handleSaveButton.bind(this));
+        document.getElementById("button-clear").addEventListener("click", sk.domHandler.handleResetButton.bind(this));
     }
 
     /**
