@@ -1,4 +1,4 @@
-export class Controller {
+export class DomHandler {
 
     constructor(mediator) {
         this.mediator = mediator;
