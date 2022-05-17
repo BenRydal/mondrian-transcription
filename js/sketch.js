@@ -21,10 +21,19 @@ const mondrian = new p5((sk) => {
         sk.textFont(sk.font_Lato, 20);
         sk.mediator = new Mediator(sk);
         sk.controller = new Controller(sk.mediator);
+        sk.addListeners();
     }
 
     sk.draw = function () {
         sk.mediator.updateProgram();
+    }
+
+    sk.addListeners = function () {
+        document.getElementById("introButton").addEventListener("click", sk.controller.handleIntroButton);
+        document.getElementById("inputFloorPlan").addEventListener("change", sk.controller.handleFloorPlanButton.bind(this));
+        document.getElementById("inputVideo").addEventListener("change", sk.controller.handleVideoButton.bind(this));
+        document.getElementById("saveButton").addEventListener("click", sk.controller.handleSaveButton.bind(this));
+        document.getElementById("resetButton").addEventListener("click", sk.controller.handleResetButton.bind(this));
     }
 
     /**

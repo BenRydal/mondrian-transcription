@@ -25,20 +25,15 @@
 <body>
     <div class="introBar">
         <form action="/action_page.php">
-            <button type="button" id="introButton" class="inputfile"
-                onclick="mondrian.controller.handleIntroButton(this)"></button>
+            <button type="button" id="introButton" class="inputfile"></button>
             <label for="introButton" title="Learn About This Tool">HOW TO USE</label>
-            <input type="file" name="file" id="inputFloorPlan" name="file" class="inputfile" accept=".png, .jpg, .jpeg"
-                onchange="mondrian.controller.handleFloorPlanButton(this)">
+            <input type="file" name="file" id="inputFloorPlan" name="file" class="inputfile" accept=".png, .jpg, .jpeg">
             <label for="inputFloorPlan" title="Load PNG/JPG Image">LOAD FLOOR PLAN</label>
-            <input type="file" name="file" id="inputVideo" name="file" class="inputfile" accept=".mp4"
-                onchange="mondrian.controller.handleVideoButton(this)">
+            <input type="file" name="file" id="inputVideo" name="file" class="inputfile" accept=".mp4">
             <label for="inputVideo" title="Load MP4 Video">LOAD VIDEO</label>
-            <button type="button" id="saveButton" class="inputfile"
-                onclick="mondrian.controller.handleSaveButton(this)"></button>
+            <button type="button" id="saveButton" class="inputfile"></button>
             <label for="saveButton" title="Save Movement Path as CSV file">SAVE PATH</label>
-            <button type="button" id="resetButton" class="inputfile"
-                onclick="mondrian.controller.handleResetButton(this)"></button>
+            <button type="button" id="resetButton" class="inputfile"></button>
             <label for="resetButton" title="Clear Current Recording">CLEAR</label>
         </form>
     </div>
@@ -62,7 +57,8 @@
                     Mondrian Transcription</a>
             </p>
             <p class="introMsgCredits">
-                Mondrian Transcription software is an open-source project built with <a href="https://p5js.org/">p5.js</a> licensed under the GNU General Public License
+                Mondrian Transcription software is an open-source project built with <a
+                    href="https://p5js.org/">p5.js</a> licensed under the GNU General Public License
                 Version 2.0 and developed with support from the National Science Foundation.
                 <a href="https://github.com/BenRydal/mondrian-transcription">Contribute</a> |
                 <a href="https://par.nsf.gov/servlets/purl/10074100">Reference</a>
