@@ -2,18 +2,10 @@
  * Mediator class coordinates calls from and across 4 other classes and P5 sketch
  */
 
-import {
-    Path
-} from './path.js';
-import {
-    GUI
-} from './gui.js';
-import {
-    FloorPlan
-} from './floorplan.js';
-import {
-    VideoPlayer
-} from './video-player.js';
+import { Path } from './path.js';
+import { GUI } from './gui.js';
+import { FloorPlan } from './floorplan.js';
+import { VideoPlayer } from './video-player.js';
 export class Mediator {
 
     constructor(sketch) {
@@ -177,7 +169,7 @@ export class Mediator {
         }
     }
 
-    writeTable = function (pointArray) {
+    writeTable = function(pointArray) {
         const headers = ["time", "x", "y"]; // Column headers for outputted .CSV movement files
         let table = new p5.Table();
         table.addColumn(headers[0]);

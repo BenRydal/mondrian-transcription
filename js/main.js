@@ -5,20 +5,16 @@ Data is displayed on the Canvas element.
 DomHandler handles user input from Dom elements.
 */
 
-import {
-    Mediator
-} from './mediator.js';
-import {
-    DomHandler
-} from './dom-handler.js';
+import { Mediator } from './mediator.js';
+import { DomHandler } from './dom-handler.js';
 
 const mondrian = new p5((sk) => {
 
-    sk.preload = function () {
+    sk.preload = function() {
         sk.font_Lato = sk.loadFont("data/fonts/Lato-Light.ttf");
     }
 
-    sk.setup = function () {
+    sk.setup = function() {
         sk.canvas = sk.createCanvas(window.innerWidth, window.innerHeight);
         sk.canvas.parent('sketch-holder');
         sk.textFont(sk.font_Lato, 20);
@@ -27,11 +23,11 @@ const mondrian = new p5((sk) => {
         sk.addListeners();
     }
 
-    sk.draw = function () {
+    sk.draw = function() {
         sk.mediator.updateProgram();
     }
 
-    sk.addListeners = function () {
+    sk.addListeners = function() {
         document.getElementById("button-intro").addEventListener("click", sk.domHandler.handleIntroButton.bind(sk.domHandler));
         document.getElementById("input-floorplan").addEventListener("change", sk.domHandler.handleFloorPlanButton.bind(sk.domHandler));
         document.getElementById("input-video").addEventListener("change", sk.domHandler.handleVideoButton.bind(sk.domHandler));
@@ -42,23 +38,23 @@ const mondrian = new p5((sk) => {
     /**
      * While wrapped in a P5 instance, keyPressed and mousePressed P5 methods operate globally on the window (there can't be two of these methods)
      */
-    sk.keyPressed = function () {
+    sk.keyPressed = function() {
         sk.mediator.handleKeyPressed(sk.key);
     }
 
-    sk.mousePressed = function () {
+    sk.mousePressed = function() {
         sk.mediator.handleMousePressed();
     }
 
-    sk.mouseDragged = function () {
+    sk.mouseDragged = function() {
         sk.mediator.handleMouseDragged();
     }
 
-    sk.mouseReleased = function () {
+    sk.mouseReleased = function() {
         sk.mediator.handleMouseReleased();
     }
 
-    sk.windowResized = function () {
+    sk.windowResized = function() {
         sk.mediator.resizeByWindow();
     }
 });
