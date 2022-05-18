@@ -1,4 +1,4 @@
-export class GUI {
+export class SketchUI {
 
     constructor(sketch) {
         this.sk = sketch;

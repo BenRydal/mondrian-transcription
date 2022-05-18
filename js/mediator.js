@@ -3,7 +3,7 @@
  */
 
 import { Path } from './path.js';
-import { GUI } from './gui.js';
+import { SketchUI } from './sketch-ui.js';
 import { FloorPlan } from './floorplan.js';
 import { VideoPlayer } from './video-player.js';
 export class Mediator {
@@ -11,7 +11,7 @@ export class Mediator {
     constructor(sketch) {
         this.sk = sketch;
         this.path = new Path(sketch); // holds methods for drawing and recording path objects/data
-        this.gui = new GUI(sketch); // holds interface containers and associated mouse over tests
+        this.gui = new SketchUI(sketch); // holds interface containers and associated mouse over tests
         this.videoPlayer = null; // instance of videoPlayer Class instantiated/updated in loadVideo method
         this.floorPlan = null; // instance of FloorPlan Class instantiated/updated in loadFloorPlan method
         this.isRecording = false; // indicates recording mode
