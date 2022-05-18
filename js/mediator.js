@@ -184,6 +184,10 @@ export class Mediator {
         return table;
     }
 
+    /**
+     * NOTE: set timeout is necessary to prevent user from hitting fastforward too quickly to allow data 
+     * to update in program 
+     */
     handleKeyPressed(keyValue) {
         if (this.allDataLoaded() && !this.isFastForwarding) {
             this.isFastForwarding = true;
