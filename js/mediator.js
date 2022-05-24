@@ -1,12 +1,17 @@
 /**
  * Mediator class coordinates calls from and across 4 other classes and P5 sketch
  */
-class Mediator {
+
+import { Path } from './path.js';
+import { SketchUI } from './sketch-ui.js';
+import { FloorPlan } from './floorplan.js';
+import { VideoPlayer } from './video-player.js';
+export class Mediator {
 
     constructor(sketch) {
         this.sk = sketch;
         this.path = new Path(sketch); // holds methods for drawing and recording path objects/data
-        this.gui = new GUI(sketch); // holds interface containers and associated mouse over tests
+        this.gui = new SketchUI(sketch); // holds interface containers and associated mouse over tests
         this.videoPlayer = null; // instance of videoPlayer Class instantiated/updated in loadVideo method
         this.floorPlan = null; // instance of FloorPlan Class instantiated/updated in loadFloorPlan method
         this.isRecording = false; // indicates recording mode
@@ -164,7 +169,7 @@ class Mediator {
         }
     }
 
-    writeTable = function (pointArray) {
+    writeTable = function(pointArray) {
         const headers = ["time", "x", "y"]; // Column headers for outputted .CSV movement files
         let table = new p5.Table();
         table.addColumn(headers[0]);
@@ -179,6 +184,10 @@ class Mediator {
         return table;
     }
 
+    /**
+     * NOTE: set timeout is necessary to prevent user from hitting fastforward too quickly to allow data 
+     * to update in program 
+     */
     handleKeyPressed(keyValue) {
         if (this.allDataLoaded() && !this.isFastForwarding) {
             this.isFastForwarding = true;

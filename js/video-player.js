@@ -1,4 +1,4 @@
-class VideoPlayer {
+export class VideoPlayer {
 
     /**
      * @param  {String} fileLocation

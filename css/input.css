@@ -1,6 +1,5 @@
 html * {
     font-family: Arial, Helvetica, sans-serif;
-    /* font-family: Helvetica; */
 }
 
 html, body {
@@ -8,11 +7,11 @@ html, body {
     overflow-x: hidden;
 }
 
-.container {
+.p5-container {
     position: relative;
 }
 
-.introContainer {
+.how-to-container {
     position: absolute;
     top: 5vh;
     width: 70vw;
@@ -25,7 +24,7 @@ html, body {
     background: rgba(255, 255, 255, 0.9);
 }
 
-.introTitle {
+.how-to-container__title {
     color: black;
     padding: 1.5vw;
     text-transform: uppercase;
@@ -34,7 +33,7 @@ html, body {
     font-weight: bold;
 }
 
-.introMsg {
+.how-to-container__msg {
     color: black;
     padding-right: 3vw;
     padding-left: 3vw;
@@ -44,7 +43,7 @@ html, body {
     text-align: justify;
 }
 
-.introMsgCredits {
+.how-to-container__credits {
     color: black;
     padding-top: 1.5vh;
     padding-right: 3vw;
@@ -56,12 +55,12 @@ html, body {
     text-align: justify;
 }
 
-.introBar {
+.main-menu-bar {
     text-align: center;
     margin-bottom: 10px;
 }
 
-.inputfile {
+.main-menu-bar__input {
     width: 0.1px;
     height: 0.1px;
     opacity: 0;
@@ -70,7 +69,7 @@ html, body {
     z-index: -1;
 }
 
-.inputfile+label {
+.main-menu-bar__input+label {
     font-size: 1em;
     font-weight: 300;
     color: black;
@@ -78,13 +77,10 @@ html, body {
     display: inline-block;
     border: 1px solid black;
     padding: 5px;
-}
-
-.inputfile:focus+label,
-.inputfile+label:hover {
-    background-color: #999;
-}
-
-.inputfile+label {
     cursor: pointer;
+}
+
+.main-menu-bar__input:focus+label,
+.main-menu-bar__input+label:hover {
+    background-color: #999;
 }

@@ -5,51 +5,37 @@
 <head>
     <title>Mondrian Transcription Software: Transcribing Movement from Video</title>
     <script src="https://cdn.jsdelivr.net/npm/p5@0.10.2/lib/p5.js"></script>
-    <script src="js/controller.js"></script>
-    <script src="js/sketch.js"></script>
-    <script src="js/path.js"></script>
-    <script src="js/mediator.js"></script>
-    <script src="js/video-player.js"></script>
-    <script src="js/floorplan.js"></script>
-    <script src="js/gui.js"></script>
+    <script type="module" src="./js/main.js"></script>
     <link rel="stylesheet" type="text/css" href="css/input.css" />
-    <link rel="apple-touch-icon" sizes="180x180" href="favicon/apple-touch-icon.png">
-    <link rel="icon" type="image/png" sizes="32x32" href="favicon/favicon-32x32.png">
-    <link rel="icon" type="image/png" sizes="16x16" href="favicon/favicon-16x16.png">
-    <link rel="manifest" href="favicon/site.webmanifest">
-    <link rel="mask-icon" href="favicon/safari-pinned-tab.svg" color="#5bbad5">
-    <meta name="msapplication-TileColor" content="#da532c">
-    <meta name="theme-color" content="#ffffff">
+    <link rel="apple-touch-icon" sizes="180x180" href="images/favicon/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="images/favicon/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="images/favicon/favicon-16x16.png">
+    <link rel="manifest" href="images/favicon/site.webmanifest">
 </head>
 
 <body>
-    <div class="introBar">
+    <div class="main-menu-bar">
         <form action="/action_page.php">
-            <button type="button" id="introButton" class="inputfile"
-                onclick="mondrian.controller.handleIntroButton(this)"></button>
-            <label for="introButton" title="Learn About This Tool">HOW TO USE</label>
-            <input type="file" name="file" id="inputFloorPlan" name="file" class="inputfile" accept=".png, .jpg, .jpeg"
-                onchange="mondrian.controller.handleFloorPlanButton(this)">
-            <label for="inputFloorPlan" title="Load PNG/JPG Image">LOAD FLOOR PLAN</label>
-            <input type="file" name="file" id="inputVideo" name="file" class="inputfile" accept=".mp4"
-                onchange="mondrian.controller.handleVideoButton(this)">
-            <label for="inputVideo" title="Load MP4 Video">LOAD VIDEO</label>
-            <button type="button" id="saveButton" class="inputfile"
-                onclick="mondrian.controller.handleSaveButton(this)"></button>
-            <label for="saveButton" title="Save Movement Path as CSV file">SAVE PATH</label>
-            <button type="button" id="resetButton" class="inputfile"
-                onclick="mondrian.controller.handleResetButton(this)"></button>
-            <label for="resetButton" title="Clear Current Recording">CLEAR</label>
+            <button type="button" id="button-intro" class="main-menu-bar__input"></button>
+            <label for="button-intro" title="Learn About This Tool">HOW TO USE</label>
+            <input type="file" name="file" id="input-floorplan" name="file" class="main-menu-bar__input" accept=".png, .jpg, .jpeg">
+            <label for="input-floorplan" title="Load PNG/JPG Image">LOAD FLOOR PLAN</label>
+            <input type="file" name="file" id="input-video" name="file" class="main-menu-bar__input" accept=".mp4">
+            <label for="input-video" title="Load MP4 Video">LOAD VIDEO</label>
+            <button type="button" id="button-save" class="main-menu-bar__input"></button>
+            <label for="button-save" title="Save Movement Path as CSV file">SAVE PATH</label>
+            <button type="button" id="button-clear" class="main-menu-bar__input"></button>
+            <label for="button-clear" title="Clear Current Recording">CLEAR</label>
         </form>
     </div>
-    <div class="container" id="sketch-holder">
-        <div class="introContainer">
-            <h1 class="introTitle">Mondrian Transcription Software</h1>
-            <p class="introMsg">
+    <div class="p5-container" id="sketch-holder">
+        <div class="how-to-container">
+            <h1 class="how-to-container__title">Mondrian Transcription Software</h1>
+            <p class="how-to-container__msg">
                 Hello! This is a tool to transcribe fine-grained movement data from video. To get started, use the top
                 buttons to load a floor plan formatted as a PNG/JPG image and video formatted as a MP4 file.
             </p>
-            <p class="introMsg">
+            <p class="how-to-container__msg">
                 Then, <u>click once</u> anywhere on the floor plan to start recording movement data synchronized to the
                 video. As
                 you move your cursor over the floor plan, positioning data is recorded. Play/pause recording by clicking
@@ -57,13 +43,12 @@
                 in 5 second
                 intervals. Use the top buttons to clear or save your recording data as a CSV file.
             </p>
-            <p class="introMsg">
+            <p class="how-to-container__msg">
                 For further information, <a href="https://benrydal.com/software/mondrian-transcription">learn more about
                     Mondrian Transcription</a>
             </p>
-            <p class="introMsgCredits">
-                Mondrian Transcription software is an open-source project built with <a href="https://p5js.org/">p5.js</a> licensed under the GNU General Public License
-                Version 2.0 and developed with support from the National Science Foundation.
+            <p class="how-to-container__credits">
+                Mondrian Transcription software is an open-source project built with JavaScript and p5.js licensed under the GNU General Public License Version 2.0. It is developed by Ben Rydal Shapiro and contributors with support from the National Science Foundation.
                 <a href="https://github.com/BenRydal/mondrian-transcription">Contribute</a> |
                 <a href="https://par.nsf.gov/servlets/purl/10074100">Reference</a>
             </p>

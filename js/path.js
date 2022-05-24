@@ -1,4 +1,4 @@
- class Path {
+ export class Path {
 
      constructor(sketch) {
          this.sk = sketch;
