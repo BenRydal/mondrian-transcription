@@ -59,6 +59,8 @@ export function drawPaths(p5: p5) {
   const state = get(drawingState);
   const config = get(drawingConfig);
   const splitX = (p5.width * config.splitPosition) / 100;
+  const drawingAreaWidth = p5.width - splitX;
+  const drawingAreaHeight = p5.height;
 
   // Save current drawing state
   p5.push();
@@ -73,18 +75,18 @@ export function drawPaths(p5: p5) {
       // Begin shape for continuous line
       p5.beginShape();
       path.points.forEach((point) => {
-        // Add split offset to x coordinate for display
-        const displayX = point.x + splitX;
-        p5.vertex(displayX, point.y);
-        console.log("Drawing vertex at:", displayX, point.y);
+        const displayX =
+          splitX + (point.x * drawingAreaWidth) / state.imageWidth;
+        const displayY = (point.y * drawingAreaHeight) / state.imageHeight;
+        p5.vertex(displayX, displayY);
       });
       p5.endShape();
     } else if (path.points.length === 1) {
       // Draw a point if there's only one point
       const point = path.points[0];
-      const displayX = point.x + splitX;
-      p5.point(displayX, point.y);
-      console.log("Drawing single point at:", displayX, point.y);
+      const displayX = splitX + (point.x * drawingAreaWidth) / state.imageWidth;
+      const displayY = (point.y * drawingAreaHeight) / state.imageHeight;
+      p5.point(displayX, displayY);
     }
   });
 
