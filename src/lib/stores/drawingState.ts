@@ -1,4 +1,3 @@
-// lib/stores/drawingState.ts
 import { writable } from "svelte/store";
 import type p5 from "p5";
 import type { Point } from "../p5/types/sketch";
@@ -12,6 +11,7 @@ export interface PathData {
 export interface DrawingState {
   isVideoPlaying: boolean;
   isDrawing: boolean;
+  shouldTrackMouse: boolean;
   paths: PathData[];
   imageWidth: number;
   imageHeight: number;
@@ -23,6 +23,7 @@ export interface DrawingState {
 const initialState: DrawingState = {
   isVideoPlaying: false,
   isDrawing: false,
+  shouldTrackMouse: false,
   paths: [],
   imageWidth: 0,
   imageHeight: 0,
@@ -33,9 +34,38 @@ const initialState: DrawingState = {
 
 export const drawingState = writable<DrawingState>(initialState);
 
+export function toggleDrawing(videoElement?: HTMLVideoElement) {
+  drawingState.update((state) => {
+    const newShouldTrack = !state.shouldTrackMouse;
+
+    if (videoElement) {
+      try {
+        if (newShouldTrack) {
+          const playPromise = videoElement.play();
+          if (playPromise !== undefined) {
+            playPromise.catch((error) => {
+              console.error("Error playing video:", error);
+            });
+          }
+        } else {
+          videoElement.pause();
+        }
+      } catch (error) {
+        console.error("Error handling video:", error);
+      }
+    }
+
+    return {
+      ...state,
+      shouldTrackMouse: newShouldTrack,
+      isDrawing: newShouldTrack,
+      isVideoPlaying: newShouldTrack,
+    };
+  });
+}
+
 export function createNewPath(color: string) {
   drawingState.update((state) => {
-    console.log("Creating new path with color:", color);
     const newPathId = state.currentPathId + 1;
     return {
       ...state,
@@ -54,14 +84,13 @@ export function createNewPath(color: string) {
 
 export function addPointToCurrentPath(point: Point) {
   drawingState.update((state) => {
-    // Find current path index
+    if (!state.shouldTrackMouse) return state;
+
     const currentPathIndex = state.paths.findIndex(
       (p) => p.pathId === state.currentPathId
     );
 
     if (currentPathIndex === -1) {
-      console.error("No current path found for pathId:", state.currentPathId);
-      // Create a new path with a default color if none exists
       const colors = [
         "#FF0000",
         "#00FF00",
@@ -75,10 +104,6 @@ export function addPointToCurrentPath(point: Point) {
       return state;
     }
 
-    console.log("Adding point to path:", point);
-    console.log("Current path index:", currentPathIndex);
-
-    // Create new paths array with updated points
     const updatedPaths = [...state.paths];
     updatedPaths[currentPathIndex] = {
       ...updatedPaths[currentPathIndex],

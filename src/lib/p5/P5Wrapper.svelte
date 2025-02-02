@@ -38,28 +38,10 @@
         splitPosition: constrainedPosition
       }));
 
-      // Prevent any drawing while dragging
       if (p5Instance) {
         p5Instance.noLoop();
       }
     }
-  }
-
-  function handleMouseDown() {
-    if (videoHtmlElement && !$drawingState.isVideoPlaying) {
-      videoHtmlElement.play();
-    }
-  }
-
-  function handleMouseUp() {
-    if (videoHtmlElement && $drawingState.isVideoPlaying) {
-      videoHtmlElement.pause();
-    }
-    // Resume p5 drawing loop if it was paused
-    if (isDraggingSplitter && p5Instance) {
-      p5Instance.loop();
-    }
-    isDraggingSplitter = false;
   }
 
   onMount(() => {
@@ -88,58 +70,45 @@
   });
 
 
-  const sketch: Sketch = (p5: p5) => {
-    p5Instance = p5;
-    const { handleMousePressed, handleMouseDragged, handleMouseReleased } = setupDrawing(p5);
+const sketch: Sketch = (p5: p5) => {
+  p5Instance = p5;
+  const { handleMousePressed, handleDrawing } = setupDrawing(p5);
 
-    p5.setup = () => {
-      const canvas = p5.createCanvas(width, height);
-      canvas.parent(containerDiv);
-      p5.strokeCap(p5.ROUND);
-      p5.strokeJoin(p5.ROUND);
-    };
-
-    p5.draw = () => {
-      p5.background(255);
-      const splitX = (width * $drawingConfig.splitPosition) / 100;
-
-      // Update video time
-      if (videoElement) {
-        const { updateVideoTime, drawVideo } = setupVideo(p5);
-        lastVideoTime = updateVideoTime(videoElement, lastVideoTime);
-        drawVideo(p5, videoElement);
-      }
-
-      // Draw image
-      const currentImage = $drawingState.imageElement;
-      if (currentImage && $drawingState.imageWidth > 0) {
-        const aspectRatio = $drawingState.imageWidth / $drawingState.imageHeight;
-        const displayHeight = Math.min(height, (width - splitX) / aspectRatio);
-        p5.image(currentImage, splitX, 0, width - splitX, displayHeight);
-      }
-
-      // Draw all paths
-      drawPaths(p5);
-    };
-
-    p5.mousePressed = () => {
-      if (!isDraggingSplitter) {
-        handleMousePressed();
-        handleMouseDown();
-      }
-    };
-
-    p5.mouseDragged = () => {
-      if (!isDraggingSplitter) {
-        handleMouseDragged();
-      }
-    };
-
-    p5.mouseReleased = () => {
-      handleMouseReleased();
-      handleMouseUp();
-    };
+  p5.setup = () => {
+    const canvas = p5.createCanvas(width, height);
+    canvas.parent(containerDiv);
+    p5.strokeCap(p5.ROUND);
+    p5.strokeJoin(p5.ROUND);
   };
+
+  p5.draw = () => {
+    p5.background(255);
+    const splitX = (width * $drawingConfig.splitPosition) / 100;
+
+    if (videoElement) {
+      const { updateVideoTime, drawVideo } = setupVideo(p5);
+      lastVideoTime = updateVideoTime(videoElement, lastVideoTime);
+      drawVideo(p5, videoElement);
+    }
+
+    const currentImage = $drawingState.imageElement;
+    if (currentImage && $drawingState.imageWidth > 0) {
+      const aspectRatio = $drawingState.imageWidth / $drawingState.imageHeight;
+      const displayHeight = Math.min(height, (width - splitX) / aspectRatio);
+      p5.image(currentImage, splitX, 0, width - splitX, displayHeight);
+    }
+
+    handleDrawing();
+    drawPaths(p5);
+  };
+
+  p5.mousePressed = () => {
+    if (!isDraggingSplitter) {
+      handleMousePressed(videoHtmlElement);
+    }
+  };
+};
+
 
   export function setVideo(video: HTMLVideoElement) {
     if (videoElement) {
@@ -148,7 +117,6 @@
     const { setVideo: setupP5Video } = setupVideo(p5Instance);
     videoElement = setupP5Video(video);
 
-    // Create initial path
     createNewPath(colors[0]);
   }
 
@@ -187,20 +155,17 @@
   }
 
   export function clearDrawing() {
-    // Reset video to beginning
     if (videoHtmlElement) {
       videoHtmlElement.currentTime = 0;
       videoHtmlElement.pause();
     }
 
-    // Clear all paths but immediately create a new one
     drawingState.update(state => ({
       ...state,
       paths: [],
       currentPathId: 0
     }));
 
-    // Create a new path with the first color
     createNewPath(colors[0]);
   }
 
@@ -213,8 +178,6 @@
   bind:this={containerDiv}
   class="relative w-full h-[calc(100vh-64px)]"
   on:mousemove={handleSplitterDrag}
-  on:mouseup={handleMouseUp}
-  on:mouseleave={handleMouseUp}
   role="application"
   aria-label="Drawing Canvas"
 >
