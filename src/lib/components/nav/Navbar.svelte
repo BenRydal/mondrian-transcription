@@ -14,10 +14,12 @@
 
   const strokeWeights = [1, 2, 3, 4, 5, 8, 10];
   const pollingRates = [
-    { label: '16ms (Fastest)', value: 16 },
-    { label: '33ms (Fast)', value: 33 },
-    { label: '66ms (Medium)', value: 66 },
-    { label: '100ms (Slow)', value: 100 },
+    { label: '4ms', value: 4 },
+    { label: '8ms', value: 8 },
+    { label: '16ms', value: 16 },
+    { label: '32ms', value: 32 },
+    { label: '64ms', value: 64 },
+    { label: '100ms', value: 100 },
   ];
 
   function handleFileUpload(event: Event) {

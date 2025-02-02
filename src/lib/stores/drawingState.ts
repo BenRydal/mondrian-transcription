@@ -18,6 +18,7 @@ export interface DrawingState {
   videoTime: number;
   imageElement: p5.Image | null;
   currentPathId: number;
+  isJumping: boolean;
 }
 
 const initialState: DrawingState = {
@@ -30,7 +31,74 @@ const initialState: DrawingState = {
   videoTime: 0,
   imageElement: null,
   currentPathId: 0,
+  isJumping: false,
 };
+
+const JUMP_SECONDS = 5;
+const JUMP_COOLDOWN = 250;
+
+export function handleTimeJump(
+  forward: boolean,
+  videoElement?: HTMLVideoElement
+) {
+  drawingState.update((state) => {
+    if (state.isJumping || !videoElement) return state;
+
+    const currentTime = state.videoTime;
+    let newTime: number;
+
+    if (forward) {
+      newTime = Math.min(currentTime + JUMP_SECONDS, videoElement.duration);
+      videoElement.currentTime = newTime;
+
+      return {
+        ...state,
+        isJumping: true,
+        videoTime: newTime,
+      };
+    } else {
+      newTime = Math.max(currentTime - JUMP_SECONDS, 0);
+      videoElement.currentTime = newTime;
+
+      const currentPathIndex = state.paths.findIndex(
+        (p) => p.pathId === state.currentPathId
+      );
+      if (currentPathIndex === -1) return state;
+
+      const updatedPaths = [...state.paths];
+      const currentPath = updatedPaths[currentPathIndex];
+
+      const updatedPoints = currentPath.points.filter(
+        (point) => point.time <= newTime
+      );
+      updatedPaths[currentPathIndex] = {
+        ...currentPath,
+        points: updatedPoints,
+      };
+
+      if (state.shouldTrackMouse) {
+        videoElement.pause();
+      }
+
+      return {
+        ...state,
+        isJumping: true,
+        shouldTrackMouse: false,
+        isDrawing: false,
+        isVideoPlaying: false,
+        videoTime: newTime,
+        paths: updatedPaths,
+      };
+    }
+  });
+
+  setTimeout(() => {
+    drawingState.update((state) => ({
+      ...state,
+      isJumping: false,
+    }));
+  }, JUMP_COOLDOWN);
+}
 
 export const drawingState = writable<DrawingState>(initialState);
 

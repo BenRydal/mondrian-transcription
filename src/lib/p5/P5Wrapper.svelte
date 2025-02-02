@@ -3,7 +3,7 @@
   import type p5 from 'p5';
   import { onMount } from 'svelte';
   import { drawingConfig } from '../stores/drawingConfig';
-  import { drawingState, createNewPath } from '../stores/drawingState';
+  import { drawingState, createNewPath, handleTimeJump } from '../stores/drawingState';
   import { setupDrawing, drawPaths } from './features/drawing';
   import { setupVideo } from './features/video';
   import VideoControls from '../components/video/VideoControls.svelte';
@@ -45,29 +45,37 @@
   }
 
   onMount(() => {
-    window.addEventListener('keydown', (e) => {
-      if (e.code === 'Space' && videoHtmlElement) {
-        e.preventDefault();
-        if (videoHtmlElement.paused) {
-          videoHtmlElement.play();
-        } else {
-          videoHtmlElement.pause();
-        }
-      }
-    });
+  window.addEventListener('keydown', (e) => {
+    if (!videoHtmlElement) return;
 
-    const updateDimensions = () => {
-      height = window.innerHeight - 64;
-      width = containerDiv.clientWidth;
-      if (p5Instance) {
-        p5Instance.resizeCanvas(width, height);
+    if (e.code === 'Space') {
+      e.preventDefault();
+      if (videoHtmlElement.paused) {
+        videoHtmlElement.play();
+      } else {
+        videoHtmlElement.pause();
       }
-    };
-
-    window.addEventListener('resize', updateDimensions);
-    updateDimensions();
-    return () => window.removeEventListener('resize', updateDimensions);
+    } else if (e.key.toLowerCase() === 'f') {
+      e.preventDefault();
+      handleTimeJump(true, videoHtmlElement);
+    } else if (e.key.toLowerCase() === 'r') {
+      e.preventDefault();
+      handleTimeJump(false, videoHtmlElement);
+    }
   });
+
+  const updateDimensions = () => {
+    height = window.innerHeight - 64;
+    width = containerDiv.clientWidth;
+    if (p5Instance) {
+      p5Instance.resizeCanvas(width, height);
+    }
+  };
+
+  window.addEventListener('resize', updateDimensions);
+  updateDimensions();
+  return () => window.removeEventListener('resize', updateDimensions);
+});
 
 
 const sketch: Sketch = (p5: p5) => {

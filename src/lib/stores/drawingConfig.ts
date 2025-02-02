@@ -11,7 +11,7 @@ const defaultConfig: DrawingConfig = {
   strokeWeight: 5,
   strokeColor: "#000000",
   splitPosition: 50,
-  pollingRate: 100,
+  pollingRate: 16,
 };
 
 export const drawingConfig = writable<DrawingConfig>(defaultConfig);
