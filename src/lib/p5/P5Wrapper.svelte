@@ -37,86 +37,95 @@
         ...config,
         splitPosition: constrainedPosition
       }));
+    }
+  }
 
-      if (p5Instance) {
-        p5Instance.noLoop();
-      }
+  function handleSplitterEnd() {
+    isDraggingSplitter = false;
+    if (p5Instance) {
+      p5Instance.loop();
     }
   }
 
   onMount(() => {
-  window.addEventListener('keydown', (e) => {
-    if (!videoHtmlElement) return;
+    window.addEventListener('keydown', (e) => {
+      if (!videoHtmlElement) return;
 
-    if (e.code === 'Space') {
-      e.preventDefault();
-      if (videoHtmlElement.paused) {
-        videoHtmlElement.play();
-      } else {
-        videoHtmlElement.pause();
+      if (e.code === 'Space') {
+        e.preventDefault();
+        if (videoHtmlElement.paused) {
+          videoHtmlElement.play();
+        } else {
+          videoHtmlElement.pause();
+        }
+      } else if (e.key.toLowerCase() === 'f') {
+        e.preventDefault();
+        handleTimeJump(true, videoHtmlElement);
+      } else if (e.key.toLowerCase() === 'r') {
+        e.preventDefault();
+        handleTimeJump(false, videoHtmlElement);
       }
-    } else if (e.key.toLowerCase() === 'f') {
-      e.preventDefault();
-      handleTimeJump(true, videoHtmlElement);
-    } else if (e.key.toLowerCase() === 'r') {
-      e.preventDefault();
-      handleTimeJump(false, videoHtmlElement);
-    }
+    });
+
+    const updateDimensions = () => {
+      height = window.innerHeight - 64;
+      width = containerDiv.clientWidth;
+      if (p5Instance) {
+        p5Instance.resizeCanvas(width, height);
+      }
+    };
+
+    window.addEventListener('resize', updateDimensions);
+    updateDimensions();
+    return () => window.removeEventListener('resize', updateDimensions);
   });
 
-  const updateDimensions = () => {
-    height = window.innerHeight - 64;
-    width = containerDiv.clientWidth;
+  const sketch: Sketch = (p5: p5) => {
+    p5Instance = p5;
+    const { handleMousePressed, handleDrawing } = setupDrawing(p5);
+
+    p5.setup = () => {
+      const canvas = p5.createCanvas(width, height);
+      canvas.parent(containerDiv);
+      p5.strokeCap(p5.ROUND);
+      p5.strokeJoin(p5.ROUND);
+
+      if (p5Instance) {
+        p5Instance.noLoop();
+      }
+    };
+
+    p5.draw = () => {
+      p5.background(255);
+      const splitX = (width * $drawingConfig.splitPosition) / 100;
+
+      if (videoElement) {
+        const { updateVideoTime, drawVideo } = setupVideo(p5);
+        lastVideoTime = updateVideoTime(videoElement, lastVideoTime);
+        drawVideo(p5, videoElement);
+      }
+
+      const currentImage = $drawingState.imageElement;
+      if (currentImage && $drawingState.imageWidth > 0) {
+        const aspectRatio = $drawingState.imageWidth / $drawingState.imageHeight;
+        const displayHeight = Math.min(height, (width - splitX) / aspectRatio);
+        p5.image(currentImage, splitX, 0, width - splitX, displayHeight);
+      }
+
+      handleDrawing();
+      drawPaths(p5);
+    };
+
+    p5.mousePressed = () => {
+      if (!isDraggingSplitter) {
+        handleMousePressed(videoHtmlElement);
+      }
+    };
+
     if (p5Instance) {
-      p5Instance.resizeCanvas(width, height);
+      p5Instance.loop();
     }
   };
-
-  window.addEventListener('resize', updateDimensions);
-  updateDimensions();
-  return () => window.removeEventListener('resize', updateDimensions);
-});
-
-
-const sketch: Sketch = (p5: p5) => {
-  p5Instance = p5;
-  const { handleMousePressed, handleDrawing } = setupDrawing(p5);
-
-  p5.setup = () => {
-    const canvas = p5.createCanvas(width, height);
-    canvas.parent(containerDiv);
-    p5.strokeCap(p5.ROUND);
-    p5.strokeJoin(p5.ROUND);
-  };
-
-  p5.draw = () => {
-    p5.background(255);
-    const splitX = (width * $drawingConfig.splitPosition) / 100;
-
-    if (videoElement) {
-      const { updateVideoTime, drawVideo } = setupVideo(p5);
-      lastVideoTime = updateVideoTime(videoElement, lastVideoTime);
-      drawVideo(p5, videoElement);
-    }
-
-    const currentImage = $drawingState.imageElement;
-    if (currentImage && $drawingState.imageWidth > 0) {
-      const aspectRatio = $drawingState.imageWidth / $drawingState.imageHeight;
-      const displayHeight = Math.min(height, (width - splitX) / aspectRatio);
-      p5.image(currentImage, splitX, 0, width - splitX, displayHeight);
-    }
-
-    handleDrawing();
-    drawPaths(p5);
-  };
-
-  p5.mousePressed = () => {
-    if (!isDraggingSplitter) {
-      handleMousePressed(videoHtmlElement);
-    }
-  };
-};
-
 
   export function setVideo(video: HTMLVideoElement) {
     if (videoElement) {
@@ -152,13 +161,20 @@ const sketch: Sketch = (p5: p5) => {
   export function exportPath() {
     const paths = $drawingState.paths;
     paths.forEach((path, index) => {
+      if (path.points.length === 0) return;
+
       const csv = path.points.map(p => `${p.x},${p.y},${p.time}`).join('\n');
       const blob = new Blob([`x,y,time\n${csv}`], { type: 'text/csv' });
       const url = URL.createObjectURL(blob);
+
       const a = document.createElement('a');
       a.href = url;
       a.download = `path-${index + 1}.csv`;
+      document.body.appendChild(a);
       a.click();
+      document.body.removeChild(a);
+
+      URL.revokeObjectURL(url);
     });
   }
 
@@ -171,7 +187,10 @@ const sketch: Sketch = (p5: p5) => {
     drawingState.update(state => ({
       ...state,
       paths: [],
-      currentPathId: 0
+      currentPathId: 0,
+      shouldTrackMouse: false,
+      isDrawing: false,
+      isVideoPlaying: false
     }));
 
     createNewPath(colors[0]);
@@ -186,6 +205,8 @@ const sketch: Sketch = (p5: p5) => {
   bind:this={containerDiv}
   class="relative w-full h-[calc(100vh-64px)]"
   on:mousemove={handleSplitterDrag}
+  on:mouseup={handleSplitterEnd}
+  on:mouseleave={handleSplitterEnd}
   role="application"
   aria-label="Drawing Canvas"
 >

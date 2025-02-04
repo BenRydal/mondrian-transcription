@@ -1,6 +1,7 @@
-import { writable } from "svelte/store";
+import { writable, get } from "svelte/store";
 import type p5 from "p5";
 import type { Point } from "../p5/types/sketch";
+import { drawingConfig } from "../stores/drawingConfig";
 
 export interface PathData {
   points: Point[];
@@ -51,10 +52,43 @@ export function handleTimeJump(
       newTime = Math.min(currentTime + JUMP_SECONDS, videoElement.duration);
       videoElement.currentTime = newTime;
 
+      const currentPathIndex = state.paths.findIndex(
+        (p) => p.pathId === state.currentPathId
+      );
+      if (currentPathIndex === -1) return state;
+
+      const updatedPaths = [...state.paths];
+      const currentPath = updatedPaths[currentPathIndex];
+
+      const lastPoint = currentPath.points[currentPath.points.length - 1];
+      if (!lastPoint) return state;
+
+      const samplingRate = get(drawingConfig).pollingRate / 1000;
+      const updatedPoints = [...currentPath.points];
+
+      for (
+        let t = currentTime + samplingRate;
+        t <= newTime;
+        t += samplingRate
+      ) {
+        updatedPoints.push({
+          x: lastPoint.x,
+          y: lastPoint.y,
+          time: t,
+          pathId: state.currentPathId,
+        });
+      }
+
+      updatedPaths[currentPathIndex] = {
+        ...currentPath,
+        points: updatedPoints,
+      };
+
       return {
         ...state,
         isJumping: true,
         videoTime: newTime,
+        paths: updatedPaths,
       };
     } else {
       newTime = Math.max(currentTime - JUMP_SECONDS, 0);
@@ -76,7 +110,7 @@ export function handleTimeJump(
         points: updatedPoints,
       };
 
-      if (state.shouldTrackMouse) {
+      if (!state.shouldTrackMouse) {
         videoElement.pause();
       }
 
