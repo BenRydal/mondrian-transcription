@@ -100,8 +100,9 @@
       const splitX = (width * $drawingConfig.splitPosition) / 100;
 
       if (videoElement) {
-        const { updateVideoTime, drawVideo } = setupVideo(p5);
+        const { updateVideoTime, drawVideo, checkVideoEnd } = setupVideo(p5);
         lastVideoTime = updateVideoTime(videoElement, lastVideoTime);
+        checkVideoEnd(videoElement);
         drawVideo(p5, videoElement);
       }
 
@@ -131,8 +132,15 @@
     if (videoElement) {
       (videoElement as any).remove();
     }
+
+    video.loop = false;
+
     const { setVideo: setupP5Video } = setupVideo(p5Instance);
     videoElement = setupP5Video(video);
+
+    if (videoElement) {
+      (videoElement as any).elt.loop = false;
+    }
 
     createNewPath(colors[0]);
   }
@@ -152,9 +160,18 @@
     if (videoHtmlElement) {
       videoHtmlElement.currentTime = 0;
       videoHtmlElement.pause();
+
       const currentPathCount = $drawingState.paths.length;
       const newColor = colors[currentPathCount % colors.length];
+
       createNewPath(newColor);
+
+      drawingState.update(state => ({
+        ...state,
+        shouldTrackMouse: false,
+        isDrawing: false,
+        isVideoPlaying: false
+      }));
     }
   }
 

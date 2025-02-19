@@ -56,9 +56,19 @@ export function setupDrawing(p5: p5) {
 
   const handleMousePressed = (videoElement?: HTMLVideoElement) => {
     if (isInDrawableArea(p5, p5.mouseX, p5.mouseY)) {
-      if (!get(drawingState).shouldTrackMouse) {
+      const state = get(drawingState);
+
+      if (
+        videoElement &&
+        videoElement.currentTime >= videoElement.duration - 0.1
+      ) {
+        return;
+      }
+
+      if (!state.shouldTrackMouse) {
         sampler.reset();
       }
+
       toggleDrawing(videoElement);
     }
   };

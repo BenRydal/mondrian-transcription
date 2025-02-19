@@ -147,6 +147,12 @@ export function toggleDrawing(videoElement?: HTMLVideoElement) {
           if (playPromise !== undefined) {
             playPromise.catch((error) => {
               console.error("Error playing video:", error);
+              drawingState.update((s) => ({
+                ...s,
+                shouldTrackMouse: false,
+                isDrawing: false,
+                isVideoPlaying: false,
+              }));
             });
           }
         } else {
@@ -154,6 +160,12 @@ export function toggleDrawing(videoElement?: HTMLVideoElement) {
         }
       } catch (error) {
         console.error("Error handling video:", error);
+        return {
+          ...state,
+          shouldTrackMouse: false,
+          isDrawing: false,
+          isVideoPlaying: false,
+        };
       }
     }
 

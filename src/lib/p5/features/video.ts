@@ -7,12 +7,28 @@ export function setupVideo(p5: p5) {
   const setVideo = (video: HTMLVideoElement) => {
     const p5Vid = p5.createVideo([video.src]);
 
+    (p5Vid.elt as HTMLVideoElement).loop = false;
+
     p5Vid.hide();
 
     p5Vid.elt.onplay = () =>
       drawingState.update((state) => ({ ...state, isVideoPlaying: true }));
+
     p5Vid.elt.onpause = () =>
-      drawingState.update((state) => ({ ...state, isVideoPlaying: false }));
+      drawingState.update((state) => ({
+        ...state,
+        isVideoPlaying: false,
+        shouldTrackMouse: false,
+        isDrawing: false,
+      }));
+
+    p5Vid.elt.onended = () =>
+      drawingState.update((state) => ({
+        ...state,
+        isVideoPlaying: false,
+        shouldTrackMouse: false,
+        isDrawing: false,
+      }));
 
     return p5Vid;
   };
@@ -39,9 +55,27 @@ export function setupVideo(p5: p5) {
     p5.image(videoElement, 0, yOffset, splitX, displayHeight);
   };
 
+  const checkVideoEnd = (videoElement: p5.Element) => {
+    if (videoElement && (videoElement as any).elt) {
+      const video = (videoElement as any).elt;
+      if (video.currentTime >= video.duration - 0.1) {
+        video.pause();
+        video.currentTime = video.duration;
+
+        drawingState.update((state) => ({
+          ...state,
+          isVideoPlaying: false,
+          shouldTrackMouse: false,
+          isDrawing: false,
+        }));
+      }
+    }
+  };
+
   return {
     setVideo,
     updateVideoTime,
     drawVideo,
+    checkVideoEnd,
   };
 }
