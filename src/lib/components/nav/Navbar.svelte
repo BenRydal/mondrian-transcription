@@ -143,6 +143,7 @@
       Mondrian Transcription software is an open-source project built with JavaScript and p5.js licensed under the GNU General Public License Version 2.0. It is developed by Ben Rydal Shapiro and contributors with support from the National Science Foundation. Contribute | Reference
     </p>
     <div class="modal-action">
+      <a href="https://forms.gle/jfV6zntsvua4k3XdA" target="_blank" class="btn bg-gray-300 text-black">Feedback</a>
       <form method="dialog">
         <button class="btn">Close</button>
       </form>
