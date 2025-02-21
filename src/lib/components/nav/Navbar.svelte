@@ -121,7 +121,7 @@
     <div class="modal-box w-11/12 max-w-3xl">
         <h3 class="font-bold text-2xl mb-4 text-center">Mondrian Transcription Software</h3>
         <p class="py-2">Welcome to Mondrian Transcription! This tool allows you to transcribe fine-grained movement data from video. To get started, use the top buttons to load a floor plan formatted as a PNG/JPG image and video formatted as a MP4 file.</p>
-        <p class="py-2">Then, click once anywhere on the floor plan to start recording movement data synchronized to the video. As you move your cursor over the floor plan, positioning data is recorded. Play/pause recording by clicking on the floor plan. Press the 'f' key to fast forward and the 'r' key to rewind video and data recording in 5 second intervals. Use the top buttons to clear or save your recording data as a CSV file.</p>
+        <p class="py-2">Then, <strong>click</strong> once anywhere on the floor plan to start recording movement data synchronized to the video. As you <strong>move your cursor</strong> over the floor plan, positioning data is recorded. <strong>Play/pause</strong> recording by clicking on the floor plan. Press the <strong>'f' key</strong> to fast forward and the <strong>'r' key</strong> to rewind video and data recording in 5 second intervals. Use the top buttons to <strong>clear/save</strong> your recording data as a CSV file.</p>
         <p class="py-2 text-center">
             <a href="https://www.youtube.com/watch?v=xOHjm-c6h3E" class="text-blue-500 underline" target="_blank" rel="noopener noreferrer"> Please also watch this demonstration video </a>
         </p>
