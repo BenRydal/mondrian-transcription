@@ -51,7 +51,7 @@
 
 <div class="navbar bg-base-100 h-16" on:mousedown={preventDrawing} on:mouseup={preventDrawing} on:mousemove={preventDrawing}>
   <div class="flex-1">
-    <a class="btn btn-ghost text-xl">Mondrian</a>
+    <a class="btn btn-ghost text-xl" href="https://interactiongeography.org">Mondrian</a>
   </div>
   <div class="flex justify-end items-center gap-2">
     <!-- Help -->
