@@ -5,9 +5,35 @@ import { drawingConfig } from "../../stores/drawingConfig";
 
 export function setupVideo(p5: p5) {
   const setVideo = (video: HTMLVideoElement) => {
+    // Create the p5 video element
     const p5Vid = p5.createVideo([video.src]);
 
     (p5Vid.elt as HTMLVideoElement).loop = false;
+
+    // Force the video to load explicitly
+    (p5Vid.elt as HTMLVideoElement).load();
+
+    // Draw the first frame immediately
+    (p5Vid.elt as HTMLVideoElement).currentTime = 0.1;
+
+    // Show first frame (this is key)
+    p5Vid.elt.addEventListener("loadeddata", () => {
+      // Force a redraw
+      if (p5.draw) {
+        p5.redraw();
+      }
+
+      // Force p5 to run a few frames to make sure the video is visible
+      let frameCount = 0;
+      const tempDraw = () => {
+        frameCount++;
+        p5.redraw();
+        if (frameCount < 3) {
+          requestAnimationFrame(tempDraw);
+        }
+      };
+      requestAnimationFrame(tempDraw);
+    });
 
     p5Vid.hide();
 
