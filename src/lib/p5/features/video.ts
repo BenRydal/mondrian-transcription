@@ -5,25 +5,39 @@ import { drawingConfig } from "../../stores/drawingConfig";
 
 export function setupVideo(p5: p5) {
   const setVideo = (video: HTMLVideoElement) => {
-    // Create the p5 video element
     const p5Vid = p5.createVideo([video.src]);
+    const videoElt = p5Vid.elt as HTMLVideoElement;
 
-    (p5Vid.elt as HTMLVideoElement).loop = false;
+    // Ensure all properties are set correctly
+    videoElt.loop = false;
+    videoElt.currentTime = 0;
 
-    // Force the video to load explicitly
-    (p5Vid.elt as HTMLVideoElement).load();
+    // Make sure metadata is loaded to get duration correctly
+    videoElt.addEventListener("loadedmetadata", () => {
+      // Reset the video time in drawingState to ensure timeline updates
+      drawingState.update((state) => ({
+        ...state,
+        videoTime: 0,
+      }));
+    });
 
-    // Draw the first frame immediately
-    (p5Vid.elt as HTMLVideoElement).currentTime = 0.1;
+    // Force load to trigger proper timeline setup
+    videoElt.load();
 
-    // Show first frame (this is key)
+    // Set a small initial time to show the first frame
+    setTimeout(() => {
+      try {
+        videoElt.currentTime = 0.1;
+      } catch (e) {
+        console.warn("Could not set initial currentTime", e);
+      }
+    }, 50);
+
     p5Vid.elt.addEventListener("loadeddata", () => {
-      // Force a redraw
       if (p5.draw) {
         p5.redraw();
       }
 
-      // Force p5 to run a few frames to make sure the video is visible
       let frameCount = 0;
       const tempDraw = () => {
         frameCount++;

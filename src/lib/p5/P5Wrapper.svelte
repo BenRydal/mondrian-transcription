@@ -129,8 +129,24 @@
   };
 
   export function setVideo(video: HTMLVideoElement) {
+    lastVideoTime = 0;
+
+    drawingState.update(state => ({
+      ...state,
+      videoTime: 0
+    }));
+
     if (videoElement) {
-      (videoElement as any).remove();
+      try {
+        const videoElt = (videoElement as any).elt;
+        if (videoElt) {
+          videoElt.pause();
+          videoElt.currentTime = 0;
+        }
+        (videoElement as any).remove();
+      } catch (e) {
+        console.warn("Error cleaning up previous video:", e);
+      }
     }
 
     video.loop = false;
@@ -140,6 +156,10 @@
 
     if (videoElement) {
       (videoElement as any).elt.loop = false;
+
+      if (p5Instance) {
+        p5Instance.redraw();
+      }
     }
 
     createNewPath(colors[0]);
