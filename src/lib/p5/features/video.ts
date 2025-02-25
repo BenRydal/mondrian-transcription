@@ -6,8 +6,48 @@ import { drawingConfig } from "../../stores/drawingConfig";
 export function setupVideo(p5: p5) {
   const setVideo = (video: HTMLVideoElement) => {
     const p5Vid = p5.createVideo([video.src]);
+    const videoElt = p5Vid.elt as HTMLVideoElement;
 
-    (p5Vid.elt as HTMLVideoElement).loop = false;
+    // Ensure all properties are set correctly
+    videoElt.loop = false;
+    videoElt.currentTime = 0;
+
+    // Make sure metadata is loaded to get duration correctly
+    videoElt.addEventListener("loadedmetadata", () => {
+      // Reset the video time in drawingState to ensure timeline updates
+      drawingState.update((state) => ({
+        ...state,
+        videoTime: 0,
+      }));
+    });
+
+    // Force load to trigger proper timeline setup
+    videoElt.load();
+
+    // Set a small initial time to show the first frame
+    setTimeout(() => {
+      try {
+        videoElt.currentTime = 0.1;
+      } catch (e) {
+        console.warn("Could not set initial currentTime", e);
+      }
+    }, 50);
+
+    p5Vid.elt.addEventListener("loadeddata", () => {
+      if (p5.draw) {
+        p5.redraw();
+      }
+
+      let frameCount = 0;
+      const tempDraw = () => {
+        frameCount++;
+        p5.redraw();
+        if (frameCount < 3) {
+          requestAnimationFrame(tempDraw);
+        }
+      };
+      requestAnimationFrame(tempDraw);
+    });
 
     p5Vid.hide();
 

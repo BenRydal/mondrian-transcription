@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onMount, afterUpdate } from 'svelte';
 
   export let videoElement: HTMLVideoElement;
 
@@ -9,25 +9,21 @@
   let isDraggingProgress = false;
   let progressBarElement: HTMLProgressElement;
 
-  onMount(() => {
-    if (videoElement) {
-      videoElement.addEventListener('timeupdate', updateProgress);
-      videoElement.addEventListener('loadedmetadata', () => {
-        duration = videoElement.duration;
-      });
+  function updateDuration() {
+    if (videoElement && !isNaN(videoElement.duration)) {
+      duration = videoElement.duration;
     }
-
-    return () => {
-      if (videoElement) {
-        videoElement.removeEventListener('timeupdate', updateProgress);
-      }
-    };
-  });
+  }
 
   function updateProgress() {
     if (!isDraggingProgress && videoElement) {
-      progress = (videoElement.currentTime / videoElement.duration) * 100;
-      currentTime = videoElement.currentTime;
+      if (!isNaN(videoElement.duration) && videoElement.duration > 0) {
+        progress = (videoElement.currentTime / videoElement.duration) * 100;
+        currentTime = videoElement.currentTime;
+      } else {
+        progress = 0;
+        currentTime = 0;
+      }
     }
   }
 
@@ -46,9 +42,42 @@
   }
 
   function formatTime(seconds: number): string {
+    if (isNaN(seconds)) return "0:00";
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
     return `${mins}:${secs.toString().padStart(2, '0')}`;
+  }
+
+  onMount(() => {
+    setupVideoListeners();
+
+    return () => {
+      removeVideoListeners();
+    };
+  });
+
+  afterUpdate(() => {
+    setupVideoListeners();
+    updateDuration();
+    updateProgress();
+  });
+
+  function setupVideoListeners() {
+    if (videoElement) {
+      removeVideoListeners();
+
+      videoElement.addEventListener('timeupdate', updateProgress);
+      videoElement.addEventListener('loadedmetadata', updateDuration);
+      videoElement.addEventListener('durationchange', updateDuration);
+    }
+  }
+
+  function removeVideoListeners() {
+    if (videoElement) {
+      videoElement.removeEventListener('timeupdate', updateProgress);
+      videoElement.removeEventListener('loadedmetadata', updateDuration);
+      videoElement.removeEventListener('durationchange', updateDuration);
+    }
   }
 </script>
 
