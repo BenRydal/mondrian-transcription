@@ -158,8 +158,9 @@
       (videoElement as any).elt.loop = false;
 
       if (p5Instance) {
-        p5Instance.redraw();
-      }
+            p5Instance.redraw();
+            clearDrawing();
+        }
     }
 
     createNewPath(colors[0]);
