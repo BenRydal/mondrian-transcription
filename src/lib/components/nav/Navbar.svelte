@@ -125,7 +125,7 @@
         <p class="py-2 text-center">
             <a href="https://youtu.be/mgbNzikyucQ" class="text-blue-500 underline" target="_blank" rel="noopener noreferrer"> Please also watch this demonstration video </a>
         </p>
-        <p class="text-sm text-gray-500 mt-4 italic">Mondrian Transcription software is an open-source project built with Svelte, JavaScript and p5.js licensed under the GNU General Public License Version 2.0. It is developed by Ben Rydal Shapiro, Edwin Zhao and contributors with support from the National Science Foundation #1623690 and #2100784.</p>
+        <p class="text-sm text-gray-500 mt-4 italic">Mondrian Transcription software is an open-source project built with Svelte, JavaScript and p5.js licensed under the GNU General Public License Version 2.0. The tool runs entirely in your browser. No transcripts or videos are uploaded, stored, or transmitted—your data stays on your device at all times. It is developed by Ben Rydal Shapiro, Edwin Zhao and contributors with support from the National Science Foundation #1623690 and #2100784.</p>
 
         <div class="modal-action">
             <a href="https://forms.gle/jfV6zntsvua4k3XdA" target="_blank" class="btn bg-gray-300 text-black">Feedback</a>

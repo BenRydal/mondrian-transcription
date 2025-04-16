@@ -1,6 +1,6 @@
 # Mondrian Transcription Software
 
-Hi there! This is a repository for Mondrian Transcription Software, an open-source tool to transcribe fine-grained movement data from video by efficiently tracing the movement of people or things over floor plan representations to generate text files of positioning data — essentially, a transcript of movement.
+Hi there! This is a repository for Mondrian Transcription Software, an open-source tool to transcribe fine-grained movement data from video by efficiently tracing the movement of people or things over floor plan representations to generate text files of positioning data — essentially, a transcript of movement. The tool runs entirely in your browser. No transcripts or videos are uploaded, stored, or transmitted—your data stays on your device at all times.
 
 Mondrian Transcription features:
 
