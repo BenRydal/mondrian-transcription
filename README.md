@@ -2,7 +2,7 @@
 
 ![repo](./docs/images/cover.png)
 
-Welcome to **Mondrian Transcription!**. This is an open-source tool that allows you to transcribe fine-grained movement data from video by efficiently tracing the movement of people or things over floor plan representations to generate text files of positioning data — essentially, a transcript of movement. This tool runs entirely in your browser. No files are uploaded, stored, or transmitted—your data stays on your device at all times.
+Welcome to **Mondrian Transcription!** This is an open-source tool that allows you to transcribe fine-grained movement data from video by efficiently tracing the movement of people or things over floor plan representations to generate text files of positioning data — essentially, a transcript of movement. This tool runs entirely in your browser. No files are uploaded, stored, or transmitted—your data stays on your device at all times.
 
 ## Get started
 
@@ -54,7 +54,7 @@ Welcome to **Mondrian Transcription!**. This is an open-source tool that allows 
 
 ## Contribute
 
-We welcome contributions! If you'd like to contribute, please follow the [contribution guidelines](CONTRIBUTING.md) and open a pull request. For major changes, please open an issue first to discuss what you would like to change.
+We welcome contributions! If you'd like to contribute, please follow the contribution guidelines and open a pull request. For major changes, please open an issue first to discuss what you would like to change.
 
 ## License
 
