@@ -4,6 +4,12 @@
     import IconUpload from "~icons/material-symbols/upload";
     import IconDelete from "~icons/material-symbols/delete-outline";
     import IconExport from "~icons/material-symbols/download";
+    import IconPlayArrow from "~icons/material-symbols/play-arrow";
+    import IconFastForward from "~icons/material-symbols/fast-forward";
+    import IconRewind from "~icons/material-symbols/fast-rewind";
+    import IconStylusNote from "~icons/material-symbols/stylus-note";
+    import IconPrivacyTip from "~icons/material-symbols/privacy-tip";
+    import IconClick from "~icons/material-symbols/touch-app";
     import { onMount } from "svelte";
     import { drawingConfig } from "$lib/stores/drawingConfig";
 
@@ -119,21 +125,72 @@
 
 <dialog id="help_modal" class="modal">
     <div class="modal-box w-11/12 max-w-3xl">
-        <h3 class="font-bold text-2xl mb-4 text-center">Mondrian Transcription Software</h3>
-        <p class="py-2">Welcome to Mondrian Transcription! This tool allows you to transcribe fine-grained movement data from video. To get started, use the top buttons to load a floor plan formatted as a PNG/JPG image and video formatted as a MP4 file.</p>
-        <p class="py-2">Then, <strong>click</strong> once anywhere on the floor plan to start recording movement data synchronized to the video. As you <strong>move your cursor</strong> over the floor plan, positioning data is recorded. <strong>Play/pause</strong> recording by clicking on the floor plan. Press the <strong>'f' key</strong> to fast forward and the <strong>'r' key</strong> to rewind video and data recording in 5 second intervals. Use the top buttons to <strong>clear/save</strong> your recording data as a CSV file.</p>
-        <p class="py-2 text-center">
-            <a href="https://youtu.be/mgbNzikyucQ" class="text-blue-500 underline" target="_blank" rel="noopener noreferrer"> Please also watch this demonstration video </a>
-        </p>
-        <p class="text-sm text-gray-500 mt-4 italic">Mondrian Transcription software is an open-source project built with Svelte, JavaScript and p5.js licensed under the GNU General Public License Version 2.0. The tool runs entirely in your browser. No transcripts or videos are uploaded, stored, or transmitted—your data stays on your device at all times. It is developed by Ben Rydal Shapiro, Edwin Zhao and contributors with support from the National Science Foundation #1623690 and #2100784.</p>
+        <h3 class="font-bold text-2xl mb-4 text-center flex items-center justify-center gap-2">
+            <IconHelp class="text-xl" /> Mondrian Transcription Software
+        </h3>
 
-        <div class="modal-action">
-            <a href="https://forms.gle/jfV6zntsvua4k3XdA" target="_blank" class="btn bg-gray-300 text-black">Feedback</a>
+        <div class="space-y-4 text-base">
+            <p>Welcome to <strong>Mondrian Transcription</strong>! This tool allows you to transcribe fine-grained movement data from video. To get started:</p>
+            <ul class="space-y-2">
+                <li class="flex items-start gap-2">
+                    <IconUpload class="text-xl mt-1" />
+                    <span>Load a <strong>floor plan</strong> (PNG/JPG) and <strong>video</strong> (MP4) using the top buttons.</span>
+                </li>
+                <li class="flex items-start gap-2">
+                    <IconClick class="text-xl mt-1" />
+                    <span><strong>Click</strong> once on the floor plan to start recording movement data synchronized to video.</span>
+                </li>
+                <li class="flex items-start gap-2">
+                    <IconStylusNote class="text-xl mt-1" />
+                    <span>As you <strong>move your cursor</strong>, positioning data is recorded.</span>
+                </li>
+                <li class="flex items-start gap-2">
+                    <IconClick class="text-xl mt-1" />
+                    <span><strong>Click</strong> again on the floor plan to play/pause recording.</span>
+                </li>
+                <li class="flex items-start gap-2">
+                    <IconFastForward class="text-xl mt-1" />
+                    <span>Press <kbd class="border px-1 rounded">f</kbd> on your keyboard to fast forward video and recording 5 seconds.</span>
+                </li>
+                <li class="flex items-start gap-2">
+                    <IconRewind class="text-xl mt-1" />
+                    <span>Press <kbd class="border px-1 rounded">r</kbd> on your keyboard to rewind video and recording 5 seconds.</span>
+                </li>
+                <li class="flex items-start gap-2">
+                    <IconExport class="text-xl mt-1" />
+                    <span> <strong>Save</strong> your recorded data as a CSV file or <IconDelete class="inline-block text-xl" /> <strong>clear</strong> your data to start over.</span>
+                </li>
+            </ul>
+
+            <p class="text-green-600 font-medium flex items-center gap-2">
+                <IconPrivacyTip class="text-xl" />
+                All your data stays local on your device. Nothing is uploaded or stored externally.
+            </p>
+
+            <p class="text-center">
+                <a href="https://youtu.be/mgbNzikyucQ" target="_blank" rel="noopener noreferrer" class="inline-block px-4 py-2 bg-gray-300 text-black rounded-lg shadow hover:bg-gray-400 transition">
+                    <IconPlayArrow class="inline-block mr-2 text-lg" /> Watch Demonstration Video
+                </a>
+            </p>
+        </div>
+
+        <div class="text-sm text-gray-500 mt-6 italic space-y-2">
+            <p>
+                Mondrian Transcription is an
+                <a href="https://github.com/BenRydal/mondrian-transcription" class="text-blue-500 underline" target="_blank"> open-source project </a>
+                built with Svelte, JavaScript, and p5.js licensed under the GNU General Public License Version 2.0. It is developed by Ben Rydal Shapiro, Edwin Zhao, and contributors, with support from the National Science Foundation (#1623690, #2100784). If using Mondrian Transcription in your work, kindly reference: Shapiro, B.R., Hall, R. and Owens, D. (2017). Developing & Using Interaction Geography in a Museum. International Journal of Computer-Supported Collaborative Learning, 12(4), 377-399.
+                <a href="https://par.nsf.gov/servlets/purl/10074100" class="text-blue-500 underline" target="_blank">https://doi.org/10.1007/s11412-017-9264-8</a>
+            </p>
+        </div>
+
+        <div class="modal-action mt-6">
+            <a href="https://forms.gle/jfV6zntsvua4k3XdA" target="_blank" class="btn bg-gray-300 text-black"> Feedback </a>
             <form method="dialog">
-                <button class="btn">Close</button>
+                <button class="btn btn-primary">Close</button>
             </form>
         </div>
     </div>
+
     <form method="dialog" class="modal-backdrop">
         <button>close</button>
     </form>
