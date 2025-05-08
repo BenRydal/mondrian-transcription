@@ -23,8 +23,8 @@ Mondrian Transcription features:
 
 ## Credits
 
-This work is supported by the National Science Foundation. Classroom science lesson data is made possible by the researchers and teachers who created The Third International Mathematics and Science Study (TIMSS) 1999 Video Study. Mondrian Transcription software was originally developed by Ben Rydal Shapiro at Vanderbilt University as part of his dissertation titled Interaction Geography & the Learning Sciences. Copyright (C) 2018 Ben Rydal Shapiro, and contributors. To reference or read more about this work please see [HERE](https://etd.library.vanderbilt.edu/available/etd-03212018-140140/unrestricted/Shapiro_Dissertation.pdf)
+Mondrian Transcription is an open-source project built with Svelte, JavaScript, and p5.js. It is developed by Ben Rydal Shapiro, Edwin Zhao, and contributors, with support from the National Science Foundation (#1623690, #2100784). If using Mondrian Transcription in your work, kindly reference: Shapiro, B.R., Hall, R. and Owens, D. (2017). Developing & Using Interaction Geography in a Museum. International Journal of Computer-Supported Collaborative Learning, 12(4), 377-399. https://doi.org/10.1007/s11412-017-9264-8
 
 ## License
 
-This software is written in JavaScript and p5.js and licensed under the GNU General Public License Version 2.0. See the GNU General Public License included with this software for more details.
+This software is written in JavaScript and p5.js and licensed under the GNU General Public License Version 3.0. See the GNU General Public License included with this software for more details.

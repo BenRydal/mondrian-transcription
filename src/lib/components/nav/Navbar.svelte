@@ -178,7 +178,7 @@
             <p>
                 Mondrian Transcription is an
                 <a href="https://github.com/BenRydal/mondrian-transcription" class="text-blue-500 underline" target="_blank"> open-source project </a>
-                built with Svelte, JavaScript, and p5.js licensed under the GNU General Public License Version 2.0. It is developed by Ben Rydal Shapiro, Edwin Zhao, and contributors, with support from the National Science Foundation (#1623690, #2100784). If using Mondrian Transcription in your work, kindly reference: Shapiro, B.R., Hall, R. and Owens, D. (2017). Developing & Using Interaction Geography in a Museum. International Journal of Computer-Supported Collaborative Learning, 12(4), 377-399.
+                built with Svelte, JavaScript, and p5.js licensed under the GNU General Public License Version 3.0. It is developed by Ben Rydal Shapiro, Edwin Zhao, and contributors, with support from the National Science Foundation (#1623690, #2100784). If using Mondrian Transcription in your work, kindly reference: Shapiro, B.R., Hall, R. and Owens, D. (2017). Developing & Using Interaction Geography in a Museum. International Journal of Computer-Supported Collaborative Learning, 12(4), 377-399.
                 <a href="https://par.nsf.gov/servlets/purl/10074100" class="text-blue-500 underline" target="_blank">https://doi.org/10.1007/s11412-017-9264-8</a>
             </p>
         </div>
