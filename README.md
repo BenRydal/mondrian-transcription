@@ -50,7 +50,7 @@ Welcome to **Mondrian Transcription!** This is an open-source tool that allows y
     yarn dev
     ```
 
-5. Visit `http://localhost:5000` in your browser to see the tool in action.
+5. Visit `http://localhost:5173` in your browser to see the tool in action.
 
 ## Contribute
 
