@@ -170,8 +170,8 @@
     p5Instance.loadImage(image.src, (p5Img: p5.Image) => {
       drawingState.update(state => ({
         ...state,
-        imageWidth: image.width,
-        imageHeight: image.height,
+        imageWidth: p5Img.width,
+        imageHeight: p5Img.height,
         imageElement: p5Img
       }));
     });
