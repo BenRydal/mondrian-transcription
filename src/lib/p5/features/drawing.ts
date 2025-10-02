@@ -49,7 +49,7 @@ export function setupDrawing(p5: p5) {
         addPointToCurrentPath(point);
     };
 
-    const handleMousePressed = (videoElement?: HTMLVideoElement) => {
+    const handleMousePressedVideo = (videoElement?: HTMLVideoElement) => {
         if (isInDrawableArea(p5, p5.mouseX, p5.mouseY)) {
             const state = get(drawingState);
             const config = get(drawingConfig);
@@ -61,9 +61,13 @@ export function setupDrawing(p5: p5) {
                 timeSampler.reset();
                 indexSampler.reset();
             }
+            toggleDrawing(videoElement);
+        }
+    };
 
-            if (config.isTranscriptionMode) toggleDrawing(videoElement);
-            else toggleDrawingNoVideo();
+    const handleMousePressedSpeculateMode = () => {
+        if (isInDrawableArea(p5, p5.mouseX, p5.mouseY)) {
+            toggleDrawingNoVideo();
         }
     };
 
@@ -76,7 +80,8 @@ export function setupDrawing(p5: p5) {
     };
 
     return {
-        handleMousePressed,
+        handleMousePressedVideo,
+        handleMousePressedSpeculateMode,
         handleDrawing,
     };
 }

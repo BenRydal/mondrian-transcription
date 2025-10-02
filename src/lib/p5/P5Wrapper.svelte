@@ -81,7 +81,7 @@
 
     const sketch: Sketch = (p5: p5) => {
         p5Instance = p5;
-        const { handleMousePressed, handleDrawing } = setupDrawing(p5);
+        const { handleMousePressedVideo, handleMousePressedSpeculateMode, handleDrawing } = setupDrawing(p5);
 
         p5.setup = () => {
             const canvas = p5.createCanvas(width, height);
@@ -131,11 +131,14 @@
         };
 
         p5.mousePressed = () => {
-            if (!isDraggingSplitter) {
-                handleMousePressed(videoHtmlElement);
+            if (!$drawingConfig.isTranscriptionMode) {
+                handleMousePressedSpeculateMode();
+            } else {
+                if (!isDraggingSplitter) {
+                    handleMousePressedVideo(videoHtmlElement);
+                }
             }
         };
-
         if (p5Instance) {
             p5Instance.loop();
         }
