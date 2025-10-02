@@ -2,6 +2,7 @@ import { writable, get } from "svelte/store";
 import type p5 from "p5";
 import type { Point } from "../p5/types/sketch";
 import { drawingConfig } from "../stores/drawingConfig";
+import { indexSampler } from "../p5/features/drawing";
 
 export interface PathData {
     points: Point[];
@@ -35,6 +36,38 @@ const initialState: DrawingState = {
     isJumping: false,
 };
 
+export function handleRewindSpeculateMode(forward: boolean) {
+    drawingState.update((state) => {
+        const currentPathIndex = state.paths.findIndex((p) => p.pathId === state.currentPathId);
+        if (currentPathIndex === -1) return state;
+
+        const updatedPaths = [...state.paths];
+        const currentPath = updatedPaths[currentPathIndex];
+
+        const stepSize = get(drawingConfig).pollingRate; // pseudo-time increment per point
+        const JUMP_STEPS = 5; // number of steps to jump
+
+        const lastPoint = currentPath.points[currentPath.points.length - 1];
+        if (!lastPoint) return state;
+        const newTime = Math.max(lastPoint.time - JUMP_STEPS * stepSize, 0);
+        const updatedPoints = currentPath.points.filter((point) => point.time <= newTime);
+
+        updatedPaths[currentPathIndex] = {
+            ...currentPath,
+            points: updatedPoints,
+        };
+
+        indexSampler.reset(newTime);
+
+        return {
+            ...state,
+            isJumping: true,
+            shouldTrackMouse: false,
+            isDrawing: false,
+            paths: updatedPaths,
+        };
+    });
+}
 const JUMP_SECONDS = 5;
 const JUMP_COOLDOWN = 250;
 
@@ -97,9 +130,7 @@ export function handleTimeJump(forward: boolean, videoElement?: HTMLVideoElement
                 points: updatedPoints,
             };
 
-            if (!state.shouldTrackMouse) {
-                videoElement.pause();
-            }
+            videoElement.pause();
 
             return {
                 ...state,

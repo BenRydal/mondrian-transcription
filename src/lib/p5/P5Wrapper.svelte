@@ -4,7 +4,7 @@
     import { onMount } from "svelte";
     import { fade } from "svelte/transition";
     import { drawingConfig, getSplitPositionForMode } from "../stores/drawingConfig";
-    import { drawingState, createNewPath, handleTimeJump } from "../stores/drawingState";
+    import { drawingState, createNewPath, handleTimeJump, handleRewindSpeculateMode } from "../stores/drawingState";
     import { setupDrawing, drawPaths, timeSampler, indexSampler } from "./features/drawing";
     import { setupVideo } from "./features/video";
     import VideoControls from "../components/video/VideoControls.svelte";
@@ -48,14 +48,20 @@
 
     onMount(() => {
         window.addEventListener("keydown", (e) => {
-            if (!videoHtmlElement) return;
-
             if (e.key.toLowerCase() === "f") {
                 e.preventDefault();
-                handleTimeJump(true, videoHtmlElement);
+                if ($drawingConfig.isTranscriptionMode && videoHtmlElement) {
+                    handleTimeJump(true, videoHtmlElement);
+                } else {
+                    handleRewindSpeculateMode(true);
+                }
             } else if (e.key.toLowerCase() === "r") {
                 e.preventDefault();
-                handleTimeJump(false, videoHtmlElement);
+                if ($drawingConfig.isTranscriptionMode && videoHtmlElement) {
+                    handleTimeJump(false, videoHtmlElement);
+                } else {
+                    handleRewindSpeculateMode(false);
+                }
             }
         });
 
