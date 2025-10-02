@@ -138,7 +138,7 @@
                 </li>
             </ul>
         </div>
-        <li>
+        <div>
             <label class="label cursor-pointer flex-col items-start gap-2">
                 <select
                     class="select select-bordered select-sm w-full"
@@ -154,7 +154,7 @@
                     {/each}
                 </select>
             </label>
-        </li>
+        </div>
     </div>
 </div>
 
