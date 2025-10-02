@@ -50,14 +50,7 @@
         window.addEventListener("keydown", (e) => {
             if (!videoHtmlElement) return;
 
-            if (e.code === "Space") {
-                e.preventDefault();
-                if (videoHtmlElement.paused) {
-                    videoHtmlElement.play();
-                } else {
-                    videoHtmlElement.pause();
-                }
-            } else if (e.key.toLowerCase() === "f") {
+            if (e.key.toLowerCase() === "f") {
                 e.preventDefault();
                 handleTimeJump(true, videoHtmlElement);
             } else if (e.key.toLowerCase() === "r") {
