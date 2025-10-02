@@ -2,9 +2,10 @@
     import P5, { type Sketch } from "p5-svelte";
     import type p5 from "p5";
     import { onMount } from "svelte";
-    import { drawingConfig } from "../stores/drawingConfig";
+    import { fade } from "svelte/transition";
+    import { drawingConfig, getSplitPositionForMode } from "../stores/drawingConfig";
     import { drawingState, createNewPath, handleTimeJump } from "../stores/drawingState";
-    import { setupDrawing, drawPaths } from "./features/drawing";
+    import { setupDrawing, drawPaths, timeSampler, indexSampler } from "./features/drawing";
     import { setupVideo } from "./features/video";
     import VideoControls from "../components/video/VideoControls.svelte";
     import { getFittedImageDisplayRect } from "$lib/utils/drawingUtils";
@@ -95,25 +96,38 @@
 
         p5.draw = () => {
             p5.background(255);
+            if ($drawingConfig.isTranscriptionMode) {
+                if (videoElement) {
+                    const { updateVideoTime, drawVideo, checkVideoEnd } = setupVideo(p5);
+                    lastVideoTime = updateVideoTime(videoElement, lastVideoTime);
+                    checkVideoEnd(videoElement);
+                    drawVideo(p5, videoElement);
+                }
 
-            if (videoElement) {
-                const { updateVideoTime, drawVideo, checkVideoEnd } = setupVideo(p5);
-                lastVideoTime = updateVideoTime(videoElement, lastVideoTime);
-                checkVideoEnd(videoElement);
-                drawVideo(p5, videoElement);
+                const img = $drawingState.imageElement;
+                const imgW = $drawingState.imageWidth;
+                const imgH = $drawingState.imageHeight;
+
+                if (img && imgW && imgH) {
+                    const r = getFittedImageDisplayRect(p5, getSplitPositionForMode(), imgW, imgH);
+                    p5.image(img, r.x, r.y, r.w, r.h);
+                }
+
+                handleDrawing();
+                drawPaths(p5);
+            } else {
+                const img = $drawingState.imageElement;
+                const imgW = $drawingState.imageWidth;
+                const imgH = $drawingState.imageHeight;
+
+                if (img && imgW && imgH) {
+                    const r = getFittedImageDisplayRect(p5, getSplitPositionForMode(), imgW, imgH);
+                    p5.image(img, r.x, r.y, r.w, r.h);
+                }
+
+                handleDrawing();
+                drawPaths(p5);
             }
-
-            const img = $drawingState.imageElement;
-            const imgW = $drawingState.imageWidth;
-            const imgH = $drawingState.imageHeight;
-
-            if (img && imgW && imgH) {
-                const r = getFittedImageDisplayRect(p5, $drawingConfig.splitPosition, imgW, imgH);
-                p5.image(img, r.x, r.y, r.w, r.h);
-            }
-
-            handleDrawing();
-            drawPaths(p5);
         };
 
         p5.mousePressed = () => {
@@ -167,6 +181,14 @@
 
     export function setImage(image: HTMLImageElement) {
         p5Instance.loadImage(image.src, (p5Img: p5.Image) => {
+            if (!$drawingConfig.isTranscriptionMode) {
+                createNewPath(colors[0]);
+                if (p5Instance) {
+                    // TODO: can this block be removed here and in setVideo?
+                    p5Instance.redraw();
+                    clearDrawing();
+                }
+            }
             drawingState.update((state) => ({
                 ...state,
                 imageWidth: image.width,
@@ -177,22 +199,27 @@
     }
 
     export function startNewPath() {
-        if (videoHtmlElement) {
+        const currentPathCount = $drawingState.paths.length;
+        const newColor = colors[currentPathCount % colors.length];
+        timeSampler.reset();
+        indexSampler.reset();
+
+        if (!$drawingConfig.isTranscriptionMode) {
+            createNewPath(newColor);
+        } else {
+            if (!videoHtmlElement) return;
+
             videoHtmlElement.currentTime = 0;
             videoHtmlElement.pause();
-
-            const currentPathCount = $drawingState.paths.length;
-            const newColor = colors[currentPathCount % colors.length];
-
             createNewPath(newColor);
-
-            drawingState.update((state) => ({
-                ...state,
-                shouldTrackMouse: false,
-                isDrawing: false,
-                isVideoPlaying: false,
-            }));
         }
+
+        drawingState.update((state) => ({
+            ...state,
+            shouldTrackMouse: false,
+            isDrawing: false,
+            isVideoPlaying: false, // always false if no video
+        }));
     }
 
     export function exportPath() {
@@ -241,19 +268,22 @@
 <div bind:this={containerDiv} class="relative w-full h-[calc(100vh-64px)]" on:mousemove={handleSplitterDrag} on:mouseup={handleSplitterEnd} on:mouseleave={handleSplitterEnd} role="application" aria-label="Drawing Canvas">
     <P5 {sketch} />
 
-    <div
-        class="absolute top-0 bottom-0 w-8 bg-transparent cursor-col-resize hover:bg-black/5"
-        style="left: calc({$drawingConfig.splitPosition}% - 16px)"
-        on:mousedown={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            isDraggingSplitter = true;
-        }}
-        role="separator"
-        aria-label="Resize panels"
-    >
-        <div class="absolute top-0 bottom-0 w-1 bg-gray-400 hover:bg-blue-500 transition-colors" style="left: 50%" />
-    </div>
+    {#if $drawingConfig.isTranscriptionMode}
+        <div
+            class="absolute top-0 bottom-0 w-8 bg-transparent cursor-col-resize hover:bg-black/5"
+            style="left: calc({$drawingConfig.splitPosition}% - 16px)"
+            on:mousedown={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                isDraggingSplitter = true;
+            }}
+            role="separator"
+            aria-label="Resize panels"
+            transition:fade={{ duration: 200 }}
+        >
+            <div class="absolute top-0 bottom-0 w-1 bg-gray-400 hover:bg-blue-500 transition-colors" style="left: 50%" />
+        </div>
+    {/if}
 
     {#if videoHtmlElement}
         <VideoControls videoElement={videoHtmlElement} />

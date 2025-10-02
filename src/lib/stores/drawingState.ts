@@ -20,7 +20,6 @@ export interface DrawingState {
     imageElement: p5.Image | null;
     currentPathId: number;
     isJumping: boolean;
-    isTranscriptionMode: boolean;
 }
 
 const initialState: DrawingState = {
@@ -34,7 +33,6 @@ const initialState: DrawingState = {
     imageElement: null,
     currentPathId: 0,
     isJumping: false,
-    isTranscriptionMode: true,
 };
 
 const JUMP_SECONDS = 5;
@@ -167,7 +165,19 @@ export function toggleDrawing(videoElement?: HTMLVideoElement) {
     });
 }
 
+export function toggleDrawingNoVideo() {
+    drawingState.update((state) => {
+        const newShouldTrack = !state.shouldTrackMouse;
+        return {
+            ...state,
+            shouldTrackMouse: newShouldTrack,
+            isDrawing: newShouldTrack,
+        };
+    });
+}
+
 export function createNewPath(color: string) {
+    console.log("Creating new path with color", color);
     drawingState.update((state) => {
         const newPathId = state.currentPathId + 1;
         return {

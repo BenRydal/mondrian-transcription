@@ -1,7 +1,7 @@
 // src/utils/drawUtils.ts
 import type p5 from "p5";
 import { get } from "svelte/store";
-import { drawingConfig } from "../stores/drawingConfig";
+import { drawingConfig, getSplitPositionForMode } from "../stores/drawingConfig";
 import { drawingState } from "../stores/drawingState";
 
 type Rect = { x: number; y: number; w: number; h: number };
@@ -33,7 +33,7 @@ export function getFittedImageDisplayRect(p5: p5, splitPosPct: number, imgW: num
 
 export function isInDrawableArea(p5: p5, x: number, y: number): boolean {
     const config = get(drawingConfig);
-    const splitX = (p5.width * config.splitPosition) / 100;
+    const splitX = (p5.width * getSplitPositionForMode()) / 100;
     return x > splitX && x < p5.width && y > 0 && y < p5.height;
 }
 
@@ -49,8 +49,7 @@ export function convertToImageCoordinates(p5: p5, x: number, y: number) {
     const imgH = state.imageHeight;
     if (!imgW || !imgH) return { x: 0, y: 0 };
 
-    // Use the exact same math as the draw call
-    const r = getFittedImageDisplayRect(p5, config.splitPosition, imgW, imgH);
+    const r = getFittedImageDisplayRect(p5, getSplitPositionForMode(), imgW, imgH);
 
     const nx = (x - r.x) / r.w;
     const ny = (y - r.y) / r.h;

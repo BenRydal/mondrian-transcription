@@ -23,14 +23,18 @@
         openHelpModal();
     });
 
+    const modes = [
+        { label: "Transcription Mode", value: true },
+        { label: "Speculate Mode", value: false },
+    ];
     const strokeWeights = [1, 2, 3, 4, 5, 8, 10];
     const pollingRates = [
-        { label: "4ms", value: 4 },
-        { label: "8ms", value: 8 },
-        { label: "16ms", value: 16 },
-        { label: "32ms", value: 32 },
-        { label: "64ms", value: 64 },
-        { label: "100ms", value: 100 },
+        { labelVideo: "4ms", labelSpeculate: "4 steps", value: 4 },
+        { labelVideo: "8ms", labelSpeculate: "8 steps", value: 8 },
+        { labelVideo: "16ms", labelSpeculate: "16 steps", value: 16 },
+        { labelVideo: "32ms", labelSpeculate: "32 steps", value: 32 },
+        { labelVideo: "64ms", labelSpeculate: "64 steps", value: 64 },
+        { labelVideo: "100ms", labelSpeculate: "100 steps", value: 100 },
     ];
 
     function handleFileUpload(event: Event) {
@@ -101,9 +105,23 @@
                 <li>
                     <label class="label cursor-pointer flex-col items-start gap-2">
                         <span class="label-text w-full">Point Capture Interval</span>
-                        <select class="select select-bordered select-sm w-full" value={$drawingConfig.pollingRate} on:change={(e) => drawingConfig.update((c) => ({ ...c, pollingRate: parseInt(e.currentTarget.value) }))}>
+                        <select
+                            class="select select-bordered select-sm w-full"
+                            value={$drawingConfig.pollingRate}
+                            on:change={(e) =>
+                                drawingConfig.update((c) => ({
+                                    ...c,
+                                    pollingRate: parseInt(e.currentTarget.value),
+                                }))}
+                        >
                             {#each pollingRates as rate}
-                                <option value={rate.value}>{rate.label}</option>
+                                <option value={rate.value}>
+                                    {#if $drawingConfig.isTranscriptionMode}
+                                        {rate.labelVideo}
+                                    {:else}
+                                        {rate.labelSpeculate}
+                                    {/if}
+                                </option>
                             {/each}
                         </select>
                     </label>
@@ -120,6 +138,23 @@
                 </li>
             </ul>
         </div>
+        <li>
+            <label class="label cursor-pointer flex-col items-start gap-2">
+                <select
+                    class="select select-bordered select-sm w-full"
+                    bind:value={$drawingConfig.isTranscriptionMode}
+                    on:change={(e) =>
+                        drawingConfig.update((c) => ({
+                            ...c,
+                            isTranscriptionMode: e.currentTarget.value === "true",
+                        }))}
+                >
+                    {#each modes as m}
+                        <option value={m.value}>{m.label}</option>
+                    {/each}
+                </select>
+            </label>
+        </li>
     </div>
 </div>
 
