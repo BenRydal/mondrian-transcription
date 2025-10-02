@@ -12,7 +12,7 @@ const defaultConfig: DrawingConfig = {
     strokeWeight: 5,
     strokeColor: "#000000",
     splitPosition: 50,
-    pollingRate: 16,
+    pollingRate: 4,
     isTranscriptionMode: true,
 };
 
