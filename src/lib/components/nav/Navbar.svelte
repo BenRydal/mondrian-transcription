@@ -11,6 +11,7 @@
     import IconPrivacyTip from "~icons/material-symbols/privacy-tip";
     import IconClick from "~icons/material-symbols/touch-app";
     import { onMount } from "svelte";
+    import { get } from "svelte/store";
     import { drawingConfig } from "$lib/stores/drawingConfig";
 
     export let onImageUpload: (event: Event) => void;
@@ -19,14 +20,21 @@
     export let onClear: () => void;
     export let onNewPath: () => void;
 
+    let showModal = false;
+    // Use strings for safe comparison with option values
+    let pendingValue = get(drawingConfig).isTranscriptionMode ? "true" : "false";
+    let originalValue = pendingValue;
+
+    // Define modes as strings
+    const modes = [
+        { label: "Transcription Mode", value: "true" },
+        { label: "Speculate Mode", value: "false" },
+    ];
+
     onMount(() => {
         openHelpModal();
     });
 
-    const modes = [
-        { label: "Transcription Mode", value: true },
-        { label: "Speculate Mode", value: false },
-    ];
     const strokeWeights = [1, 2, 3, 4, 5, 8, 10];
     const pollingRates = [
         { labelVideo: "4ms", labelSpeculate: "4 steps", value: 4 },
@@ -36,6 +44,31 @@
         { labelVideo: "64ms", labelSpeculate: "64 steps", value: 64 },
         { labelVideo: "100ms", labelSpeculate: "100 steps", value: 100 },
     ];
+
+    function handleModeChange(e) {
+        pendingValue = e.currentTarget.value;
+        showModal = true;
+    }
+
+    function confirmSwitch() {
+        // Clear existing data
+        onClear();
+
+        // Update store
+        drawingConfig.update((c) => ({
+            ...c,
+            isTranscriptionMode: pendingValue === "true",
+        }));
+
+        originalValue = pendingValue;
+        showModal = false;
+    }
+
+    function cancelSwitch() {
+        // Revert select UI back to original
+        pendingValue = originalValue;
+        showModal = false;
+    }
 
     function handleFileUpload(event: Event) {
         const file = (event.target as HTMLInputElement).files?.[0];
@@ -140,23 +173,27 @@
         </div>
         <div>
             <label class="label cursor-pointer flex-col items-start gap-2">
-                <select
-                    class="select select-bordered select-sm w-full"
-                    bind:value={$drawingConfig.isTranscriptionMode}
-                    on:change={(e) => {
-                        onClear();
-                        drawingConfig.update((c) => ({
-                            ...c,
-                            isTranscriptionMode: e.currentTarget.value === "true",
-                        }));
-                    }}
-                >
+                <select id="mode-select" class="select select-bordered select-sm w-full" bind:value={pendingValue} on:change={handleModeChange}>
                     {#each modes as m}
                         <option value={m.value}>{m.label}</option>
                     {/each}
                 </select>
             </label>
         </div>
+
+        <!-- Modal -->
+        {#if showModal}
+            <div class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+                <div class="bg-white rounded-lg shadow-lg p-6 w-80">
+                    <h2 class="text-lg font-semibold mb-4">Switch Mode?</h2>
+                    <p class="mb-6 text-sm">Switching modes will erase all recorded data. Do you want to continue?</p>
+                    <div class="flex justify-end gap-2">
+                        <button class="btn btn-sm" on:click={cancelSwitch}>Cancel</button>
+                        <button class="btn btn-sm btn-error" on:click={confirmSwitch}>Switch</button>
+                    </div>
+                </div>
+            </div>
+        {/if}
     </div>
 </div>
 
