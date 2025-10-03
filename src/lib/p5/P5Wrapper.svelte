@@ -278,6 +278,28 @@
         }));
     }
 
+    export function clearCurrentPath() {
+        if (videoHtmlElement) {
+            videoHtmlElement.currentTime = 0;
+            videoHtmlElement.pause();
+        }
+
+        drawingState.update((state) => {
+            const { paths } = state;
+            if (paths.length === 0) return state;
+            const newPaths = paths.slice(0, -1); // Remove last path
+
+            return {
+                ...state,
+                paths: newPaths,
+                currentPathId: newPaths.length,
+                shouldTrackMouse: false,
+                isDrawing: false,
+                isVideoPlaying: false,
+            };
+        });
+    }
+
     $: if (containerDiv && $drawingConfig) {
         containerDiv.style.setProperty("--split-width", `${$drawingConfig.splitPosition}%`);
     }

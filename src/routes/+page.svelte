@@ -33,10 +33,15 @@
         p5Component.startNewPath();
     }
 
+    function handleClearCurrent() {
+        p5Component.clearCurrentPath();
+        p5Component.startNewPath();
+    }
+
     function handleNewPath() {
         p5Component.startNewPath();
     }
 </script>
 
-<Navbar onImageUpload={handleImageUpload} onVideoUpload={handleVideoUpload} onSavePath={handleSavePath} onClear={handleClear} onNewPath={handleNewPath} />
+<Navbar onImageUpload={handleImageUpload} onVideoUpload={handleVideoUpload} onSavePath={handleSavePath} onClear={handleClear} onClearCurrent={handleClearCurrent} onNewPath={handleNewPath} />
 <P5Wrapper bind:this={p5Component} />

@@ -3,6 +3,7 @@
     import IconSettings from "~icons/material-symbols/settings";
     import IconUpload from "~icons/material-symbols/upload";
     import IconDelete from "~icons/material-symbols/delete-outline";
+    import IconDeleteAll from "~icons/material-symbols/delete-sweep-outline";
     import IconExport from "~icons/material-symbols/download";
     import IconPlayArrow from "~icons/material-symbols/play-arrow";
     import IconFastForward from "~icons/material-symbols/fast-forward";
@@ -18,6 +19,7 @@
     export let onVideoUpload: (event: Event) => void;
     export let onSavePath: () => void;
     export let onClear: () => void;
+    export let onClearCurrent: () => void;
     export let onNewPath: () => void;
 
     let showModal = false;
@@ -131,11 +133,20 @@
             <IconHelp class="w-5 h-5" />
         </button>
 
-        <!-- Clear All -->
-        <button class="btn btn-ghost gap-2" on:click={onClear}>
-            <IconDelete class="w-5 h-5" />
-            Clear All
-        </button>
+        <!-- Clear Buttons -->
+        <div class="flex gap-2">
+            <!-- Clear current path -->
+            <button class="btn btn-ghost gap-2" on:click={onClearCurrent} title="Clear current path">
+                <IconDelete class="w-5 h-5" />
+                Clear
+            </button>
+
+            <!-- Clear all paths -->
+            <button class="btn btn-ghost gap-2" on:click={onClear} title="Clear all paths">
+                <IconDeleteAll class="w-5 h-5" />
+                Clear All
+            </button>
+        </div>
 
         <!-- Export Data -->
         <button class="btn" on:click={handleExport}>Export Data</button>
