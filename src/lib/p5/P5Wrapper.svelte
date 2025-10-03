@@ -227,10 +227,27 @@
 
     export function exportPath() {
         const paths = $drawingState.paths;
+        const isTranscriptionMode = $drawingConfig.isTranscriptionMode;
+        const scaleValue = $drawingConfig.speculateScale;
+
         paths.forEach((path, index) => {
             if (path.points.length === 0) return;
 
-            const csv = path.points.map((p) => `${p.x},${p.y},${p.time}`).join("\n");
+            const maxTime = path.points[path.points.length - 1].time; // last point is max
+
+            const csv = path.points
+                .map((p) => {
+                    let time;
+                    if (isTranscriptionMode) {
+                        time = p.time;
+                    } else {
+                        // Scale time linearly to 0 → scaleValue
+                        time = (p.time / maxTime) * scaleValue;
+                    }
+                    return `${p.x},${p.y},${time}`;
+                })
+                .join("\n");
+
             const blob = new Blob([`x,y,time\n${csv}`], { type: "text/csv" });
             const url = URL.createObjectURL(blob);
 

@@ -31,6 +31,9 @@
         { label: "Speculate Mode", value: "false" },
     ];
 
+    let showScaleModal = false;
+    let scaleSeconds = 1; // default value for scaling
+
     onMount(() => {
         openHelpModal();
     });
@@ -44,6 +47,27 @@
         { labelVideo: "64ms", labelSpeculate: "64 steps", value: 64 },
         { labelVideo: "100ms", labelSpeculate: "100 steps", value: 100 },
     ];
+
+    function handleExport() {
+        if ($drawingConfig.isTranscriptionMode) {
+            onSavePath();
+        } else {
+            showScaleModal = true; // ask for scaling
+        }
+    }
+
+    function confirmScale() {
+        drawingConfig.update((c) => ({
+            ...c,
+            speculateScale: scaleSeconds,
+        }));
+        onSavePath();
+        showScaleModal = false;
+    }
+
+    function cancelScale() {
+        showScaleModal = false;
+    }
 
     function handleModeChange(e) {
         pendingValue = e.currentTarget.value;
@@ -113,11 +137,22 @@
             Clear All
         </button>
 
-        <!-- Export All -->
-        <button class="btn btn-ghost gap-2" on:click={onSavePath}>
-            <IconExport class="w-5 h-5" />
-            Export All
-        </button>
+        <!-- Export Data -->
+        <button class="btn" on:click={handleExport}>Export Data</button>
+
+        {#if showScaleModal}
+            <div class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+                <div class="bg-white rounded-lg shadow-lg p-6 w-80">
+                    <h2 class="text-lg font-semibold mb-4">Scale Time Values?</h2>
+                    <p class="mb-4 text-sm">You're not in transcription mode. Enter the number of seconds to scale recorded time values:</p>
+                    <input type="number" min="0" class="input input-bordered w-full mb-4" bind:value={scaleSeconds} />
+                    <div class="flex justify-end gap-2">
+                        <button class="btn btn-sm" on:click={cancelScale}>Cancel</button>
+                        <button class="btn btn-sm btn-primary" on:click={confirmScale}>Save with Scaling</button>
+                    </div>
+                </div>
+            </div>
+        {/if}
 
         <!-- File Upload -->
         <label class="btn btn-ghost gap-2">

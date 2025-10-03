@@ -6,6 +6,7 @@ interface DrawingConfig {
     splitPosition: number; // percentage (0-100)
     pollingRate: number; // milliseconds
     isTranscriptionMode: boolean;
+    speculateScale: number; // optional scale for speculate mode
 }
 
 const defaultConfig: DrawingConfig = {
@@ -14,6 +15,7 @@ const defaultConfig: DrawingConfig = {
     splitPosition: 50,
     pollingRate: 4,
     isTranscriptionMode: true,
+    speculateScale: 1,
 };
 
 export const drawingConfig = writable<DrawingConfig>(defaultConfig);
