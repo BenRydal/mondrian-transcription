@@ -34,7 +34,11 @@
     ];
 
     let showScaleModal = false;
-    let scaleSeconds = 1; // default value for scaling
+    let minutes = 0;
+    let seconds = 10; // default
+    export let scaleSeconds = minutes * 60 + seconds;
+
+    $: scaleSeconds = minutes * 60 + seconds;
 
     onMount(() => {
         openHelpModal();
@@ -154,16 +158,45 @@
         {#if showScaleModal}
             <div class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
                 <div class="bg-white rounded-lg shadow-lg p-6 w-80">
-                    <h2 class="text-lg font-semibold mb-4">Scale Time Values?</h2>
-                    <p class="mb-4 text-sm">You're not in transcription mode. Enter the number of seconds to scale recorded time values:</p>
-                    <input type="number" min="0" class="input input-bordered w-full mb-4" bind:value={scaleSeconds} />
+                    <h2 class="text-lg font-semibold mb-4">Set Time Scale</h2>
+                    <p class="mb-4 text-sm">
+                        In <strong>Speculate Mode</strong>, recorded data is stretched over a chosen duration. Enter total time below:
+                    </p>
+
+                    <div class="flex gap-2 mb-2">
+                        <div class="flex-1">
+                            <label class="block text-xs font-medium mb-1">Minutes</label>
+                            <input type="number" min="0" class="input input-bordered w-full" bind:value={minutes} />
+                        </div>
+                        <div class="flex-1">
+                            <label class="block text-xs font-medium mb-1">Seconds</label>
+                            <input type="number" min="0" max="59" class="input input-bordered w-full" bind:value={seconds} />
+                        </div>
+                    </div>
+
+                    <p class="text-sm text-gray-600 mb-4">
+                        Total duration: <strong>{scaleSeconds} seconds</strong>
+                    </p>
+
+                    {#if scaleSeconds <= 0}
+                        <p class="text-red-600 text-xs mb-2">Please enter a duration greater than 0 seconds.</p>
+                    {/if}
+
                     <div class="flex justify-end gap-2">
                         <button class="btn btn-sm" on:click={cancelScale}>Cancel</button>
-                        <button class="btn btn-sm btn-primary" on:click={confirmScale}>Save with Scaling</button>
+                        <button class="btn btn-sm btn-primary" on:click={confirmScale} disabled={scaleSeconds <= 0}> Save with Scaling </button>
                     </div>
                 </div>
             </div>
         {/if}
+
+        <script>
+            let minutes = 0;
+            let seconds = 10; // default
+            export let scaleSeconds = minutes * 60 + seconds;
+
+            $: scaleSeconds = minutes * 60 + seconds;
+        </script>
 
         <!-- File Upload -->
         <label class="btn btn-ghost gap-2">
