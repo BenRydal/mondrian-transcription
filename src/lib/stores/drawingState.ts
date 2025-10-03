@@ -232,13 +232,6 @@ export function addPointToCurrentPath(point: Point) {
 
         const currentPathIndex = state.paths.findIndex((p) => p.pathId === state.currentPathId);
 
-        if (currentPathIndex === -1) {
-            const colors = ["#FF0000", "#00FF00", "#0000FF", "#FFFF00", "#FF00FF", "#00FFFF"];
-            const newColor = colors[state.paths.length % colors.length];
-            createNewPath(newColor);
-            return state;
-        }
-
         const updatedPaths = [...state.paths];
         updatedPaths[currentPathIndex] = {
             ...updatedPaths[currentPathIndex],

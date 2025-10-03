@@ -178,18 +178,19 @@
             }
         }
 
-        createNewPath(colors[0]);
+        if ($drawingState.imageElement) startNewPath();
     }
 
     export function setImage(image: HTMLImageElement) {
         p5Instance.loadImage(image.src, (p5Img: p5.Image) => {
             if (!$drawingConfig.isTranscriptionMode) {
-                createNewPath(colors[0]);
                 if (p5Instance) {
-                    // TODO: can this block be removed here and in setVideo?
                     p5Instance.redraw();
                     clearDrawing();
                 }
+                startNewPath();
+            } else {
+                if (videoElement) startNewPath();
             }
             drawingState.update((state) => ({
                 ...state,
@@ -209,10 +210,10 @@
         if (!$drawingConfig.isTranscriptionMode) {
             createNewPath(newColor);
         } else {
-            if (!videoHtmlElement) return;
-
-            videoHtmlElement.currentTime = 0;
-            videoHtmlElement.pause();
+            if (videoHtmlElement) {
+                videoHtmlElement.currentTime = 0;
+                videoHtmlElement.pause();
+            }
             createNewPath(newColor);
         }
 
@@ -258,8 +259,6 @@
             isDrawing: false,
             isVideoPlaying: false,
         }));
-
-        createNewPath(colors[0]);
     }
 
     $: if (containerDiv && $drawingConfig) {
