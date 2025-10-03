@@ -223,12 +223,13 @@
         }));
     }
 
-    export function exportPath() {
+    export async function exportPath() {
         const paths = $drawingState.paths;
         const isTranscriptionMode = $drawingConfig.isTranscriptionMode;
         const scaleValue = $drawingConfig.speculateScale;
 
-        paths.forEach((path, index) => {
+        for (let index = 0; index < paths.length; index++) {
+            const path = paths[index];
             if (path.points.length === 0) return;
 
             const maxTime = path.points[path.points.length - 1].time; // last point is max
@@ -257,7 +258,9 @@
             document.body.removeChild(a);
 
             URL.revokeObjectURL(url);
-        });
+            // Delay before the next download
+            await new Promise((resolve) => setTimeout(resolve, 300));
+        }
     }
 
     export function clearDrawing() {
