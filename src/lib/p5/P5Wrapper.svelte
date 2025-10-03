@@ -52,8 +52,6 @@
                 e.preventDefault();
                 if ($drawingConfig.isTranscriptionMode && videoHtmlElement) {
                     handleTimeJump(true, videoHtmlElement);
-                } else {
-                    handleRewindSpeculateMode(true);
                 }
             } else if (e.key.toLowerCase() === "r") {
                 e.preventDefault();
