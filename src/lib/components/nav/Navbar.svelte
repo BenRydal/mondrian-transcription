@@ -250,11 +250,11 @@
         </h3>
 
         <div class="space-y-4 text-base">
-            <p>Welcome to <strong>Mondrian Transcription</strong>! This tool allows you to transcribe fine-grained movement data from video. To get started:</p>
+            <p>Welcome to <strong>Mondrian Transcription</strong>! This tool allows you to <em>transcribe </em> movement data from video or <em>speculate</em> about how movement could occur over space and time. To get started:</p>
             <ul class="space-y-2">
                 <li class="flex items-start gap-2">
                     <IconUpload class="text-xl mt-1" />
-                    <span>Load a <strong>floor plan</strong> (PNG/JPG) and <strong>video</strong> (MP4) using the top buttons.</span>
+                    <span>Load a <strong>floor plan or image</strong> (PNG/JPG) and <strong>video</strong> (MP4) using the top buttons.<br /><em>* If using Speculate Mode you only need a floor plan/image</em></span>
                 </li>
                 <li class="flex items-start gap-2">
                     <IconClick class="text-xl mt-1" />
