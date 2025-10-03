@@ -30,6 +30,7 @@
 
     function handleClear() {
         p5Component.clearDrawing();
+        p5Component.startNewPath();
     }
 
     function handleNewPath() {

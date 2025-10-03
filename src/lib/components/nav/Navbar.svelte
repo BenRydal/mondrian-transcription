@@ -143,11 +143,13 @@
                 <select
                     class="select select-bordered select-sm w-full"
                     bind:value={$drawingConfig.isTranscriptionMode}
-                    on:change={(e) =>
+                    on:change={(e) => {
+                        onClear();
                         drawingConfig.update((c) => ({
                             ...c,
                             isTranscriptionMode: e.currentTarget.value === "true",
-                        }))}
+                        }));
+                    }}
                 >
                     {#each modes as m}
                         <option value={m.value}>{m.label}</option>
