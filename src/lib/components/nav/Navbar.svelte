@@ -139,11 +139,6 @@
         <a class="btn btn-ghost text-xl" href="https://interactiongeography.org">Mondrian</a>
     </div>
     <div class="flex justify-end items-center gap-2">
-        <!-- Help -->
-        <button class="btn btn-ghost" on:click={openHelpModal}>
-            <IconHelp class="w-5 h-5" />
-        </button>
-
         <!-- Clear Buttons -->
         <div class="flex gap-2">
             <!-- Clear current path -->
@@ -293,6 +288,11 @@
                 </div>
             </div>
         {/if}
+
+        <!-- Help -->
+        <button class="btn btn-ghost" on:click={openHelpModal}>
+            <IconHelp class="w-5 h-5" />
+        </button>
     </div>
 </div>
 
