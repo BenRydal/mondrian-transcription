@@ -307,7 +307,7 @@
             <ul class="space-y-2">
                 <li class="flex items-start gap-2">
                     <IconUpload class="text-xl mt-1" />
-                    <span>Load a <strong>floor plan or image</strong> (PNG/JPG) and <strong>video</strong> (MP4) using the top buttons.<br /><em>* If using Speculate Mode you only need a floor plan/image</em></span>
+                    <span>Load a <strong>floor plan/image</strong> (PNG/JPG) and <strong>video</strong> (MP4) using the top buttons.<br /><em>* If using Speculate Mode you only need a floor plan/image</em></span>
                 </li>
                 <li class="flex items-start gap-2">
                     <IconClick class="text-xl mt-1" />
