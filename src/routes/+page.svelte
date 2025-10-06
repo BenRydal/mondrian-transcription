@@ -1,47 +1,60 @@
 <script lang="ts">
-  import P5Wrapper from '../lib/p5/P5Wrapper.svelte';
-  import Navbar from '$lib/components/nav/Navbar.svelte';
+    import P5Wrapper from "../lib/p5/P5Wrapper.svelte";
+    import Navbar from "$lib/components/nav/Navbar.svelte";
 
-  let p5Component: P5Wrapper;
+    let p5Component: P5Wrapper;
 
-  function handleVideoUpload(event: Event) {
-    const file = (event.target as HTMLInputElement).files?.[0];
-    if (file) {
-      const video = document.createElement('video');
-      video.src = URL.createObjectURL(file);
-      video.autoplay = false;
-      video.loop = false;
-      p5Component.setVideo(video);
+    function handleVideoUpload(event: Event) {
+        const file = (event.target as HTMLInputElement).files?.[0];
+        if (file) {
+            const video = document.createElement("video");
+            video.src = URL.createObjectURL(file);
+            video.autoplay = false;
+            video.loop = false;
+            p5Component.setVideo(video);
+        }
     }
-  }
 
-  function handleImageUpload(event: Event) {
-    const file = (event.target as HTMLInputElement).files?.[0];
-    if (file) {
-      const image = new Image();
-      image.src = URL.createObjectURL(file);
-      image.onload = () => p5Component.setImage(image);
+    function handleImageUpload(event: Event) {
+        const file = (event.target as HTMLInputElement).files?.[0];
+        if (file) {
+            const image = new Image();
+            image.src = URL.createObjectURL(file);
+            image.onload = () => p5Component.setImage(image);
+        }
     }
-  }
 
-  function handleSavePath() {
-    p5Component.exportPath();
-  }
+    function handleSavePath() {
+        p5Component.exportPath();
+        p5Component.exportImage();
+    }
 
-  function handleClear() {
-    p5Component.clearDrawing();
-  }
+    function handleClear() {
+        p5Component.clearDrawing();
+        p5Component.startNewPath();
+    }
 
-  function handleNewPath() {
-    p5Component.startNewPath();
-  }
+    function handleClearCurrent() {
+        p5Component.clearCurrentPath();
+        p5Component.startNewPath();
+    }
+
+    function handleNewPath() {
+        p5Component.startNewPath();
+    }
+
+    function loadExampleData(imageID: string) {
+        const filePath = `/examples/${imageID}.png`;
+        const image = new Image();
+        image.src = filePath;
+        image.onload = () => {
+            p5Component.setImage(image);
+        };
+        image.onerror = (error) => {
+            console.error(`Error loading example image from ${filePath}:`, error);
+        };
+    }
 </script>
 
-<Navbar
-  onImageUpload={handleImageUpload}
-  onVideoUpload={handleVideoUpload}
-  onSavePath={handleSavePath}
-  onClear={handleClear}
-  onNewPath={handleNewPath}
-/>
+<Navbar onSelectExample={loadExampleData} onImageUpload={handleImageUpload} onVideoUpload={handleVideoUpload} onSavePath={handleSavePath} onClear={handleClear} onClearCurrent={handleClearCurrent} onNewPath={handleNewPath} />
 <P5Wrapper bind:this={p5Component} />

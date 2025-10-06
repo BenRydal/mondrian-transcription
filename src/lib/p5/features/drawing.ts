@@ -1,78 +1,87 @@
 import type p5 from "p5";
 import type { Point } from "../types/sketch";
 import { get } from "svelte/store";
-import { drawingState, addPointToCurrentPath, toggleDrawing } from "../../stores/drawingState";
-import { drawingConfig } from "../../stores/drawingConfig";
+import { drawingState, addPointToCurrentPath, toggleDrawing, toggleDrawingNoVideo } from "../../stores/drawingState";
+import { drawingConfig, getSplitPositionForMode } from "../../stores/drawingConfig";
 import { isInDrawableArea, convertToImageCoordinates } from "../../utils/drawingUtils";
 import { getFittedImageDisplayRect } from "../../utils/drawingUtils";
+import { TimeBasedSampler, IndexBasedSampler } from "./samplers";
 
-class TimeBasedSampler {
-    private lastSampleTime: number = 0;
-
-    constructor(private sampleInterval: number) {}
-
-    shouldSample(currentTime: number): boolean {
-        if (currentTime - this.lastSampleTime >= this.sampleInterval) {
-            this.lastSampleTime = currentTime;
-            return true;
-        }
-        return false;
-    }
-
-    reset() {
-        this.lastSampleTime = 0;
-    }
-}
+export const timeSampler = new TimeBasedSampler(get(drawingConfig).pollingRate / 1000);
+export const indexSampler = new IndexBasedSampler(get(drawingConfig).pollingRate);
 
 export function setupDrawing(p5: p5) {
-    const sampler = new TimeBasedSampler(get(drawingConfig).pollingRate / 1000);
-
     drawingConfig.subscribe((config) => {
-        sampler.reset();
+        timeSampler.setInterval(config.pollingRate / 1000);
+        indexSampler.setStep(config.pollingRate); // or whatever mapping you want
     });
 
     const addCurrentPoint = () => {
         const state = get(drawingState);
-        if (!state.shouldTrackMouse) return;
+        const config = get(drawingConfig);
+        if (!state.shouldTrackMouse || !isInDrawableArea(p5, p5.mouseX, p5.mouseY)) return;
 
-        if (isInDrawableArea(p5, p5.mouseX, p5.mouseY)) {
-            if (sampler.shouldSample(state.videoTime)) {
-                const coords = convertToImageCoordinates(p5, p5.mouseX, p5.mouseY);
-                const point: Point = {
-                    ...coords,
-                    time: state.videoTime,
-                    pathId: state.currentPathId,
-                };
-                addPointToCurrentPath(point);
-            }
+        const curPath = state.paths[state.currentPathId - 1];
+        if (!curPath) return;
+
+        const curPointArray = curPath.points;
+        const coords = convertToImageCoordinates(p5, p5.mouseX, p5.mouseY);
+
+        let time: number;
+        let shouldAdd = false;
+
+        if (config.isTranscriptionMode) {
+            time = state.videoTime;
+            shouldAdd = timeSampler.shouldSample(time);
+        } else {
+            shouldAdd = indexSampler.shouldSample();
+            time = indexSampler.getPseudoTime();
         }
+
+        if (!shouldAdd) return;
+
+        const point: Point = {
+            ...coords,
+            time,
+            pathId: state.currentPathId,
+        };
+
+        addPointToCurrentPath(point);
     };
 
-    const handleMousePressed = (videoElement?: HTMLVideoElement) => {
+    const handleMousePressedVideo = (videoElement?: HTMLVideoElement) => {
         if (isInDrawableArea(p5, p5.mouseX, p5.mouseY)) {
             const state = get(drawingState);
+            const config = get(drawingConfig);
 
             if (videoElement && videoElement.currentTime >= videoElement.duration - 0.1) {
                 return;
             }
-
             if (!state.shouldTrackMouse) {
-                sampler.reset();
+                timeSampler.reset();
+                indexSampler.reset();
             }
-
             toggleDrawing(videoElement);
+        }
+    };
+
+    const handleMousePressedSpeculateMode = () => {
+        if (isInDrawableArea(p5, p5.mouseX, p5.mouseY)) {
+            toggleDrawingNoVideo();
         }
     };
 
     const handleDrawing = () => {
         const state = get(drawingState);
+        addCurrentPoint();
         if (state.shouldTrackMouse) {
             addCurrentPoint();
         }
     };
 
     return {
-        handleMousePressed,
+        handleMousePressedVideo,
+        handleMousePressedSpeculateMode,
         handleDrawing,
     };
 }
@@ -85,22 +94,21 @@ export function drawPaths(p5: p5) {
     const imgH = state.imageHeight;
     if (!imgW || !imgH) return;
 
-    // Same rect used for p5.image(...)
-    const r = getFittedImageDisplayRect(p5, config.splitPosition, imgW, imgH);
-
+    const r = getFittedImageDisplayRect(p5, getSplitPositionForMode(), imgW, imgH);
     const ENDPOINT_MARKER_SIZE = 15;
 
     p5.push();
 
+    const toDisplay = (pt: { x: number; y: number }) => ({
+        x: r.x + (pt.x / imgW) * r.w,
+        y: r.y + (pt.y / imgH) * r.h,
+    });
+
+    // First draw all paths
     state.paths.forEach((path) => {
         p5.strokeWeight(config.strokeWeight);
         p5.stroke(path.color);
         p5.noFill();
-
-        const toDisplay = (pt: { x: number; y: number }) => ({
-            x: r.x + (pt.x / imgW) * r.w,
-            y: r.y + (pt.y / imgH) * r.h,
-        });
 
         if (path.points.length > 1) {
             p5.beginShape();
@@ -109,31 +117,52 @@ export function drawPaths(p5: p5) {
                 p5.vertex(x, y);
             });
             p5.endShape();
-
-            // Pulsing endpoint for the active path
-            if (path.pathId === state.currentPathId && !state.shouldTrackMouse) {
-                const last = toDisplay(path.points[path.points.length - 1]);
-
-                const pulseScale = (Math.sin(p5.frameCount * 0.05) + 1) * 0.25 + 0.5;
-
-                p5.noStroke();
-                for (let i = 4; i > 0; i--) {
-                    const alpha = 50 - i * 10;
-                    p5.fill(255, 0, 0, alpha);
-                    const size = ENDPOINT_MARKER_SIZE * (1.5 + i * 0.5) * pulseScale;
-                    p5.circle(last.x, last.y, size);
-                }
-
-                p5.fill(255, 0, 0, 200);
-                p5.circle(last.x, last.y, ENDPOINT_MARKER_SIZE * pulseScale);
-
-                p5.fill(255);
-                p5.circle(last.x, last.y, ENDPOINT_MARKER_SIZE * 0.5 * pulseScale);
-            }
         } else if (path.points.length === 1) {
             const { x, y } = toDisplay(path.points[0]);
             p5.point(x, y);
         }
+    });
+
+    // Determine the current endpoint (active path)
+    const activePath = state.paths.find((p) => p.pathId === state.currentPathId);
+    const currentEndpoint = activePath?.points.length ? activePath.points[activePath.points.length - 1] : null;
+
+    // Draw pulsing endpoints for all paths
+    state.paths.forEach((path) => {
+        if (path.points.length === 0) return;
+
+        let endpoint: { x: number; y: number } | null = null;
+
+        if (path.pathId === state.currentPathId) {
+            // Active path: last point
+            endpoint = currentEndpoint!;
+        } else if (currentEndpoint) {
+            // Saved path: find point closest in time to current endpoint
+            endpoint = path.points.reduce((closest, pt) => {
+                const prevDiff = Math.abs(closest.time - currentEndpoint.time);
+                const currDiff = Math.abs(pt.time - currentEndpoint.time);
+                return currDiff < prevDiff ? pt : closest;
+            }, path.points[0]);
+        } else {
+            endpoint = path.points[0]; // No current endpoint, just use first point
+        }
+
+        const display = toDisplay(endpoint);
+
+        // Pulsing effect
+        const pulseScale = (Math.sin(p5.frameCount * 0.05) + 1) * 0.25 + 0.5;
+
+        p5.noStroke();
+        const c = p5.color(path.color); // converts "#ff0000" to p5.Color
+        c.setAlpha(50); // set the transparency
+        p5.fill(c);
+        for (let i = 4; i > 0; i--) {
+            const size = ENDPOINT_MARKER_SIZE * (1.5 + i * 0.5) * pulseScale;
+            p5.circle(display.x, display.y, size);
+        }
+        p5.circle(display.x, display.y, ENDPOINT_MARKER_SIZE * pulseScale);
+        p5.fill(255);
+        p5.circle(display.x, display.y, ENDPOINT_MARKER_SIZE * 0.5 * pulseScale);
     });
 
     p5.pop();

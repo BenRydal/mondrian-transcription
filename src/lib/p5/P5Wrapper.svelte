@@ -2,9 +2,10 @@
     import P5, { type Sketch } from "p5-svelte";
     import type p5 from "p5";
     import { onMount } from "svelte";
-    import { drawingConfig } from "../stores/drawingConfig";
-    import { drawingState, createNewPath, handleTimeJump } from "../stores/drawingState";
-    import { setupDrawing, drawPaths } from "./features/drawing";
+    import { fade } from "svelte/transition";
+    import { drawingConfig, getSplitPositionForMode } from "../stores/drawingConfig";
+    import { drawingState, createNewPath, handleTimeJump, handleRewindSpeculateMode } from "../stores/drawingState";
+    import { setupDrawing, drawPaths, timeSampler, indexSampler } from "./features/drawing";
     import { setupVideo } from "./features/video";
     import VideoControls from "../components/video/VideoControls.svelte";
     import { getFittedImageDisplayRect } from "$lib/utils/drawingUtils";
@@ -47,21 +48,18 @@
 
     onMount(() => {
         window.addEventListener("keydown", (e) => {
-            if (!videoHtmlElement) return;
-
-            if (e.code === "Space") {
+            if (e.key.toLowerCase() === "f") {
                 e.preventDefault();
-                if (videoHtmlElement.paused) {
-                    videoHtmlElement.play();
-                } else {
-                    videoHtmlElement.pause();
+                if ($drawingConfig.isTranscriptionMode && videoHtmlElement) {
+                    handleTimeJump(true, videoHtmlElement);
                 }
-            } else if (e.key.toLowerCase() === "f") {
-                e.preventDefault();
-                handleTimeJump(true, videoHtmlElement);
             } else if (e.key.toLowerCase() === "r") {
                 e.preventDefault();
-                handleTimeJump(false, videoHtmlElement);
+                if ($drawingConfig.isTranscriptionMode && videoHtmlElement) {
+                    handleTimeJump(false, videoHtmlElement);
+                } else {
+                    handleRewindSpeculateMode(false);
+                }
             }
         });
 
@@ -80,7 +78,7 @@
 
     const sketch: Sketch = (p5: p5) => {
         p5Instance = p5;
-        const { handleMousePressed, handleDrawing } = setupDrawing(p5);
+        const { handleMousePressedVideo, handleMousePressedSpeculateMode, handleDrawing } = setupDrawing(p5);
 
         p5.setup = () => {
             const canvas = p5.createCanvas(width, height);
@@ -95,33 +93,49 @@
 
         p5.draw = () => {
             p5.background(255);
+            if ($drawingConfig.isTranscriptionMode) {
+                if (videoElement) {
+                    const { updateVideoTime, drawVideo, checkVideoEnd } = setupVideo(p5);
+                    lastVideoTime = updateVideoTime(videoElement, lastVideoTime);
+                    checkVideoEnd(videoElement);
+                    drawVideo(p5, videoElement);
+                }
 
-            if (videoElement) {
-                const { updateVideoTime, drawVideo, checkVideoEnd } = setupVideo(p5);
-                lastVideoTime = updateVideoTime(videoElement, lastVideoTime);
-                checkVideoEnd(videoElement);
-                drawVideo(p5, videoElement);
+                const img = $drawingState.imageElement;
+                const imgW = $drawingState.imageWidth;
+                const imgH = $drawingState.imageHeight;
+
+                if (img && imgW && imgH) {
+                    const r = getFittedImageDisplayRect(p5, getSplitPositionForMode(), imgW, imgH);
+                    p5.image(img, r.x, r.y, r.w, r.h);
+                }
+
+                handleDrawing();
+                drawPaths(p5);
+            } else {
+                const img = $drawingState.imageElement;
+                const imgW = $drawingState.imageWidth;
+                const imgH = $drawingState.imageHeight;
+
+                if (img && imgW && imgH) {
+                    const r = getFittedImageDisplayRect(p5, getSplitPositionForMode(), imgW, imgH);
+                    p5.image(img, r.x, r.y, r.w, r.h);
+                }
+
+                handleDrawing();
+                drawPaths(p5);
             }
-
-            const img = $drawingState.imageElement;
-            const imgW = $drawingState.imageWidth;
-            const imgH = $drawingState.imageHeight;
-
-            if (img && imgW && imgH) {
-                const r = getFittedImageDisplayRect(p5, $drawingConfig.splitPosition, imgW, imgH);
-                p5.image(img, r.x, r.y, r.w, r.h);
-            }
-
-            handleDrawing();
-            drawPaths(p5);
         };
 
         p5.mousePressed = () => {
-            if (!isDraggingSplitter) {
-                handleMousePressed(videoHtmlElement);
+            if (!$drawingConfig.isTranscriptionMode) {
+                handleMousePressedSpeculateMode();
+            } else {
+                if (!isDraggingSplitter) {
+                    handleMousePressedVideo(videoHtmlElement);
+                }
             }
         };
-
         if (p5Instance) {
             p5Instance.loop();
         }
@@ -162,11 +176,20 @@
             }
         }
 
-        createNewPath(colors[0]);
+        if ($drawingState.imageElement) startNewPath();
     }
 
     export function setImage(image: HTMLImageElement) {
         p5Instance.loadImage(image.src, (p5Img: p5.Image) => {
+            if (!$drawingConfig.isTranscriptionMode) {
+                if (p5Instance) {
+                    p5Instance.redraw();
+                    clearDrawing();
+                }
+                startNewPath();
+            } else {
+                if (videoElement) startNewPath();
+            }
             drawingState.update((state) => ({
                 ...state,
                 imageWidth: image.width,
@@ -177,30 +200,62 @@
     }
 
     export function startNewPath() {
-        if (videoHtmlElement) {
-            videoHtmlElement.currentTime = 0;
-            videoHtmlElement.pause();
+        const currentPathCount = $drawingState.paths.length;
+        const newColor = colors[currentPathCount % colors.length];
+        timeSampler.reset();
+        indexSampler.reset();
 
-            const currentPathCount = $drawingState.paths.length;
-            const newColor = colors[currentPathCount % colors.length];
-
+        if (!$drawingConfig.isTranscriptionMode) {
             createNewPath(newColor);
+        } else {
+            if (videoHtmlElement) {
+                videoHtmlElement.currentTime = 0;
+                videoHtmlElement.pause();
+            }
+            createNewPath(newColor);
+        }
 
-            drawingState.update((state) => ({
-                ...state,
-                shouldTrackMouse: false,
-                isDrawing: false,
-                isVideoPlaying: false,
-            }));
+        drawingState.update((state) => ({
+            ...state,
+            shouldTrackMouse: false,
+            isDrawing: false,
+            isVideoPlaying: false, // always false if no video
+        }));
+    }
+
+    export function exportImage() {
+        const imageElement = $drawingState?.imageElement;
+        if (imageElement) {
+            imageElement.save("example-image", "png");
+        } else {
+            console.warn("No image loaded to export.");
         }
     }
 
-    export function exportPath() {
+    export async function exportPath() {
         const paths = $drawingState.paths;
-        paths.forEach((path, index) => {
+        const isTranscriptionMode = $drawingConfig.isTranscriptionMode;
+        const scaleValue = $drawingConfig.speculateScale;
+
+        for (let index = 0; index < paths.length; index++) {
+            const path = paths[index];
             if (path.points.length === 0) return;
 
-            const csv = path.points.map((p) => `${p.x},${p.y},${p.time}`).join("\n");
+            const maxTime = path.points[path.points.length - 1].time; // last point is max
+
+            const csv = path.points
+                .map((p) => {
+                    let time;
+                    if (isTranscriptionMode) {
+                        time = p.time;
+                    } else {
+                        // Scale time linearly to 0 → scaleValue
+                        time = (p.time / maxTime) * scaleValue;
+                    }
+                    return `${p.x},${p.y},${time}`;
+                })
+                .join("\n");
+
             const blob = new Blob([`x,y,time\n${csv}`], { type: "text/csv" });
             const url = URL.createObjectURL(blob);
 
@@ -212,7 +267,9 @@
             document.body.removeChild(a);
 
             URL.revokeObjectURL(url);
-        });
+            // Delay before the next download
+            await new Promise((resolve) => setTimeout(resolve, 300));
+        }
     }
 
     export function clearDrawing() {
@@ -229,8 +286,28 @@
             isDrawing: false,
             isVideoPlaying: false,
         }));
+    }
 
-        createNewPath(colors[0]);
+    export function clearCurrentPath() {
+        if (videoHtmlElement) {
+            videoHtmlElement.currentTime = 0;
+            videoHtmlElement.pause();
+        }
+
+        drawingState.update((state) => {
+            const { paths } = state;
+            if (paths.length === 0) return state;
+            const newPaths = paths.slice(0, -1); // Remove last path
+
+            return {
+                ...state,
+                paths: newPaths,
+                currentPathId: newPaths.length,
+                shouldTrackMouse: false,
+                isDrawing: false,
+                isVideoPlaying: false,
+            };
+        });
     }
 
     $: if (containerDiv && $drawingConfig) {
@@ -241,19 +318,22 @@
 <div bind:this={containerDiv} class="relative w-full h-[calc(100vh-64px)]" on:mousemove={handleSplitterDrag} on:mouseup={handleSplitterEnd} on:mouseleave={handleSplitterEnd} role="application" aria-label="Drawing Canvas">
     <P5 {sketch} />
 
-    <div
-        class="absolute top-0 bottom-0 w-8 bg-transparent cursor-col-resize hover:bg-black/5"
-        style="left: calc({$drawingConfig.splitPosition}% - 16px)"
-        on:mousedown={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            isDraggingSplitter = true;
-        }}
-        role="separator"
-        aria-label="Resize panels"
-    >
-        <div class="absolute top-0 bottom-0 w-1 bg-gray-400 hover:bg-blue-500 transition-colors" style="left: 50%" />
-    </div>
+    {#if $drawingConfig.isTranscriptionMode}
+        <div
+            class="absolute top-0 bottom-0 w-8 bg-transparent cursor-col-resize hover:bg-black/5"
+            style="left: calc({$drawingConfig.splitPosition}% - 16px)"
+            on:mousedown={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                isDraggingSplitter = true;
+            }}
+            role="separator"
+            aria-label="Resize panels"
+            transition:fade={{ duration: 200 }}
+        >
+            <div class="absolute top-0 bottom-0 w-1 bg-gray-400 hover:bg-blue-500 transition-colors" style="left: 50%" />
+        </div>
+    {/if}
 
     {#if videoHtmlElement}
         <VideoControls videoElement={videoHtmlElement} />
