@@ -26,6 +26,7 @@
 
     function handleSavePath() {
         p5Component.exportPath();
+        p5Component.exportImage();
     }
 
     function handleClear() {

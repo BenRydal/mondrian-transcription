@@ -223,6 +223,15 @@
         }));
     }
 
+    export function exportImage() {
+        const imageElement = $drawingState?.imageElement;
+        if (imageElement) {
+            imageElement.save("example-image", "png");
+        } else {
+            console.warn("No image loaded to export.");
+        }
+    }
+
     export async function exportPath() {
         const paths = $drawingState.paths;
         const isTranscriptionMode = $drawingConfig.isTranscriptionMode;
