@@ -41,7 +41,19 @@
     function handleNewPath() {
         p5Component.startNewPath();
     }
+
+    function loadExampleData(imageID: string) {
+        const filePath = `/examples/${imageID}.png`;
+        const image = new Image();
+        image.src = filePath;
+        image.onload = () => {
+            p5Component.setImage(image);
+        };
+        image.onerror = (error) => {
+            console.error(`Error loading example image from ${filePath}:`, error);
+        };
+    }
 </script>
 
-<Navbar onImageUpload={handleImageUpload} onVideoUpload={handleVideoUpload} onSavePath={handleSavePath} onClear={handleClear} onClearCurrent={handleClearCurrent} onNewPath={handleNewPath} />
+<Navbar onSelectExample={loadExampleData} onImageUpload={handleImageUpload} onVideoUpload={handleVideoUpload} onSavePath={handleSavePath} onClear={handleClear} onClearCurrent={handleClearCurrent} onNewPath={handleNewPath} />
 <P5Wrapper bind:this={p5Component} />

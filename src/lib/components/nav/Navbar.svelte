@@ -8,6 +8,7 @@
     import IconPlayArrow from "~icons/material-symbols/play-arrow";
     import IconFastForward from "~icons/material-symbols/fast-forward";
     import IconRewind from "~icons/material-symbols/fast-rewind";
+    import IconImage from "~icons/material-symbols/image";
     import IconStylusNote from "~icons/material-symbols/stylus-note";
     import IconPrivacyTip from "~icons/material-symbols/privacy-tip";
     import IconClick from "~icons/material-symbols/touch-app";
@@ -21,6 +22,7 @@
     export let onClear: () => void;
     export let onClearCurrent: () => void;
     export let onNewPath: () => void;
+    export let onSelectExample: (data: string) => void;
 
     let showModal = false;
     // Use strings for safe comparison with option values
@@ -36,7 +38,6 @@
     let showScaleModal = false;
     let minutes = 0;
     let seconds = 10; // default
-    export let scaleSeconds = minutes * 60 + seconds;
 
     $: scaleSeconds = minutes * 60 + seconds;
 
@@ -52,6 +53,12 @@
         { labelVideo: "32ms", labelSpeculate: "32 steps", value: 32 },
         { labelVideo: "64ms", labelSpeculate: "64 steps", value: 64 },
         { labelVideo: "100ms", labelSpeculate: "100 steps", value: 100 },
+    ];
+
+    const examples = [
+        { id: "classroom", label: "Classroom Space" },
+        { id: "museum", label: "Museum Gallery" },
+        { id: "basketball", label: "Basketball Court" },
     ];
 
     function handleExport() {
@@ -190,14 +197,6 @@
             </div>
         {/if}
 
-        <script>
-            let minutes = 0;
-            let seconds = 10; // default
-            export let scaleSeconds = minutes * 60 + seconds;
-
-            $: scaleSeconds = minutes * 60 + seconds;
-        </script>
-
         <!-- File Upload -->
         <label class="btn btn-ghost gap-2">
             <IconUpload class="w-5 h-5" />
@@ -259,6 +258,27 @@
                 </select>
             </label>
         </div>
+
+        <!-- Sample Data for Speculate Mode -->
+        {#if !$drawingConfig.isTranscriptionMode}
+            <!-- Example Data Dropdown -->
+            <div class="dropdown dropdown-end">
+                <div tabindex="0" role="button" class="btn btn-ghost flex items-center gap-2">
+                    <IconImage class="w-5 h-5" />
+                    <span>Example Data</span>
+                </div>
+
+                <ul tabindex="0" class="dropdown-content menu bg-base-100 rounded-box z-[100] w-72 p-3 shadow-lg mt-2 border border-gray-200">
+                    {#each examples as example}
+                        <li class="mb-1">
+                            <button class="btn btn-sm btn-outline w-full text-left text-gray-800 border-gray-300 hover:bg-gray-100 transition" on:click={() => onSelectExample(example.id)}>
+                                {example.label}
+                            </button>
+                        </li>
+                    {/each}
+                </ul>
+            </div>
+        {/if}
 
         <!-- Modal -->
         {#if showModal}
