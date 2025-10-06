@@ -263,7 +263,7 @@
         {#if !$drawingConfig.isTranscriptionMode}
             <!-- Example Data Dropdown -->
             <div class="dropdown dropdown-end">
-                <div tabindex="0" role="button" class="btn btn-ghost flex items-center gap-2">
+                <div tabindex="0" role="button" class="btn bg-black text-white flex items-center gap-2">
                     <IconImage class="w-5 h-5" />
                     <span>Example Data</span>
                 </div>
