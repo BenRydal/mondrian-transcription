@@ -28,27 +28,27 @@ Welcome to **Mondrian Transcription!** This is an open-source tool that allows y
 
 1. Clone the repository:
 
-    ```bash
-    git clone https://github.com/yourusername/mondrian-transcription.git
-    ```
+   ```bash
+   git clone https://github.com/yourusername/mondrian-transcription.git
+   ```
 
 2. Navigate to the project directory:
 
-    ```bash
-    cd mondrian-transcription
-    ```
+   ```bash
+   cd mondrian-transcription
+   ```
 
 3. Install dependencies:
 
-    ```bash
-    yarn install
-    ```
+   ```bash
+   yarn install
+   ```
 
 4. Start the development server:
 
-    ```bash
-    yarn dev
-    ```
+   ```bash
+   yarn dev
+   ```
 
 5. Visit `http://localhost:5000` in your browser to see the tool in action.
 
