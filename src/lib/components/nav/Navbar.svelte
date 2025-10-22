@@ -164,7 +164,9 @@
     <div class="divider divider-horizontal"></div>
 
     <!-- Export Data -->
-    <button class="btn btn-ghost" on:click={handleExport}><IconDownload class="w-5 h-5" />Export Data</button>
+    <button class="btn btn-ghost" on:click={handleExport}
+      ><IconDownload class="w-5 h-5" />Export Data</button
+    >
 
     <!-- Scale Modal using DaisyUI Modal -->
     <dialog id="scale_modal" class="modal" class:modal-open={showScaleModal}>
@@ -209,11 +211,7 @@
 
         <div class="modal-action">
           <button class="btn" on:click={cancelScale}>Cancel</button>
-          <button
-            class="btn btn-primary"
-            on:click={confirmScale}
-            disabled={scaleSeconds <= 0}
-          >
+          <button class="btn btn-primary" on:click={confirmScale} disabled={scaleSeconds <= 0}>
             Save with Scaling
           </button>
         </div>
@@ -247,7 +245,6 @@
         </select>
       </label>
     </div>
-
 
     <!-- Sample Data for Speculate Mode -->
     {#if !$drawingConfig.isTranscriptionMode}
@@ -292,7 +289,6 @@
         <button on:click={cancelSwitch}>close</button>
       </form>
     </dialog>
-
 
     <!-- New Path -->
     <button class="btn btn-neutral gap-2" on:click={onNewPath}> New Path </button>
@@ -370,7 +366,7 @@
 <dialog id="help_modal" class="modal">
   <div class="modal-box w-11/12 max-w-3xl">
     <h3 class="font-bold text-3xl mb-4 text-center flex items-center justify-center gap-2">
-      <IconHelp/> Mondrian Transcription Software
+      <IconHelp /> Mondrian Transcription Software
     </h3>
 
     <div class="space-y-4 text-base">
@@ -471,11 +467,7 @@
     </div>
 
     <div class="modal-action mt-6">
-      <a
-        href="https://forms.gle/jfV6zntsvua4k3XdA"
-        target="_blank"
-        class="btn btn-base-100"
-      >
+      <a href="https://forms.gle/jfV6zntsvua4k3XdA" target="_blank" class="btn btn-base-100">
         Feedback
       </a>
       <form method="dialog">
