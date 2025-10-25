@@ -300,6 +300,22 @@
     }))
   }
 
+  export function clearVideo() {
+    if (videoElement) {
+      try {
+        const videoElt = (videoElement as { elt: HTMLVideoElement }).elt
+        if (videoElt) {
+          videoElt.pause()
+          videoElt.currentTime = 0
+        }
+        ;(videoElement as { remove: () => void }).remove()
+      } catch (e) {
+        window.console.warn('Error cleaning up video:', e)
+      }
+      videoElement = null
+    }
+  }
+
   export function clearCurrentPath() {
     if (videoElement) {
       const htmlVideo = (videoElement as { elt: HTMLVideoElement }).elt

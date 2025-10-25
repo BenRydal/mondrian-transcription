@@ -24,6 +24,7 @@
   export let onClearCurrent: () => void
   export let onNewPath: () => void
   export let onSelectExample: (data: string) => void
+  export let onModeSwitch: () => void
 
   let showModal = false
   // Use strings for safe comparison with option values
@@ -90,7 +91,7 @@
 
   function confirmSwitch() {
     // Clear existing data
-    onClear()
+    onModeSwitch()
 
     // Update store
     drawingConfig.update((c) => ({

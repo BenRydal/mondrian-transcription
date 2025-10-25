@@ -34,6 +34,12 @@
     p5Component.startNewPath()
   }
 
+  function handleModeSwitch() {
+    p5Component.clearDrawing()
+    p5Component.clearVideo()
+    p5Component.startNewPath()
+  }
+
   function handleClearCurrent() {
     p5Component.clearCurrentPath()
     p5Component.startNewPath()
@@ -64,5 +70,6 @@
   onClear={handleClear}
   onClearCurrent={handleClearCurrent}
   onNewPath={handleNewPath}
+  onModeSwitch={handleModeSwitch}
 />
 <P5Wrapper bind:this={p5Component} />
