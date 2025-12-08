@@ -7,6 +7,7 @@ interface DrawingConfig {
   pollingRate: number // milliseconds
   isTranscriptionMode: boolean
   speculateScale: number // optional scale for speculate mode
+  isContinuousMode: boolean
 }
 
 const defaultConfig: DrawingConfig = {
@@ -16,6 +17,7 @@ const defaultConfig: DrawingConfig = {
   pollingRate: 4,
   isTranscriptionMode: true,
   speculateScale: 1,
+  isContinuousMode: true,
 }
 
 export const drawingConfig = writable<DrawingConfig>(defaultConfig)
