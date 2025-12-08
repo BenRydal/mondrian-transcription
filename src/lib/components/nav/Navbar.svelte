@@ -295,7 +295,7 @@
     <button class="btn btn-neutral gap-2" on:click={onNewPath}> New Path </button>
 
     <!-- Settings Dropdown -->
-    <div class="dropdown dropdown-end" on:click={preventDrawing} on:keydown={preventDrawing}>
+    <div class="dropdown dropdown-end" role="none" on:click={preventDrawing}>
       <button
         tabindex="0"
         class="btn btn-ghost"
@@ -308,10 +308,12 @@
       >
         <IconSettings class="w-5 h-5" />
       </button>
+
       <ul
         class="dropdown-content menu bg-base-100 rounded-box z-[1] w-80 p-4 shadow mt-4"
         role="menu"
       >
+        <!-- Point Capture Interval -->
         <li>
           <label class="label cursor-pointer flex-col items-start gap-2">
             <span class="label-text w-full">Point Capture Interval</span>
@@ -336,6 +338,8 @@
             </select>
           </label>
         </li>
+
+        <!-- Stroke Weight -->
         <li>
           <label class="label cursor-pointer flex-col items-start gap-2">
             <span class="label-text w-full">Stroke Weight</span>
@@ -352,6 +356,28 @@
                 <option value={weight}>{weight}px</option>
               {/each}
             </select>
+          </label>
+        </li>
+
+        <!-- Continuous Mode Toggle -->
+        <li>
+          <label class="label cursor-pointer flex-col items-start gap-2 w-full">
+            <span class="label-text w-full">Continuous Mode</span>
+            <button
+              type="button"
+              class="btn btn-sm w-full transition-colors duration-200"
+              class:bg-blue-800={$drawingConfig.isContinuousMode}
+              class:text-white={$drawingConfig.isContinuousMode}
+              class:bg-gray-200={!$drawingConfig.isContinuousMode}
+              class:text-gray-800={!$drawingConfig.isContinuousMode}
+              on:click={() =>
+                drawingConfig.update((c) => ({
+                  ...c,
+                  isContinuousMode: !c.isContinuousMode,
+                }))}
+            >
+              {#if $drawingConfig.isContinuousMode}ON{:else}OFF{/if}
+            </button>
           </label>
         </li>
       </ul>

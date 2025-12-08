@@ -36,6 +36,10 @@ const initialState: DrawingState = {
   isJumping: false,
 }
 
+const JUMP_SECONDS = 5
+const JUMP_COOLDOWN = 250
+const JUMP_STEPS = 10 // 10 seems to work well for speculate mode
+
 export function handleRewindSpeculateMode(forward: boolean) {
   drawingState.update((state) => {
     const currentPathIndex = state.paths.findIndex((p) => p.pathId === state.currentPathId)
@@ -45,7 +49,6 @@ export function handleRewindSpeculateMode(forward: boolean) {
     const currentPath = updatedPaths[currentPathIndex]
 
     const stepSize = get(drawingConfig).pollingRate // pseudo-time increment per point
-    const JUMP_STEPS = 5 // number of steps to jump
 
     const lastPoint = currentPath.points[currentPath.points.length - 1]
     if (!lastPoint) return state
@@ -68,8 +71,6 @@ export function handleRewindSpeculateMode(forward: boolean) {
     }
   })
 }
-const JUMP_SECONDS = 5
-const JUMP_COOLDOWN = 250
 
 export function handleTimeJump(forward: boolean, videoElement?: HTMLVideoElement) {
   drawingState.update((state) => {
