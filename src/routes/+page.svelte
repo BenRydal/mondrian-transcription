@@ -1,6 +1,7 @@
 <script lang="ts">
   import P5Wrapper from '../lib/p5/P5Wrapper.svelte'
   import Navbar from '$lib/components/nav/Navbar.svelte'
+  import PathStats from '$lib/components/PathStats.svelte'
 
   let p5Component: P5Wrapper
 
@@ -71,4 +72,7 @@
   onNewPath={handleNewPath}
   onModeSwitch={handleModeSwitch}
 />
-<P5Wrapper bind:this={p5Component} />
+<div class="relative">
+  <P5Wrapper bind:this={p5Component} />
+  <PathStats />
+</div>

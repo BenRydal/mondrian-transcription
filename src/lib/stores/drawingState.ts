@@ -8,6 +8,7 @@ export interface PathData {
   points: Point[]
   color: string
   pathId: number
+  name?: string
 }
 
 export interface DrawingState {
@@ -237,6 +238,24 @@ export function addPointToCurrentPath(point: Point) {
     updatedPaths[currentPathIndex] = {
       ...updatedPaths[currentPathIndex],
       points: [...updatedPaths[currentPathIndex].points, point],
+    }
+
+    return {
+      ...state,
+      paths: updatedPaths,
+    }
+  })
+}
+
+export function renamePathById(pathId: number, name: string) {
+  drawingState.update((state) => {
+    const pathIndex = state.paths.findIndex((p) => p.pathId === pathId)
+    if (pathIndex === -1) return state
+
+    const updatedPaths = [...state.paths]
+    updatedPaths[pathIndex] = {
+      ...updatedPaths[pathIndex],
+      name: name.trim() || undefined,
     }
 
     return {

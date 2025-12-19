@@ -134,7 +134,11 @@
       }
     }
 
-    p5.mousePressed = () => {
+    p5.mousePressed = (event: MouseEvent) => {
+      // Ignore clicks on UI elements (modals, buttons, etc.)
+      const target = event?.target as HTMLElement
+      if (target?.closest('[data-ui-element]')) return
+
       if (!$drawingConfig.isTranscriptionMode) {
         handleMousePressedSpeculateMode()
       } else {
@@ -270,7 +274,8 @@
         })
         .join('\n')
 
-      files[`path-${index + 1}.csv`] = new TextEncoder().encode(`x,y,time\n${csv}`)
+      const filename = path.name ? `${path.name}.csv` : `path-${index + 1}.csv`
+      files[filename] = new TextEncoder().encode(`x,y,time\n${csv}`)
     })
 
     // Generate ZIP asynchronously (uses Web Workers, won't block UI)
@@ -377,6 +382,7 @@
     <button
       class="absolute top-0 bottom-0 w-8 bg-transparent cursor-col-resize hover:bg-base-content/5"
       style="left: calc({$drawingConfig.splitPosition}% - 16px)"
+      data-ui-element
       on:mousedown={(e) => {
         e.preventDefault()
         e.stopPropagation()
