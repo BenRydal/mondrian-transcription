@@ -1,6 +1,8 @@
 <script lang="ts">
   import { drawingState, renamePathById, deletePathById, togglePathVisibility } from '$lib/stores/drawingState'
   import { drawingConfig } from '$lib/stores/drawingConfig'
+  import IconVisibility from '~icons/material-symbols/visibility'
+  import IconVisibilityOff from '~icons/material-symbols/visibility-off'
 
   let expanded = true
   let editingPathId: number | null = null
@@ -92,7 +94,7 @@
 
 {#if paths.length > 0}
   <div
-    class="fixed bg-base-100/90 backdrop-blur-sm rounded-lg shadow-lg text-sm w-48 z-50"
+    class="fixed bg-base-100/90 backdrop-blur-sm rounded-lg shadow-lg w-64 z-50"
     style={position ? `left: ${position.x}px; top: ${position.y}px;` : 'left: 16px; bottom: 16px;'}
     role="region"
     aria-label="Path statistics"
@@ -106,7 +108,7 @@
     >
       <span class="font-medium text-base-content/70">Recorded Paths</span>
       <button
-        class="text-base-content/50 text-xs hover:text-base-content cursor-pointer px-1"
+        class="text-base-content/50 text-sm hover:text-base-content cursor-pointer px-1"
         on:click={() => (expanded = !expanded)}
       >
         {expanded ? '▼' : '▶'}
@@ -124,7 +126,7 @@
             class:bg-base-200={isActive}
           >
             <span
-              class="w-3 h-3 rounded-full flex-shrink-0"
+              class="w-4 h-4 rounded-full flex-shrink-0"
               class:animate-pulse={isActiveRecording}
               style="background-color: {path.color}"
             ></span>
@@ -132,7 +134,7 @@
             {#if editingPathId === path.pathId}
               <input
                 type="text"
-                class="flex-1 bg-base-100 border border-base-300 rounded px-1 text-base-content/80 text-sm w-16"
+                class="flex-1 bg-base-100 border border-base-300 rounded px-2 py-0.5 text-base-content/80 w-20"
                 bind:value={editValue}
                 on:blur={saveEdit}
                 on:keydown={handleKeydown}
@@ -140,7 +142,7 @@
               />
             {:else}
               <button
-                class="flex-1 text-left text-base-content/80 hover:text-primary cursor-pointer truncate"
+                class="flex-1 text-left text-base-content/80 hover:text-primary cursor-pointer truncate text-sm"
                 on:click={() => startEditing(path.pathId, displayName)}
                 title="Click to rename"
               >
@@ -148,30 +150,34 @@
               </button>
             {/if}
 
-            <span class="text-base-content/60 tabular-nums text-xs">
+            <span class="text-base-content/60 tabular-nums text-sm">
               {formatPoints(path.points.length)}
             </span>
 
             {#if isTranscriptionMode}
-              <span class="text-base-content/50 tabular-nums text-xs w-10 text-right">
+              <span class="text-base-content/50 tabular-nums text-sm w-12 text-right">
                 {getPathDuration(path.points)}
               </span>
             {/if}
 
             {#if isActiveRecording}
-              <span class="text-error text-xs">●</span>
+              <span class="text-error text-sm">●</span>
             {/if}
 
             <button
-              class="text-base-content/30 hover:text-base-content text-xs cursor-pointer"
+              class="text-base-content/40 hover:text-base-content cursor-pointer"
               on:click={() => togglePathVisibility(path.pathId)}
               title={path.visible === false ? 'Show path' : 'Hide path'}
             >
-              {path.visible === false ? '○' : '●'}
+              {#if path.visible === false}
+                <IconVisibilityOff class="w-4 h-4" />
+              {:else}
+                <IconVisibility class="w-4 h-4" />
+              {/if}
             </button>
 
             <button
-              class="text-base-content/30 hover:text-error text-xs cursor-pointer px-1"
+              class="text-base-content/30 hover:text-error text-sm cursor-pointer px-1"
               on:click={() => (pendingDeletePathId = path.pathId)}
               title="Delete path"
             >
@@ -183,12 +189,12 @@
     {/if}
 
     <!-- Keyboard Shortcuts -->
-    <div class="px-3 pb-2 pt-1 border-t border-base-200 text-xs text-base-content/50 flex gap-3">
+    <div class="px-3 pb-2 pt-2 border-t border-base-200 text-sm text-base-content/50 flex gap-4">
       {#if isTranscriptionMode}
-        <span><kbd class="px-1 border rounded">F</kbd> +5s</span>
-        <span><kbd class="px-1 border rounded">R</kbd> -5s</span>
+        <span><kbd class="px-1.5 py-0.5 border rounded">F</kbd> +5s</span>
+        <span><kbd class="px-1.5 py-0.5 border rounded">R</kbd> -5s</span>
       {:else}
-        <span><kbd class="px-1 border rounded">R</kbd> undo</span>
+        <span><kbd class="px-1.5 py-0.5 border rounded">R</kbd> undo</span>
       {/if}
     </div>
   </div>
