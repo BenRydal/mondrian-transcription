@@ -138,7 +138,7 @@ export function drawPaths(p5: p5) {
     : null
   // Draw pulsing endpoints
   state.paths.forEach((path) => {
-    if (path.points.length === 0) return
+    if (path.visible === false || path.points.length === 0) return
 
     let endpoint: { x: number; y: number } | null = null
 
