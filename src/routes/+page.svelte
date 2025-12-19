@@ -1,8 +1,26 @@
 <script lang="ts">
   import P5Wrapper from '../lib/p5/P5Wrapper.svelte'
   import Navbar from '$lib/components/nav/Navbar.svelte'
+  import PathStats from '$lib/components/PathStats.svelte'
+  import { onMount } from 'svelte'
+  import { get } from 'svelte/store'
+  import { drawingState } from '$lib/stores/drawingState'
 
   let p5Component: P5Wrapper
+
+  onMount(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      const state = get(drawingState)
+      const hasRecordedData = state.paths.some((p) => p.points.length > 0)
+      if (hasRecordedData) {
+        e.preventDefault()
+        e.returnValue = ''
+      }
+    }
+
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+  })
 
   function handleVideoUpload(event: Event) {
     const file = (event.target as HTMLInputElement).files?.[0]
@@ -24,9 +42,8 @@
     }
   }
 
-  function handleSavePath() {
-    p5Component.exportPath()
-    p5Component.exportImage()
+  function handleSavePath(onComplete?: () => void) {
+    p5Component.exportAll(onComplete)
   }
 
   function handleClear() {
@@ -37,11 +54,6 @@
   function handleModeSwitch() {
     p5Component.clearDrawing()
     p5Component.clearVideo()
-    p5Component.startNewPath()
-  }
-
-  function handleClearCurrent() {
-    p5Component.clearCurrentPath()
     p5Component.startNewPath()
   }
 
@@ -68,8 +80,10 @@
   onVideoUpload={handleVideoUpload}
   onSavePath={handleSavePath}
   onClear={handleClear}
-  onClearCurrent={handleClearCurrent}
   onNewPath={handleNewPath}
   onModeSwitch={handleModeSwitch}
 />
-<P5Wrapper bind:this={p5Component} />
+<div class="relative">
+  <P5Wrapper bind:this={p5Component} />
+  <PathStats />
+</div>

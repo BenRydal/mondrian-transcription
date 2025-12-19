@@ -26,7 +26,7 @@ export function setupDrawing(p5: p5) {
     const config = get(drawingConfig)
     if (!state.shouldTrackMouse || !isInDrawableArea(p5, p5.mouseX, p5.mouseY)) return
 
-    const curPath = state.paths[state.currentPathId - 1]
+    const curPath = state.paths.find((p) => p.pathId === state.currentPathId)
     if (!curPath) return
 
     const curPointArray = curPath.points
@@ -76,18 +76,10 @@ export function setupDrawing(p5: p5) {
     }
   }
 
-  const handleDrawing = () => {
-    const state = get(drawingState)
-    addCurrentPoint()
-    if (state.shouldTrackMouse) {
-      addCurrentPoint()
-    }
-  }
-
   return {
     handleMousePressedVideo,
     handleMousePressedSpeculateMode,
-    handleDrawing,
+    addCurrentPoint,
   }
 }
 
@@ -113,6 +105,8 @@ export function drawPaths(p5: p5) {
 
   // Draw All paths
   state.paths.forEach((path) => {
+    if (path.visible === false) return
+
     p5.strokeWeight(config.strokeWeight)
     p5.stroke(path.color)
     p5.noFill()
@@ -144,7 +138,7 @@ export function drawPaths(p5: p5) {
     : null
   // Draw pulsing endpoints
   state.paths.forEach((path) => {
-    if (path.points.length === 0) return
+    if (path.visible === false || path.points.length === 0) return
 
     let endpoint: { x: number; y: number } | null = null
 

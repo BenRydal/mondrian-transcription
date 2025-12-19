@@ -5,28 +5,30 @@
   import IconDownload from '~icons/material-symbols/download'
   import IconDelete from '~icons/material-symbols/delete-outline'
   import IconDeleteAll from '~icons/material-symbols/delete-sweep-outline'
-  import IconExport from '~icons/material-symbols/download'
   import IconPlayArrow from '~icons/material-symbols/play-arrow'
   import IconFastForward from '~icons/material-symbols/fast-forward'
   import IconRewind from '~icons/material-symbols/fast-rewind'
   import IconImage from '~icons/material-symbols/image'
+  import IconVideo from '~icons/material-symbols/videocam'
   import IconStylusNote from '~icons/material-symbols/stylus-note'
   import IconPrivacyTip from '~icons/material-symbols/privacy-tip'
   import IconClick from '~icons/material-symbols/touch-app'
   import { onMount } from 'svelte'
   import { get } from 'svelte/store'
   import { drawingConfig } from '$lib/stores/drawingConfig'
+  import { drawingState } from '$lib/stores/drawingState'
 
   export let onImageUpload: (event: Event) => void
   export let onVideoUpload: (event: Event) => void
-  export let onSavePath: () => void
+  export let onSavePath: (onComplete?: () => void) => void
   export let onClear: () => void
-  export let onClearCurrent: () => void
   export let onNewPath: () => void
   export let onSelectExample: (data: string) => void
   export let onModeSwitch: () => void
 
   let showModal = false
+  let showClearAllModal = false
+  let isExporting = false
   // Use strings for safe comparison with option values
   let pendingValue = get(drawingConfig).isTranscriptionMode ? 'true' : 'false'
   let originalValue = pendingValue
@@ -38,10 +40,16 @@
   ]
 
   let showScaleModal = false
+  let showExportPreviewModal = false
+  let showUploadModal = false
+  let isDraggingFile = false
   let minutes = 0
   let seconds = 10 // default
 
   $: scaleSeconds = minutes * 60 + seconds
+  $: paths = $drawingState.paths
+  $: hasImage = $drawingState.imageElement !== null
+  $: hasExportableData = hasImage || paths.some(p => p.points.length > 0)
 
   onMount(() => {
     openHelpModal()
@@ -65,9 +73,9 @@
 
   function handleExport() {
     if ($drawingConfig.isTranscriptionMode) {
-      onSavePath()
+      showExportPreviewModal = true
     } else {
-      showScaleModal = true // ask for scaling
+      showScaleModal = true // ask for scaling first
     }
   }
 
@@ -76,12 +84,31 @@
       ...c,
       speculateScale: scaleSeconds,
     }))
-    onSavePath()
     showScaleModal = false
+    showExportPreviewModal = true
   }
 
   function cancelScale() {
     showScaleModal = false
+  }
+
+  function confirmExport() {
+    isExporting = true
+    onSavePath(() => {
+      isExporting = false
+      showExportPreviewModal = false
+    })
+  }
+
+  function cancelExport() {
+    showExportPreviewModal = false
+  }
+
+  function formatPoints(count: number): string {
+    if (count >= 1000) {
+      return `${(count / 1000).toFixed(1)}k`
+    }
+    return count.toString()
   }
 
   function handleModeChange(e) {
@@ -109,6 +136,15 @@
     showModal = false
   }
 
+  function confirmClearAll() {
+    onClear()
+    showClearAllModal = false
+  }
+
+  function cancelClearAll() {
+    showClearAllModal = false
+  }
+
   function handleFileUpload(event: Event) {
     const file = (event.target as HTMLInputElement).files?.[0]
     if (!file) return
@@ -119,9 +155,47 @@
       onImageUpload(event)
     } else {
       window.alert('Please upload a video or image file')
+      return
     }
 
+    showUploadModal = false
     ;(event.target as HTMLInputElement).value = ''
+  }
+
+  function handleDragOver(e: DragEvent) {
+    e.preventDefault()
+    isDraggingFile = true
+  }
+
+  function handleDragLeave(e: DragEvent) {
+    e.preventDefault()
+    isDraggingFile = false
+  }
+
+  function handleDrop(e: DragEvent) {
+    e.preventDefault()
+    isDraggingFile = false
+
+    const file = e.dataTransfer?.files[0]
+    if (!file) return
+
+    // Create a synthetic event for the existing handlers
+    const input = document.createElement('input')
+    input.type = 'file'
+    const dataTransfer = new DataTransfer()
+    dataTransfer.items.add(file)
+    input.files = dataTransfer.files
+    const syntheticEvent = { target: input } as unknown as Event
+
+    if (file.type.startsWith('video/')) {
+      onVideoUpload(syntheticEvent)
+    } else if (file.type.startsWith('image/')) {
+      onImageUpload(syntheticEvent)
+    } else {
+      window.alert('Please upload a video or image file')
+      return
+    }
+    showUploadModal = false
   }
 
   function preventDrawing(e: MouseEvent) {
@@ -147,30 +221,21 @@
     <a class="btn btn-ghost text-xl" href="https://interactiongeography.org">Mondrian</a>
   </div>
   <div class="flex justify-end items-center gap-2">
-    <!-- Clear Buttons -->
-    <div class="flex">
-      <!-- Clear current path -->
-      <button class="btn btn-ghost" on:click={onClearCurrent} title="Clear current path">
-        <IconDelete class="w-5 h-5" />
-        Clear
-      </button>
-
-      <!-- Clear all paths -->
-      <button class="btn btn-ghost" on:click={onClear} title="Clear all paths">
-        <IconDeleteAll class="w-5 h-5" />
-        Clear All
-      </button>
-    </div>
+    <!-- Clear All Button -->
+    <button class="btn btn-ghost" on:click={() => (showClearAllModal = true)} title="Clear all paths">
+      <IconDeleteAll class="w-5 h-5" />
+      Clear All
+    </button>
 
     <div class="divider divider-horizontal"></div>
 
     <!-- Export Data -->
     <button class="btn btn-ghost" on:click={handleExport}
-      ><IconDownload class="w-5 h-5" />Export Data</button
+      ><IconDownload class="w-5 h-5" />Export</button
     >
 
     <!-- Scale Modal using DaisyUI Modal -->
-    <dialog id="scale_modal" class="modal" class:modal-open={showScaleModal}>
+    <dialog id="scale_modal" class="modal" class:modal-open={showScaleModal} data-ui-element>
       <div class="modal-box w-80">
         <h2 class="text-lg font-semibold mb-4">Set Time Scale</h2>
         <p class="mb-4 text-sm">
@@ -223,11 +288,10 @@
     </dialog>
 
     <!-- File Upload -->
-    <label class="btn btn-ghost">
+    <button class="btn btn-ghost" on:click={() => (showUploadModal = true)}>
       <IconUpload class="w-5 h-5" />
-      Upload File
-      <input type="file" class="hidden" accept="video/*,image/*" on:change={handleFileUpload} />
-    </label>
+      Upload
+    </button>
 
     <div class="divider divider-horizontal"></div>
 
@@ -275,7 +339,7 @@
     {/if}
 
     <!-- Mode Switch Modal using DaisyUI Modal -->
-    <dialog id="mode_switch_modal" class="modal" class:modal-open={showModal}>
+    <dialog id="mode_switch_modal" class="modal" class:modal-open={showModal} data-ui-element>
       <div class="modal-box w-80">
         <h2 class="text-lg font-semibold mb-4">Switch Mode?</h2>
         <p class="mb-6 text-sm">
@@ -288,6 +352,127 @@
       </div>
       <form method="dialog" class="modal-backdrop">
         <button on:click={cancelSwitch}>close</button>
+      </form>
+    </dialog>
+
+    <!-- Clear All Modal -->
+    <dialog id="clear_all_modal" class="modal" class:modal-open={showClearAllModal} data-ui-element>
+      <div class="modal-box w-80">
+        <h2 class="text-lg font-semibold mb-4">Clear All Paths?</h2>
+        <p class="mb-6 text-sm">
+          This will delete all recorded paths. This action cannot be undone.
+        </p>
+        <div class="modal-action">
+          <button class="btn" on:click={cancelClearAll}>Cancel</button>
+          <button class="btn btn-error" on:click={confirmClearAll}>Clear All</button>
+        </div>
+      </div>
+      <form method="dialog" class="modal-backdrop">
+        <button on:click={cancelClearAll}>close</button>
+      </form>
+    </dialog>
+
+    <!-- Export Preview Modal -->
+    <dialog id="export_preview_modal" class="modal" class:modal-open={showExportPreviewModal} data-ui-element>
+      <div class="modal-box w-96">
+        <h2 class="text-lg font-semibold mb-4">Export Preview</h2>
+        <p class="mb-4 text-sm text-base-content/70">
+          The following files will be included in your ZIP:
+        </p>
+
+        <div class="bg-base-200 rounded-lg p-3 space-y-2 max-h-64 overflow-y-auto">
+          {#if hasImage}
+            <div class="flex items-center gap-2 text-sm">
+              <IconImage class="w-4 h-4 text-primary" />
+              <span class="font-mono">floor-plan.png</span>
+            </div>
+          {/if}
+
+          {#each paths as path, index (path.pathId)}
+            {#if path.points.length > 0}
+              <div class="flex items-center justify-between text-sm">
+                <div class="flex items-center gap-2">
+                  <span
+                    class="w-3 h-3 rounded-full flex-shrink-0"
+                    style="background-color: {path.color}"
+                  ></span>
+                  <span class="font-mono">{path.name || `path-${index + 1}`}.csv</span>
+                </div>
+                <span class="text-base-content/50 text-xs">
+                  {formatPoints(path.points.length)} pts
+                </span>
+              </div>
+            {/if}
+          {/each}
+
+          {#if !hasExportableData}
+            <p class="text-sm text-base-content/50 italic">No data to export</p>
+          {/if}
+        </div>
+
+        <div class="modal-action">
+          <button class="btn" on:click={cancelExport}>Cancel</button>
+          <button
+            class="btn btn-primary"
+            on:click={confirmExport}
+            disabled={!hasExportableData || isExporting}
+          >
+            {#if isExporting}
+              <span class="loading loading-spinner loading-sm"></span>
+              Exporting...
+            {:else}
+              <IconDownload class="w-4 h-4" />
+              Download ZIP
+            {/if}
+          </button>
+        </div>
+      </div>
+      <form method="dialog" class="modal-backdrop">
+        <button on:click={cancelExport}>close</button>
+      </form>
+    </dialog>
+
+    <!-- Upload Modal -->
+    <dialog class="modal" class:modal-open={showUploadModal} data-ui-element>
+      <div class="modal-box w-96">
+        <h2 class="text-lg font-semibold mb-4">Upload Files</h2>
+
+        <!-- Drag & Drop Zone -->
+        <div
+          class="border-2 border-dashed rounded-lg p-8 text-center transition-colors {isDraggingFile ? 'border-primary bg-primary/5' : 'border-base-300'}"
+          on:dragover={handleDragOver}
+          on:dragleave={handleDragLeave}
+          on:drop={handleDrop}
+          role="button"
+          tabindex="0"
+        >
+          <IconUpload class="w-12 h-12 mx-auto mb-3 text-base-content/40" />
+          <p class="text-base-content/70 mb-1">Drag & drop files here</p>
+          <p class="text-sm text-base-content/50">or use the buttons below</p>
+        </div>
+
+        <!-- File Type Buttons -->
+        <div class="flex gap-3 mt-4">
+          <label class="btn btn-outline flex-1">
+            <IconImage class="w-5 h-5" />
+            Floor Plan
+            <input type="file" class="hidden" accept="image/*" on:change={handleFileUpload} />
+          </label>
+          {#if $drawingConfig.isTranscriptionMode}
+            <label class="btn btn-outline flex-1">
+              <IconVideo class="w-5 h-5" />
+              Video
+              <input type="file" class="hidden" accept="video/*" on:change={handleFileUpload} />
+            </label>
+          {/if}
+        </div>
+
+        <div class="modal-action">
+          <button class="btn" on:click={() => (showUploadModal = false)}>Cancel</button>
+        </div>
+      </div>
+      <form method="dialog" class="modal-backdrop">
+        <button on:click={() => (showUploadModal = false)}>close</button>
       </form>
     </dialog>
 
@@ -390,7 +575,7 @@
   </div>
 </div>
 
-<dialog id="help_modal" class="modal">
+<dialog id="help_modal" class="modal" data-ui-element>
   <div class="modal-box w-11/12 max-w-3xl">
     <h3 class="font-bold text-3xl mb-4 text-center flex items-center justify-center gap-2">
       <IconHelp /> Mondrian Transcription Software
@@ -443,7 +628,7 @@
           >
         </li>
         <li class="flex items-start gap-2">
-          <IconExport class="text-xl mt-1" />
+          <IconDownload class="text-xl mt-1" />
           <span>
             <strong>Save</strong> your recorded data as a CSV file or <IconDelete
               class="inline-block text-xl"
@@ -469,29 +654,25 @@
       </p>
     </div>
 
-    <div class="text-sm text-base-content/60 mt-6 italic space-y-2">
-      <p>
-        Mondrian Transcription is an
+    <details class="mt-6 text-sm text-base-content/60">
+      <summary class="cursor-pointer hover:text-base-content">Credits & Citation</summary>
+      <p class="mt-2 italic">
         <a
           href="https://github.com/BenRydal/mondrian-transcription"
           class="text-primary underline"
-          target="_blank"
-        >
-          open-source project
-        </a>
-        built with Svelte, JavaScript, and p5.js licensed under the GNU General Public License Version
-        3.0. It is developed by Ben Rydal Shapiro, Edwin Zhao, and contributors, with support from the
-        National Science Foundation (#1623690, #2100784). If using Mondrian Transcription in your work,
-        kindly reference: Shapiro, B.R., Hall, R. and Owens, D. (2017). Developing & Using Interaction
-        Geography in a Museum. International Journal of Computer-Supported Collaborative Learning, 12(4),
-        377-399.
+          target="_blank">Open-source project</a
+        > built with Svelte, JavaScript, and p5.js (GPL 3.0). Developed by Ben Rydal Shapiro, Edwin Zhao,
+        and contributors, with support from the National Science Foundation (#1623690, #2100784). If
+        using Mondrian Transcription in your work, kindly reference: Shapiro, B.R., Hall, R. and Owens,
+        D. (2017). Developing & Using Interaction Geography in a Museum. International Journal of Computer-Supported
+        Collaborative Learning, 12(4), 377-399.
         <a
           href="https://par.nsf.gov/servlets/purl/10074100"
           class="text-primary underline"
-          target="_blank">https://doi.org/10.1007/s11412-017-9264-8</a
+          target="_blank">DOI</a
         >
       </p>
-    </div>
+    </details>
 
     <div class="modal-action mt-6">
       <a href="https://forms.gle/jfV6zntsvua4k3XdA" target="_blank" class="btn btn-base-100">

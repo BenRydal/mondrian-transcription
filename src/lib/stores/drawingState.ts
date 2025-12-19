@@ -8,6 +8,8 @@ export interface PathData {
   points: Point[]
   color: string
   pathId: number
+  name?: string
+  visible?: boolean
 }
 
 export interface DrawingState {
@@ -237,6 +239,86 @@ export function addPointToCurrentPath(point: Point) {
     updatedPaths[currentPathIndex] = {
       ...updatedPaths[currentPathIndex],
       points: [...updatedPaths[currentPathIndex].points, point],
+    }
+
+    return {
+      ...state,
+      paths: updatedPaths,
+    }
+  })
+}
+
+export function renamePathById(pathId: number, name: string) {
+  drawingState.update((state) => {
+    const pathIndex = state.paths.findIndex((p) => p.pathId === pathId)
+    if (pathIndex === -1) return state
+
+    const updatedPaths = [...state.paths]
+    updatedPaths[pathIndex] = {
+      ...updatedPaths[pathIndex],
+      name: name.trim() || undefined,
+    }
+
+    return {
+      ...state,
+      paths: updatedPaths,
+    }
+  })
+}
+
+export function deletePathById(pathId: number) {
+  drawingState.update((state) => {
+    const updatedPaths = state.paths.filter((p) => p.pathId !== pathId)
+
+    // If no paths remain, create a new empty path (consistent with Clear All behavior)
+    const newPaths = updatedPaths.length === 0
+      ? [{ points: [], color: '#FF0000', pathId: 1 }]
+      : updatedPaths
+
+    const newCurrentPathId = updatedPaths.length === 0
+      ? 1
+      : state.currentPathId === pathId
+        ? (updatedPaths.at(-1)?.pathId ?? 0)
+        : state.currentPathId
+
+    return {
+      ...state,
+      paths: newPaths,
+      currentPathId: newCurrentPathId,
+      shouldTrackMouse: false,
+      isDrawing: false,
+      isVideoPlaying: false,
+    }
+  })
+}
+
+export function togglePathVisibility(pathId: number) {
+  drawingState.update((state) => {
+    const pathIndex = state.paths.findIndex((p) => p.pathId === pathId)
+    if (pathIndex === -1) return state
+
+    const updatedPaths = [...state.paths]
+    updatedPaths[pathIndex] = {
+      ...updatedPaths[pathIndex],
+      visible: updatedPaths[pathIndex].visible === false,
+    }
+
+    return {
+      ...state,
+      paths: updatedPaths,
+    }
+  })
+}
+
+export function updatePathColor(pathId: number, color: string) {
+  drawingState.update((state) => {
+    const pathIndex = state.paths.findIndex((p) => p.pathId === pathId)
+    if (pathIndex === -1) return state
+
+    const updatedPaths = [...state.paths]
+    updatedPaths[pathIndex] = {
+      ...updatedPaths[pathIndex],
+      color,
     }
 
     return {
