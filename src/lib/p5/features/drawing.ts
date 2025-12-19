@@ -26,7 +26,7 @@ export function setupDrawing(p5: p5) {
     const config = get(drawingConfig)
     if (!state.shouldTrackMouse || !isInDrawableArea(p5, p5.mouseX, p5.mouseY)) return
 
-    const curPath = state.paths[state.currentPathId - 1]
+    const curPath = state.paths.find((p) => p.pathId === state.currentPathId)
     if (!curPath) return
 
     const curPointArray = curPath.points
