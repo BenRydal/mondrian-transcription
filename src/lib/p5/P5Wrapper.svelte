@@ -378,6 +378,23 @@
 >
   <P5 {sketch} />
 
+  <!-- Empty State -->
+  {#if !$drawingState.imageElement}
+    <div
+      class="absolute inset-0 flex items-center justify-center pointer-events-none"
+      data-ui-element
+    >
+      <div class="text-center text-base-content/40 text-lg space-y-2">
+        {#if $drawingConfig.isTranscriptionMode}
+          <p>Upload a floor plan and video to get started</p>
+        {:else}
+          <p>Upload a floor plan to get started</p>
+          <p>or try an example from the <span class="font-medium">Example Data</span> menu</p>
+        {/if}
+      </div>
+    </div>
+  {/if}
+
   {#if $drawingConfig.isTranscriptionMode}
     <button
       class="absolute top-0 bottom-0 w-8 bg-transparent cursor-col-resize hover:bg-base-content/5"
@@ -408,4 +425,5 @@
   {#if videoHtmlElement}
     <VideoControls videoElement={videoHtmlElement} />
   {/if}
+
 </div>

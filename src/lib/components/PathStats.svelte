@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { drawingState, renamePathById, deletePathById } from '$lib/stores/drawingState'
+  import { drawingState, renamePathById, deletePathById, togglePathVisibility } from '$lib/stores/drawingState'
   import { drawingConfig } from '$lib/stores/drawingConfig'
 
   let expanded = true
@@ -163,6 +163,14 @@
             {/if}
 
             <button
+              class="text-base-content/30 hover:text-base-content text-xs cursor-pointer"
+              on:click={() => togglePathVisibility(path.pathId)}
+              title={path.visible === false ? 'Show path' : 'Hide path'}
+            >
+              {path.visible === false ? '○' : '●'}
+            </button>
+
+            <button
               class="text-base-content/30 hover:text-error text-xs cursor-pointer px-1"
               on:click={() => (pendingDeletePathId = path.pathId)}
               title="Delete path"
@@ -173,6 +181,16 @@
         {/each}
       </div>
     {/if}
+
+    <!-- Keyboard Shortcuts -->
+    <div class="px-3 pb-2 pt-1 border-t border-base-200 text-xs text-base-content/50 flex gap-3">
+      {#if isTranscriptionMode}
+        <span><kbd class="px-1 border rounded">F</kbd> +5s</span>
+        <span><kbd class="px-1 border rounded">R</kbd> -5s</span>
+      {:else}
+        <span><kbd class="px-1 border rounded">R</kbd> undo</span>
+      {/if}
+    </div>
   </div>
 {/if}
 

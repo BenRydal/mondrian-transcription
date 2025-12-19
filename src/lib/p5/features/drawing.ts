@@ -113,6 +113,8 @@ export function drawPaths(p5: p5) {
 
   // Draw All paths
   state.paths.forEach((path) => {
+    if (path.visible === false) return
+
     p5.strokeWeight(config.strokeWeight)
     p5.stroke(path.color)
     p5.noFill()

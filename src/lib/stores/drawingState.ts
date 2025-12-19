@@ -9,6 +9,7 @@ export interface PathData {
   color: string
   pathId: number
   name?: string
+  visible?: boolean
 }
 
 export interface DrawingState {
@@ -287,6 +288,24 @@ export function deletePathById(pathId: number) {
       shouldTrackMouse: false,
       isDrawing: false,
       isVideoPlaying: false,
+    }
+  })
+}
+
+export function togglePathVisibility(pathId: number) {
+  drawingState.update((state) => {
+    const pathIndex = state.paths.findIndex((p) => p.pathId === pathId)
+    if (pathIndex === -1) return state
+
+    const updatedPaths = [...state.paths]
+    updatedPaths[pathIndex] = {
+      ...updatedPaths[pathIndex],
+      visible: updatedPaths[pathIndex].visible === false,
+    }
+
+    return {
+      ...state,
+      paths: updatedPaths,
     }
   })
 }
