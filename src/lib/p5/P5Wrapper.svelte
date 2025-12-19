@@ -386,7 +386,7 @@
       class="absolute inset-0 flex items-center justify-center pointer-events-none"
       data-ui-element
     >
-      <div class="text-center text-base-content/40 text-lg space-y-2">
+      <div class="text-center text-base-content/40 text-2xl space-y-2">
         {#if $drawingConfig.isTranscriptionMode}
           <p>Upload a floor plan and video to get started</p>
         {:else}
