@@ -3,6 +3,7 @@
   import type p5 from 'p5'
   import { onMount } from 'svelte'
   import { fade } from 'svelte/transition'
+  import { zip } from 'fflate'
   import { drawingConfig, getSplitPositionForMode } from '../stores/drawingConfig'
   import {
     drawingState,
@@ -232,53 +233,63 @@
     }))
   }
 
-  export function exportImage() {
-    const imageElement = $drawingState?.imageElement
-    if (imageElement) {
-      imageElement.save('example-image', 'png')
-    } else {
-      window.console.warn('No image loaded to export.')
-    }
-  }
-
-  export async function exportPath() {
+  export function exportAll() {
     const paths = $drawingState.paths
+    const imageElement = $drawingState?.imageElement
     const isTranscriptionMode = $drawingConfig.isTranscriptionMode
     const scaleValue = $drawingConfig.speculateScale
 
-    for (let index = 0; index < paths.length; index++) {
-      const path = paths[index]
+    const files: Record<string, Uint8Array> = {}
+
+    // Add image to ZIP
+    if (imageElement && p5Instance) {
+      const canvas = p5Instance.createGraphics($drawingState.imageWidth, $drawingState.imageHeight)
+      canvas.image(imageElement, 0, 0)
+      const dataUrl = (canvas as unknown as { canvas: HTMLCanvasElement }).canvas.toDataURL(
+        'image/png'
+      )
+      const base64Data = dataUrl.split(',')[1]
+      const binaryString = window.atob(base64Data)
+      const bytes = new Uint8Array(binaryString.length)
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i)
+      }
+      files['floor-plan.png'] = bytes
+      canvas.remove()
+    }
+
+    // Add each path as CSV
+    paths.forEach((path, index) => {
       if (path.points.length === 0) return
 
-      const maxTime = path.points[path.points.length - 1].time // last point is max
-
+      const maxTime = path.points[path.points.length - 1].time
       const csv = path.points
         .map((p) => {
-          let time
-          if (isTranscriptionMode) {
-            time = p.time
-          } else {
-            // Scale time linearly to 0 → scaleValue
-            time = (p.time / maxTime) * scaleValue
-          }
+          const time = isTranscriptionMode ? p.time : (p.time / maxTime) * scaleValue
           return `${p.x},${p.y},${time}`
         })
         .join('\n')
 
-      const blob = new window.Blob([`x,y,time\n${csv}`], { type: 'text/csv' })
-      const url = window.URL.createObjectURL(blob)
+      files[`path-${index + 1}.csv`] = new TextEncoder().encode(`x,y,time\n${csv}`)
+    })
 
+    // Generate ZIP asynchronously (uses Web Workers, won't block UI)
+    zip(files, (err, data) => {
+      if (err) {
+        window.console.error('Error creating ZIP:', err)
+        return
+      }
+
+      const blob = new Blob([data], { type: 'application/zip' })
+      const url = window.URL.createObjectURL(blob)
       const a = window.document.createElement('a')
       a.href = url
-      a.download = `path-${index + 1}.csv`
+      a.download = 'transcription-export.zip'
       window.document.body.appendChild(a)
       a.click()
       window.document.body.removeChild(a)
-
       window.URL.revokeObjectURL(url)
-      // Delay before the next download
-      await new Promise((resolve) => window.setTimeout(resolve, 300))
-    }
+    })
   }
 
   export function clearDrawing() {
