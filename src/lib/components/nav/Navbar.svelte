@@ -469,29 +469,25 @@
       </p>
     </div>
 
-    <div class="text-sm text-base-content/60 mt-6 italic space-y-2">
-      <p>
-        Mondrian Transcription is an
+    <details class="mt-6 text-sm text-base-content/60">
+      <summary class="cursor-pointer hover:text-base-content">Credits & Citation</summary>
+      <p class="mt-2 italic">
         <a
           href="https://github.com/BenRydal/mondrian-transcription"
           class="text-primary underline"
-          target="_blank"
-        >
-          open-source project
-        </a>
-        built with Svelte, JavaScript, and p5.js licensed under the GNU General Public License Version
-        3.0. It is developed by Ben Rydal Shapiro, Edwin Zhao, and contributors, with support from the
-        National Science Foundation (#1623690, #2100784). If using Mondrian Transcription in your work,
-        kindly reference: Shapiro, B.R., Hall, R. and Owens, D. (2017). Developing & Using Interaction
-        Geography in a Museum. International Journal of Computer-Supported Collaborative Learning, 12(4),
-        377-399.
+          target="_blank">Open-source project</a
+        > built with Svelte, JavaScript, and p5.js (GPL 3.0). Developed by Ben Rydal Shapiro, Edwin Zhao,
+        and contributors, with support from the National Science Foundation (#1623690, #2100784). If
+        using Mondrian Transcription in your work, kindly reference: Shapiro, B.R., Hall, R. and Owens,
+        D. (2017). Developing & Using Interaction Geography in a Museum. International Journal of Computer-Supported
+        Collaborative Learning, 12(4), 377-399.
         <a
           href="https://par.nsf.gov/servlets/purl/10074100"
           class="text-primary underline"
-          target="_blank">https://doi.org/10.1007/s11412-017-9264-8</a
+          target="_blank">DOI</a
         >
       </p>
-    </div>
+    </details>
 
     <div class="modal-action mt-6">
       <a href="https://forms.gle/jfV6zntsvua4k3XdA" target="_blank" class="btn btn-base-100">
