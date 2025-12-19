@@ -2,8 +2,25 @@
   import P5Wrapper from '../lib/p5/P5Wrapper.svelte'
   import Navbar from '$lib/components/nav/Navbar.svelte'
   import PathStats from '$lib/components/PathStats.svelte'
+  import { onMount } from 'svelte'
+  import { get } from 'svelte/store'
+  import { drawingState } from '$lib/stores/drawingState'
 
   let p5Component: P5Wrapper
+
+  onMount(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      const state = get(drawingState)
+      const hasRecordedData = state.paths.some((p) => p.points.length > 0)
+      if (hasRecordedData) {
+        e.preventDefault()
+        e.returnValue = ''
+      }
+    }
+
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+  })
 
   function handleVideoUpload(event: Event) {
     const file = (event.target as HTMLInputElement).files?.[0]
