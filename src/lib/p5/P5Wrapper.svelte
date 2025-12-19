@@ -84,7 +84,7 @@
 
   const sketch: Sketch = (p5: p5) => {
     p5Instance = p5
-    const { handleMousePressedVideo, handleMousePressedSpeculateMode, handleDrawing } =
+    const { handleMousePressedVideo, handleMousePressedSpeculateMode, addCurrentPoint } =
       setupDrawing(p5)
 
     p5.setup = () => {
@@ -117,7 +117,7 @@
           p5.image(img, r.x, r.y, r.w, r.h)
         }
 
-        handleDrawing()
+        addCurrentPoint()
         drawPaths(p5)
       } else {
         const img = $drawingState.imageElement
@@ -129,7 +129,7 @@
           p5.image(img, r.x, r.y, r.w, r.h)
         }
 
-        handleDrawing()
+        addCurrentPoint()
         drawPaths(p5)
       }
     }

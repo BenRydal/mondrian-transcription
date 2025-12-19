@@ -76,18 +76,10 @@ export function setupDrawing(p5: p5) {
     }
   }
 
-  const handleDrawing = () => {
-    const state = get(drawingState)
-    addCurrentPoint()
-    if (state.shouldTrackMouse) {
-      addCurrentPoint()
-    }
-  }
-
   return {
     handleMousePressedVideo,
     handleMousePressedSpeculateMode,
-    handleDrawing,
+    addCurrentPoint,
   }
 }
 
