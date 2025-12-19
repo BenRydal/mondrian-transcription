@@ -190,7 +190,7 @@
 
     <!-- Export Data -->
     <button class="btn btn-ghost" on:click={handleExport}
-      ><IconDownload class="w-5 h-5" />Export Data</button
+      ><IconDownload class="w-5 h-5" />Export</button
     >
 
     <!-- Scale Modal using DaisyUI Modal -->
@@ -249,7 +249,7 @@
     <!-- File Upload -->
     <label class="btn btn-ghost">
       <IconUpload class="w-5 h-5" />
-      Upload File
+      Upload
       <input type="file" class="hidden" accept="video/*,image/*" on:change={handleFileUpload} />
     </label>
 
