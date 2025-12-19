@@ -40,11 +40,6 @@
     p5Component.startNewPath()
   }
 
-  function handleClearCurrent() {
-    p5Component.clearCurrentPath()
-    p5Component.startNewPath()
-  }
-
   function handleNewPath() {
     p5Component.startNewPath()
   }
@@ -68,7 +63,6 @@
   onVideoUpload={handleVideoUpload}
   onSavePath={handleSavePath}
   onClear={handleClear}
-  onClearCurrent={handleClearCurrent}
   onNewPath={handleNewPath}
   onModeSwitch={handleModeSwitch}
 />

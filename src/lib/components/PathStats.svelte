@@ -1,10 +1,11 @@
 <script lang="ts">
-  import { drawingState, renamePathById } from '$lib/stores/drawingState'
+  import { drawingState, renamePathById, deletePathById } from '$lib/stores/drawingState'
   import { drawingConfig } from '$lib/stores/drawingConfig'
 
   let expanded = true
   let editingPathId: number | null = null
   let editValue = ''
+  let pendingDeletePathId: number | null = null
 
   // Dragging state
   let isDragging = false
@@ -70,6 +71,17 @@
     isDragging = false
     window.removeEventListener('mousemove', onDrag)
     window.removeEventListener('mouseup', stopDrag)
+  }
+
+  function confirmDelete() {
+    if (pendingDeletePathId !== null) {
+      deletePathById(pendingDeletePathId)
+      pendingDeletePathId = null
+    }
+  }
+
+  function cancelDelete() {
+    pendingDeletePathId = null
   }
 
   $: paths = $drawingState.paths
@@ -149,9 +161,34 @@
             {#if isActiveRecording}
               <span class="text-error text-xs">●</span>
             {/if}
+
+            <button
+              class="text-base-content/30 hover:text-error text-xs cursor-pointer px-1"
+              on:click={() => (pendingDeletePathId = path.pathId)}
+              title="Delete path"
+            >
+              ×
+            </button>
           </div>
         {/each}
       </div>
     {/if}
   </div>
 {/if}
+
+<!-- Delete Path Confirmation Modal -->
+<dialog class="modal" class:modal-open={pendingDeletePathId !== null} data-ui-element>
+  <div class="modal-box w-72">
+    <h2 class="text-lg font-semibold mb-4">Delete Path?</h2>
+    <p class="mb-6 text-sm">
+      This will delete the selected path and all its recorded points.
+    </p>
+    <div class="modal-action">
+      <button class="btn btn-sm" on:click={cancelDelete}>Cancel</button>
+      <button class="btn btn-sm btn-error" on:click={confirmDelete}>Delete</button>
+    </div>
+  </div>
+  <form method="dialog" class="modal-backdrop">
+    <button on:click={cancelDelete}>close</button>
+  </form>
+</dialog>

@@ -21,12 +21,12 @@
   export let onVideoUpload: (event: Event) => void
   export let onSavePath: () => void
   export let onClear: () => void
-  export let onClearCurrent: () => void
   export let onNewPath: () => void
   export let onSelectExample: (data: string) => void
   export let onModeSwitch: () => void
 
   let showModal = false
+  let showClearAllModal = false
   // Use strings for safe comparison with option values
   let pendingValue = get(drawingConfig).isTranscriptionMode ? 'true' : 'false'
   let originalValue = pendingValue
@@ -109,6 +109,15 @@
     showModal = false
   }
 
+  function confirmClearAll() {
+    onClear()
+    showClearAllModal = false
+  }
+
+  function cancelClearAll() {
+    showClearAllModal = false
+  }
+
   function handleFileUpload(event: Event) {
     const file = (event.target as HTMLInputElement).files?.[0]
     if (!file) return
@@ -147,20 +156,11 @@
     <a class="btn btn-ghost text-xl" href="https://interactiongeography.org">Mondrian</a>
   </div>
   <div class="flex justify-end items-center gap-2">
-    <!-- Clear Buttons -->
-    <div class="flex">
-      <!-- Clear current path -->
-      <button class="btn btn-ghost" on:click={onClearCurrent} title="Clear current path">
-        <IconDelete class="w-5 h-5" />
-        Clear
-      </button>
-
-      <!-- Clear all paths -->
-      <button class="btn btn-ghost" on:click={onClear} title="Clear all paths">
-        <IconDeleteAll class="w-5 h-5" />
-        Clear All
-      </button>
-    </div>
+    <!-- Clear All Button -->
+    <button class="btn btn-ghost" on:click={() => (showClearAllModal = true)} title="Clear all paths">
+      <IconDeleteAll class="w-5 h-5" />
+      Clear All
+    </button>
 
     <div class="divider divider-horizontal"></div>
 
@@ -288,6 +288,23 @@
       </div>
       <form method="dialog" class="modal-backdrop">
         <button on:click={cancelSwitch}>close</button>
+      </form>
+    </dialog>
+
+    <!-- Clear All Modal -->
+    <dialog id="clear_all_modal" class="modal" class:modal-open={showClearAllModal}>
+      <div class="modal-box w-80">
+        <h2 class="text-lg font-semibold mb-4">Clear All Paths?</h2>
+        <p class="mb-6 text-sm">
+          This will delete all recorded paths. This action cannot be undone.
+        </p>
+        <div class="modal-action">
+          <button class="btn" on:click={cancelClearAll}>Cancel</button>
+          <button class="btn btn-error" on:click={confirmClearAll}>Clear All</button>
+        </div>
+      </div>
+      <form method="dialog" class="modal-backdrop">
+        <button on:click={cancelClearAll}>close</button>
       </form>
     </dialog>
 
