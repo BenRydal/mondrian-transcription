@@ -9,6 +9,7 @@
   import IconFastForward from '~icons/material-symbols/fast-forward'
   import IconRewind from '~icons/material-symbols/fast-rewind'
   import IconImage from '~icons/material-symbols/image'
+  import IconVideo from '~icons/material-symbols/videocam'
   import IconStylusNote from '~icons/material-symbols/stylus-note'
   import IconPrivacyTip from '~icons/material-symbols/privacy-tip'
   import IconClick from '~icons/material-symbols/touch-app'
@@ -40,6 +41,8 @@
 
   let showScaleModal = false
   let showExportPreviewModal = false
+  let showUploadModal = false
+  let isDraggingFile = false
   let minutes = 0
   let seconds = 10 // default
 
@@ -152,9 +155,47 @@
       onImageUpload(event)
     } else {
       window.alert('Please upload a video or image file')
+      return
     }
 
+    showUploadModal = false
     ;(event.target as HTMLInputElement).value = ''
+  }
+
+  function handleDragOver(e: DragEvent) {
+    e.preventDefault()
+    isDraggingFile = true
+  }
+
+  function handleDragLeave(e: DragEvent) {
+    e.preventDefault()
+    isDraggingFile = false
+  }
+
+  function handleDrop(e: DragEvent) {
+    e.preventDefault()
+    isDraggingFile = false
+
+    const file = e.dataTransfer?.files[0]
+    if (!file) return
+
+    // Create a synthetic event for the existing handlers
+    const input = document.createElement('input')
+    input.type = 'file'
+    const dataTransfer = new DataTransfer()
+    dataTransfer.items.add(file)
+    input.files = dataTransfer.files
+    const syntheticEvent = { target: input } as unknown as Event
+
+    if (file.type.startsWith('video/')) {
+      onVideoUpload(syntheticEvent)
+    } else if (file.type.startsWith('image/')) {
+      onImageUpload(syntheticEvent)
+    } else {
+      window.alert('Please upload a video or image file')
+      return
+    }
+    showUploadModal = false
   }
 
   function preventDrawing(e: MouseEvent) {
@@ -247,11 +288,10 @@
     </dialog>
 
     <!-- File Upload -->
-    <label class="btn btn-ghost">
+    <button class="btn btn-ghost" on:click={() => (showUploadModal = true)}>
       <IconUpload class="w-5 h-5" />
       Upload
-      <input type="file" class="hidden" accept="video/*,image/*" on:change={handleFileUpload} />
-    </label>
+    </button>
 
     <div class="divider divider-horizontal"></div>
 
@@ -389,6 +429,50 @@
       </div>
       <form method="dialog" class="modal-backdrop">
         <button on:click={cancelExport}>close</button>
+      </form>
+    </dialog>
+
+    <!-- Upload Modal -->
+    <dialog class="modal" class:modal-open={showUploadModal} data-ui-element>
+      <div class="modal-box w-96">
+        <h2 class="text-lg font-semibold mb-4">Upload Files</h2>
+
+        <!-- Drag & Drop Zone -->
+        <div
+          class="border-2 border-dashed rounded-lg p-8 text-center transition-colors {isDraggingFile ? 'border-primary bg-primary/5' : 'border-base-300'}"
+          on:dragover={handleDragOver}
+          on:dragleave={handleDragLeave}
+          on:drop={handleDrop}
+          role="button"
+          tabindex="0"
+        >
+          <IconUpload class="w-12 h-12 mx-auto mb-3 text-base-content/40" />
+          <p class="text-base-content/70 mb-1">Drag & drop files here</p>
+          <p class="text-sm text-base-content/50">or use the buttons below</p>
+        </div>
+
+        <!-- File Type Buttons -->
+        <div class="flex gap-3 mt-4">
+          <label class="btn btn-outline flex-1">
+            <IconImage class="w-5 h-5" />
+            Floor Plan
+            <input type="file" class="hidden" accept="image/*" on:change={handleFileUpload} />
+          </label>
+          {#if $drawingConfig.isTranscriptionMode}
+            <label class="btn btn-outline flex-1">
+              <IconVideo class="w-5 h-5" />
+              Video
+              <input type="file" class="hidden" accept="video/*" on:change={handleFileUpload} />
+            </label>
+          {/if}
+        </div>
+
+        <div class="modal-action">
+          <button class="btn" on:click={() => (showUploadModal = false)}>Cancel</button>
+        </div>
+      </div>
+      <form method="dialog" class="modal-backdrop">
+        <button on:click={() => (showUploadModal = false)}>close</button>
       </form>
     </dialog>
 
