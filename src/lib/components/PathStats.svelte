@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { drawingState, renamePathById, deletePathById, togglePathVisibility } from '$lib/stores/drawingState'
+  import { drawingState, renamePathById, deletePathById, togglePathVisibility, updatePathColor } from '$lib/stores/drawingState'
   import { drawingConfig } from '$lib/stores/drawingConfig'
   import IconVisibility from '~icons/material-symbols/visibility'
   import IconVisibilityOff from '~icons/material-symbols/visibility-off'
@@ -125,11 +125,19 @@
             class="flex items-center gap-2 py-1 px-2 rounded transition-colors"
             class:bg-base-200={isActive}
           >
-            <span
-              class="w-4 h-4 rounded-full flex-shrink-0"
+            <label
+              class="w-4 h-4 rounded-full flex-shrink-0 cursor-pointer hover:ring-2 hover:ring-primary hover:ring-offset-1"
               class:animate-pulse={isActiveRecording}
               style="background-color: {path.color}"
-            ></span>
+              title="Change color"
+            >
+              <input
+                type="color"
+                class="sr-only"
+                value={path.color}
+                on:input={(e) => updatePathColor(path.pathId, e.currentTarget.value)}
+              />
+            </label>
 
             {#if editingPathId === path.pathId}
               <input

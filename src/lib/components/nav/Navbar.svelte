@@ -19,7 +19,7 @@
 
   export let onImageUpload: (event: Event) => void
   export let onVideoUpload: (event: Event) => void
-  export let onSavePath: () => void
+  export let onSavePath: (onComplete?: () => void) => void
   export let onClear: () => void
   export let onNewPath: () => void
   export let onSelectExample: (data: string) => void
@@ -27,6 +27,7 @@
 
   let showModal = false
   let showClearAllModal = false
+  let isExporting = false
   // Use strings for safe comparison with option values
   let pendingValue = get(drawingConfig).isTranscriptionMode ? 'true' : 'false'
   let originalValue = pendingValue
@@ -89,8 +90,11 @@
   }
 
   function confirmExport() {
-    onSavePath()
-    showExportPreviewModal = false
+    isExporting = true
+    onSavePath(() => {
+      isExporting = false
+      showExportPreviewModal = false
+    })
   }
 
   function cancelExport() {
@@ -371,10 +375,15 @@
           <button
             class="btn btn-primary"
             on:click={confirmExport}
-            disabled={!hasExportableData}
+            disabled={!hasExportableData || isExporting}
           >
-            <IconDownload class="w-4 h-4" />
-            Download ZIP
+            {#if isExporting}
+              <span class="loading loading-spinner loading-sm"></span>
+              Exporting...
+            {:else}
+              <IconDownload class="w-4 h-4" />
+              Download ZIP
+            {/if}
           </button>
         </div>
       </div>

@@ -309,3 +309,21 @@ export function togglePathVisibility(pathId: number) {
     }
   })
 }
+
+export function updatePathColor(pathId: number, color: string) {
+  drawingState.update((state) => {
+    const pathIndex = state.paths.findIndex((p) => p.pathId === pathId)
+    if (pathIndex === -1) return state
+
+    const updatedPaths = [...state.paths]
+    updatedPaths[pathIndex] = {
+      ...updatedPaths[pathIndex],
+      color,
+    }
+
+    return {
+      ...state,
+      paths: updatedPaths,
+    }
+  })
+}

@@ -237,7 +237,7 @@
     }))
   }
 
-  export function exportAll() {
+  export function exportAll(onComplete?: () => void) {
     const paths = $drawingState.paths
     const imageElement = $drawingState?.imageElement
     const isTranscriptionMode = $drawingConfig.isTranscriptionMode
@@ -282,6 +282,7 @@
     zip(files, (err, data) => {
       if (err) {
         window.console.error('Error creating ZIP:', err)
+        onComplete?.()
         return
       }
 
@@ -294,6 +295,7 @@
       a.click()
       window.document.body.removeChild(a)
       window.URL.revokeObjectURL(url)
+      onComplete?.()
     })
   }
 

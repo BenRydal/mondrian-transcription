@@ -25,8 +25,8 @@
     }
   }
 
-  function handleSavePath() {
-    p5Component.exportAll()
+  function handleSavePath(onComplete?: () => void) {
+    p5Component.exportAll(onComplete)
   }
 
   function handleClear() {
