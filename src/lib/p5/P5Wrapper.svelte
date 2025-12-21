@@ -248,6 +248,7 @@
     // Add image to ZIP
     if (imageElement && p5Instance) {
       const canvas = p5Instance.createGraphics($drawingState.imageWidth, $drawingState.imageHeight)
+      canvas.pixelDensity(1) // Prevent DPI scaling on retina displays
       canvas.image(imageElement, 0, 0)
       const dataUrl = (canvas as unknown as { canvas: HTMLCanvasElement }).canvas.toDataURL(
         'image/png'
