@@ -94,7 +94,12 @@ export function handleTimeJump(forward: boolean, videoElement?: HTMLVideoElement
       const lastPoint = currentPath.points[currentPath.points.length - 1]
       if (!lastPoint) return state
 
-      const samplingRate = get(drawingConfig).pollingRate / 1000
+      const config = get(drawingConfig)
+      // Use heartbeat interval for jumps when adaptive sampling is on (fewer points for stationary periods)
+      // Use polling rate when adaptive sampling is off (consistent with fixed interval mode)
+      const samplingRate = config.useAdaptiveSampling
+        ? config.heartbeatInterval / 1000
+        : config.pollingRate / 1000
       const updatedPoints = [...currentPath.points]
 
       for (let t = currentTime + samplingRate; t <= newTime; t += samplingRate) {
