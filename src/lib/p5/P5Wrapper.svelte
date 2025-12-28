@@ -8,7 +8,9 @@
   import {
     drawingState,
     createNewPath,
-    handleTimeJump,
+    handleForwardTranscription,
+    handleRewindTranscription,
+    handleForwardSpeculateMode,
     handleRewindSpeculateMode,
   } from '../stores/drawingState'
   import {
@@ -61,21 +63,23 @@
   }
 
   onMount(() => {
-    window.addEventListener('keydown', (e) => {
+    const handleKeydown = (e: KeyboardEvent) => {
       if (e.key.toLowerCase() === 'f') {
         e.preventDefault()
         if ($drawingConfig.isTranscriptionMode && videoHtmlElement) {
-          handleTimeJump(true, videoHtmlElement)
+          handleForwardTranscription(videoHtmlElement)
+        } else {
+          handleForwardSpeculateMode()
         }
       } else if (e.key.toLowerCase() === 'r') {
         e.preventDefault()
         if ($drawingConfig.isTranscriptionMode && videoHtmlElement) {
-          handleTimeJump(false, videoHtmlElement)
+          handleRewindTranscription(videoHtmlElement)
         } else {
-          handleRewindSpeculateMode(false)
+          handleRewindSpeculateMode()
         }
       }
-    })
+    }
 
     const updateDimensions = () => {
       height = window.innerHeight - 64
@@ -85,9 +89,14 @@
       }
     }
 
+    window.addEventListener('keydown', handleKeydown)
     window.addEventListener('resize', updateDimensions)
     updateDimensions()
-    return () => window.removeEventListener('resize', updateDimensions)
+
+    return () => {
+      window.removeEventListener('keydown', handleKeydown)
+      window.removeEventListener('resize', updateDimensions)
+    }
   })
 
   const sketch: Sketch = (p5: p5) => {

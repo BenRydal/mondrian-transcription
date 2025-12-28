@@ -15,7 +15,7 @@
   import IconClick from '~icons/material-symbols/touch-app'
   import IconMenu from '~icons/material-symbols/menu'
   import IconClose from '~icons/material-symbols/close'
-  import { onMount } from 'svelte'
+  import { onMount, onDestroy } from 'svelte'
   import { get } from 'svelte/store'
   import { drawingConfig } from '$lib/stores/drawingConfig'
   import { drawingState } from '$lib/stores/drawingState'
@@ -32,6 +32,7 @@
   let showClearAllModal = false
   let isExporting = false
   let showMobileMenu = false
+  let showSettingsMenu = false
   // Use strings for safe comparison with option values
   let pendingValue = get(drawingConfig).isTranscriptionMode ? 'true' : 'false'
   let originalValue = pendingValue
@@ -248,9 +249,40 @@
     }))
   }
 
+  function setJumpValue(e: Event) {
+    const value = parseInt((e.currentTarget as HTMLInputElement).value)
+    drawingConfig.update((c) => ({
+      ...c,
+      ...(c.isTranscriptionMode ? { jumpSeconds: value } : { jumpSteps: value }),
+    }))
+  }
+
   function getPollingRateLabel(rate: typeof pollingRates[number]): string {
     return $drawingConfig.isTranscriptionMode ? rate.labelVideo : rate.labelSpeculate
   }
+
+  function handleSettingsClickOutside(e: MouseEvent) {
+    const target = e.target as HTMLElement
+    if (!target.closest('[data-settings-menu]')) {
+      showSettingsMenu = false
+    }
+  }
+
+  // Watch showSettingsMenu and add/remove click listener (browser only)
+  $: if (typeof window !== 'undefined') {
+    if (showSettingsMenu) {
+      document.addEventListener('click', handleSettingsClickOutside)
+    } else {
+      document.removeEventListener('click', handleSettingsClickOutside)
+    }
+  }
+
+  // Cleanup on destroy
+  onDestroy(() => {
+    if (typeof window !== 'undefined') {
+      document.removeEventListener('click', handleSettingsClickOutside)
+    }
+  })
 </script>
 
 <div
@@ -334,32 +366,26 @@
     <!-- New Path -->
     <button class="btn btn-neutral gap-2" on:click={onNewPath}> New Path </button>
 
-    <!-- Settings Dropdown -->
-    <div class="dropdown dropdown-end" role="none" on:click={preventDrawing} data-ui-element>
+    <!-- Settings Dropdown (controlled) -->
+    <div class="relative" data-settings-menu data-ui-element>
       <button
-        tabindex="0"
         class="btn btn-ghost"
-        on:keydown={(e) => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault()
-          }
-        }}
+        on:click={() => (showSettingsMenu = !showSettingsMenu)}
         aria-label="Settings menu"
       >
         <IconSettings class="w-5 h-5" />
       </button>
 
-      <ul
-        class="dropdown-content menu bg-base-100 rounded-box z-[1] w-80 p-4 shadow mt-4"
-        role="menu"
-      >
-        <!-- Sampling Section -->
-        <li class="menu-title text-xs uppercase text-base-content/50 pt-0 text-center">Sampling</li>
+      {#if showSettingsMenu}
+        <div class="absolute right-0 mt-2 w-80 bg-base-100 rounded-box shadow-lg p-4 z-50">
+          <!-- Sampling Section -->
+          <div class="text-xs uppercase text-base-content/50 text-center mb-2">Sampling</div>
 
-        <!-- Point Capture Interval -->
-        <li>
-          <label class="label cursor-pointer flex-col items-start gap-2">
-            <span class="label-text w-full">Point Capture Interval</span>
+          <!-- Point Capture Interval -->
+          <div class="form-control mb-3">
+            <label class="label py-1">
+              <span class="label-text">Point Capture Interval</span>
+            </label>
             <select
               class="select select-bordered select-sm w-full"
               value={$drawingConfig.pollingRate}
@@ -369,13 +395,11 @@
                 <option value={rate.value}>{getPollingRateLabel(rate)}</option>
               {/each}
             </select>
-          </label>
-        </li>
+          </div>
 
-        <!-- Adaptive Sampling Toggle -->
-        <li>
-          <label class="label cursor-pointer flex-col items-start gap-2 w-full">
-            <div class="flex items-center justify-between w-full">
+          <!-- Adaptive Sampling Toggle -->
+          <div class="form-control mb-3">
+            <div class="flex items-center justify-between mb-1">
               <span class="label-text">Adaptive Sampling</span>
               <div class="tooltip tooltip-left" data-tip="When ON: samples frequently during movement, less when stationary. When OFF: fixed interval sampling.">
                 <IconHelp class="w-4 h-4 text-base-content/50" />
@@ -383,27 +407,50 @@
             </div>
             <button
               type="button"
-              class="btn btn-sm w-full transition-colors duration-200"
+              class="btn btn-sm w-full"
               class:bg-blue-800={$drawingConfig.useAdaptiveSampling}
               class:text-white={$drawingConfig.useAdaptiveSampling}
               class:bg-gray-200={!$drawingConfig.useAdaptiveSampling}
               class:text-gray-800={!$drawingConfig.useAdaptiveSampling}
               on:click={toggleAdaptiveSampling}
             >
-              {#if $drawingConfig.useAdaptiveSampling}ON{:else}OFF{/if}
+              {$drawingConfig.useAdaptiveSampling ? 'ON' : 'OFF'}
             </button>
-          </label>
-        </li>
+          </div>
 
-        <div class="divider my-1"></div>
+          <!-- Fast Forward/Rewind Slider (adapts based on mode) -->
+          <div class="form-control mb-3">
+            <div class="flex items-center justify-between mb-1">
+              <span class="label-text">Fast Forward / Rewind</span>
+              <span class="label-text text-base-content/50">
+                {$drawingConfig.isTranscriptionMode ? `${$drawingConfig.jumpSeconds}s` : `${$drawingConfig.jumpSteps} steps`}
+              </span>
+            </div>
+            <input
+              type="range"
+              min="5"
+              max={$drawingConfig.isTranscriptionMode ? 60 : 50}
+              step="5"
+              value={$drawingConfig.isTranscriptionMode ? $drawingConfig.jumpSeconds : $drawingConfig.jumpSteps}
+              on:input={setJumpValue}
+              class="range range-sm w-full"
+            />
+            <div class="flex justify-between text-xs text-base-content/40 w-full px-1">
+              <span>5{$drawingConfig.isTranscriptionMode ? 's' : ''}</span>
+              <span>{$drawingConfig.isTranscriptionMode ? '60s' : '50'}</span>
+            </div>
+          </div>
 
-        <!-- Rendering Section -->
-        <li class="menu-title text-xs uppercase text-base-content/50 text-center">Rendering</li>
+          <div class="divider my-2"></div>
 
-        <!-- Stroke Weight -->
-        <li>
-          <label class="label cursor-pointer flex-col items-start gap-2">
-            <span class="label-text w-full">Stroke Weight</span>
+          <!-- Rendering Section -->
+          <div class="text-xs uppercase text-base-content/50 text-center mb-2">Rendering</div>
+
+          <!-- Stroke Weight -->
+          <div class="form-control mb-3">
+            <label class="label py-1">
+              <span class="label-text">Stroke Weight</span>
+            </label>
             <select
               class="select select-bordered select-sm w-full"
               value={$drawingConfig.strokeWeight}
@@ -413,27 +460,25 @@
                 <option value={weight}>{weight}px</option>
               {/each}
             </select>
-          </label>
-        </li>
+          </div>
 
-        <!-- Continuous Mode Toggle -->
-        <li>
-          <label class="label cursor-pointer flex-col items-start gap-2 w-full">
-            <span class="label-text w-full">Continuous Mode</span>
+          <!-- Continuous Mode Toggle -->
+          <div class="form-control">
+            <span class="label-text mb-1">Continuous Mode</span>
             <button
               type="button"
-              class="btn btn-sm w-full transition-colors duration-200"
+              class="btn btn-sm w-full"
               class:bg-blue-800={$drawingConfig.isContinuousMode}
               class:text-white={$drawingConfig.isContinuousMode}
               class:bg-gray-200={!$drawingConfig.isContinuousMode}
               class:text-gray-800={!$drawingConfig.isContinuousMode}
               on:click={toggleContinuousMode}
             >
-              {#if $drawingConfig.isContinuousMode}ON{:else}OFF{/if}
+              {$drawingConfig.isContinuousMode ? 'ON' : 'OFF'}
             </button>
-          </label>
-        </li>
-      </ul>
+          </div>
+        </div>
+      {/if}
     </div>
 
     <!-- Help -->
@@ -550,6 +595,29 @@
             on:change={toggleAdaptiveSampling}
           />
         </label>
+      </div>
+
+      <!-- Fast Forward/Rewind Slider (adapts based on mode) -->
+      <div class="form-control">
+        <div class="flex items-center justify-between">
+          <span class="label-text">Fast Forward / Rewind</span>
+          <span class="label-text text-base-content/50">
+            {$drawingConfig.isTranscriptionMode ? `${$drawingConfig.jumpSeconds}s` : `${$drawingConfig.jumpSteps} steps`}
+          </span>
+        </div>
+        <input
+          type="range"
+          min="5"
+          max={$drawingConfig.isTranscriptionMode ? 60 : 50}
+          step="5"
+          value={$drawingConfig.isTranscriptionMode ? $drawingConfig.jumpSeconds : $drawingConfig.jumpSteps}
+          on:input={setJumpValue}
+          class="range range-sm w-full mt-1"
+        />
+        <div class="flex justify-between text-xs text-base-content/40 w-full px-1">
+          <span>5{$drawingConfig.isTranscriptionMode ? 's' : ''}</span>
+          <span>{$drawingConfig.isTranscriptionMode ? '60s' : '50'}</span>
+        </div>
       </div>
 
       <div class="divider my-2"></div>
@@ -850,14 +918,13 @@
           <IconFastForward class="text-xl mt-1" />
           <span
             >Press <kbd class="border px-1 rounded">f</kbd> on your keyboard to fast forward video and
-            recording 5 seconds.</span
+            recording.</span
           >
         </li>
         <li class="flex items-start gap-2">
           <IconRewind class="text-xl mt-1" />
           <span
-            >Press <kbd class="border px-1 rounded">r</kbd> on your keyboard to rewind video and recording
-            5 seconds.</span
+            >Press <kbd class="border px-1 rounded">r</kbd> on your keyboard to rewind video and recording.</span
           >
         </li>
         <li class="flex items-start gap-2">

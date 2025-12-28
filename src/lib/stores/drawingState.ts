@@ -38,125 +38,132 @@ const initialState: DrawingState = {
   isJumping: false,
 }
 
-const JUMP_SECONDS = 5
 const JUMP_COOLDOWN = 250
-const JUMP_STEPS = 10 // 10 seems to work well for speculate mode
 
-export function handleRewindSpeculateMode(forward: boolean) {
+export function handleRewindSpeculateMode() {
   drawingState.update((state) => {
+    const currentPathIndex = state.paths.findIndex((p) => p.pathId === state.currentPathId)
+    if (currentPathIndex === -1) return state
+
+    const { jumpSteps } = get(drawingConfig)
+    const updatedPaths = [...state.paths]
+    const currentPath = updatedPaths[currentPathIndex]
+
+    if (currentPath.points.length === 0) return state
+
+    // Remove last N points directly (works regardless of time units)
+    const updatedPoints = currentPath.points.slice(0, Math.max(0, currentPath.points.length - jumpSteps))
+    updatedPaths[currentPathIndex] = { ...currentPath, points: updatedPoints }
+
+    const newTime = updatedPoints.length > 0 ? updatedPoints[updatedPoints.length - 1].time : 0
+    indexSampler.reset(newTime)
+
+    return { ...state, shouldTrackMouse: false, isDrawing: false, paths: updatedPaths }
+  })
+}
+
+export function handleForwardSpeculateMode() {
+  drawingState.update((state) => {
+    const currentPathIndex = state.paths.findIndex((p) => p.pathId === state.currentPathId)
+    if (currentPathIndex === -1) return state
+
+    const { jumpSteps, useAdaptiveSampling, heartbeatInterval, pollingRate } = get(drawingConfig)
+    const updatedPaths = [...state.paths]
+    const currentPath = updatedPaths[currentPathIndex]
+
+    const lastPoint = currentPath.points[currentPath.points.length - 1]
+    if (!lastPoint) return state
+
+    // Time increment depends on sampling mode (adaptive uses seconds, index-based uses pollingRate)
+    const timeStep = useAdaptiveSampling ? heartbeatInterval / 1000 : pollingRate
+
+    // Add stationary points at the last position (simulating a pause/stop)
+    const updatedPoints = [...currentPath.points]
+    for (let i = 1; i <= jumpSteps; i++) {
+      updatedPoints.push({
+        x: lastPoint.x,
+        y: lastPoint.y,
+        time: lastPoint.time + i * timeStep,
+        pathId: state.currentPathId,
+      })
+    }
+    updatedPaths[currentPathIndex] = { ...currentPath, points: updatedPoints }
+
+    const newTime = lastPoint.time + jumpSteps * timeStep
+    indexSampler.reset(newTime)
+
+    return { ...state, paths: updatedPaths }
+  })
+}
+
+export function handleForwardTranscription(videoElement: HTMLVideoElement) {
+  drawingState.update((state) => {
+    if (state.isJumping) return state
+    if (!videoElement.duration || isNaN(videoElement.duration)) return state
+
+    const { jumpSeconds, useAdaptiveSampling, heartbeatInterval, pollingRate } = get(drawingConfig)
+    const currentTime = state.videoTime
     const currentPathIndex = state.paths.findIndex((p) => p.pathId === state.currentPathId)
     if (currentPathIndex === -1) return state
 
     const updatedPaths = [...state.paths]
     const currentPath = updatedPaths[currentPathIndex]
-
-    const stepSize = get(drawingConfig).pollingRate // pseudo-time increment per point
-
     const lastPoint = currentPath.points[currentPath.points.length - 1]
     if (!lastPoint) return state
-    const newTime = Math.max(lastPoint.time - JUMP_STEPS * stepSize, 0)
-    const updatedPoints = currentPath.points.filter((point) => point.time <= newTime)
 
-    updatedPaths[currentPathIndex] = {
-      ...currentPath,
-      points: updatedPoints,
+    const newTime = Math.min(currentTime + jumpSeconds, videoElement.duration)
+    videoElement.currentTime = newTime
+
+    // Use heartbeat interval when adaptive sampling is on (fewer points for stationary periods)
+    const samplingRate = useAdaptiveSampling ? heartbeatInterval / 1000 : pollingRate / 1000
+    const updatedPoints = [...currentPath.points]
+
+    for (let t = currentTime + samplingRate; t <= newTime; t += samplingRate) {
+      updatedPoints.push({ x: lastPoint.x, y: lastPoint.y, time: t, pathId: state.currentPathId })
     }
 
-    indexSampler.reset(newTime)
+    updatedPaths[currentPathIndex] = { ...currentPath, points: updatedPoints }
+
+    return { ...state, isJumping: true, videoTime: newTime, paths: updatedPaths }
+  })
+
+  setTimeout(() => {
+    drawingState.update((state) => ({ ...state, isJumping: false }))
+  }, JUMP_COOLDOWN)
+}
+
+export function handleRewindTranscription(videoElement: HTMLVideoElement) {
+  drawingState.update((state) => {
+    if (state.isJumping) return state
+    if (!videoElement.duration || isNaN(videoElement.duration)) return state
+
+    const { jumpSeconds } = get(drawingConfig)
+    const currentTime = state.videoTime
+    const currentPathIndex = state.paths.findIndex((p) => p.pathId === state.currentPathId)
+    if (currentPathIndex === -1) return state
+
+    const newTime = Math.max(currentTime - jumpSeconds, 0)
+    videoElement.currentTime = newTime
+    videoElement.pause()
+
+    const updatedPaths = [...state.paths]
+    const currentPath = updatedPaths[currentPathIndex]
+    const updatedPoints = currentPath.points.filter((point) => point.time <= newTime)
+    updatedPaths[currentPathIndex] = { ...currentPath, points: updatedPoints }
 
     return {
       ...state,
       isJumping: true,
       shouldTrackMouse: false,
       isDrawing: false,
+      isVideoPlaying: false,
+      videoTime: newTime,
       paths: updatedPaths,
-    }
-  })
-}
-
-export function handleTimeJump(forward: boolean, videoElement?: HTMLVideoElement) {
-  drawingState.update((state) => {
-    if (state.isJumping || !videoElement) return state
-
-    const currentTime = state.videoTime
-    let newTime: number
-
-    if (forward) {
-      newTime = Math.min(currentTime + JUMP_SECONDS, videoElement.duration)
-      videoElement.currentTime = newTime
-
-      const currentPathIndex = state.paths.findIndex((p) => p.pathId === state.currentPathId)
-      if (currentPathIndex === -1) return state
-
-      const updatedPaths = [...state.paths]
-      const currentPath = updatedPaths[currentPathIndex]
-
-      const lastPoint = currentPath.points[currentPath.points.length - 1]
-      if (!lastPoint) return state
-
-      const config = get(drawingConfig)
-      // Use heartbeat interval for jumps when adaptive sampling is on (fewer points for stationary periods)
-      // Use polling rate when adaptive sampling is off (consistent with fixed interval mode)
-      const samplingRate = config.useAdaptiveSampling
-        ? config.heartbeatInterval / 1000
-        : config.pollingRate / 1000
-      const updatedPoints = [...currentPath.points]
-
-      for (let t = currentTime + samplingRate; t <= newTime; t += samplingRate) {
-        updatedPoints.push({
-          x: lastPoint.x,
-          y: lastPoint.y,
-          time: t,
-          pathId: state.currentPathId,
-        })
-      }
-
-      updatedPaths[currentPathIndex] = {
-        ...currentPath,
-        points: updatedPoints,
-      }
-
-      return {
-        ...state,
-        isJumping: true,
-        videoTime: newTime,
-        paths: updatedPaths,
-      }
-    } else {
-      newTime = Math.max(currentTime - JUMP_SECONDS, 0)
-      videoElement.currentTime = newTime
-
-      const currentPathIndex = state.paths.findIndex((p) => p.pathId === state.currentPathId)
-      if (currentPathIndex === -1) return state
-
-      const updatedPaths = [...state.paths]
-      const currentPath = updatedPaths[currentPathIndex]
-
-      const updatedPoints = currentPath.points.filter((point) => point.time <= newTime)
-      updatedPaths[currentPathIndex] = {
-        ...currentPath,
-        points: updatedPoints,
-      }
-
-      videoElement.pause()
-
-      return {
-        ...state,
-        isJumping: true,
-        shouldTrackMouse: false,
-        isDrawing: false,
-        isVideoPlaying: false,
-        videoTime: newTime,
-        paths: updatedPaths,
-      }
     }
   })
 
   setTimeout(() => {
-    drawingState.update((state) => ({
-      ...state,
-      isJumping: false,
-    }))
+    drawingState.update((state) => ({ ...state, isJumping: false }))
   }, JUMP_COOLDOWN)
 }
 

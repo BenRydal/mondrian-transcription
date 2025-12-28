@@ -10,6 +10,8 @@ interface DrawingConfig {
   isTranscriptionMode: boolean
   speculateScale: number // optional scale for speculate mode
   isContinuousMode: boolean
+  jumpSeconds: number // transcription mode: fast forward/rewind duration in seconds (5-60)
+  jumpSteps: number // speculate mode: undo steps (5-50)
 }
 
 const defaultConfig: DrawingConfig = {
@@ -22,6 +24,8 @@ const defaultConfig: DrawingConfig = {
   isTranscriptionMode: true,
   speculateScale: 1,
   isContinuousMode: true,
+  jumpSeconds: 5,
+  jumpSteps: 10,
 }
 
 export const drawingConfig = writable<DrawingConfig>(defaultConfig)
