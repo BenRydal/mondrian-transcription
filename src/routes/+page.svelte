@@ -109,6 +109,8 @@
       ...config,
       isTranscriptionMode: recoveredSession!.config.isTranscriptionMode,
       pollingRate: recoveredSession!.config.pollingRate,
+      heartbeatInterval: recoveredSession!.config.heartbeatInterval ?? 500,
+      useAdaptiveSampling: recoveredSession!.config.useAdaptiveSampling ?? true,
       strokeWeight: recoveredSession!.config.strokeWeight,
       speculateScale: recoveredSession!.config.speculateScale,
       isContinuousMode: recoveredSession!.config.isContinuousMode,

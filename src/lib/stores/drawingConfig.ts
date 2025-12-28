@@ -4,7 +4,9 @@ interface DrawingConfig {
   strokeWeight: number
   strokeColor: string
   splitPosition: number // percentage (0-100)
-  pollingRate: number // milliseconds
+  pollingRate: number // milliseconds - sampling interval when moving (or fixed interval if adaptive is off)
+  heartbeatInterval: number // milliseconds - sampling interval when stationary (adaptive mode only)
+  useAdaptiveSampling: boolean // true = adaptive/heartbeat, false = fixed interval
   isTranscriptionMode: boolean
   speculateScale: number // optional scale for speculate mode
   isContinuousMode: boolean
@@ -15,6 +17,8 @@ const defaultConfig: DrawingConfig = {
   strokeColor: '#000000',
   splitPosition: 50,
   pollingRate: 4,
+  heartbeatInterval: 500, // 500ms heartbeat when stationary
+  useAdaptiveSampling: true, // default to adaptive sampling
   isTranscriptionMode: true,
   speculateScale: 1,
   isContinuousMode: true,

@@ -11,7 +11,13 @@
     handleTimeJump,
     handleRewindSpeculateMode,
   } from '../stores/drawingState'
-  import { setupDrawing, drawPaths, timeSampler, indexSampler } from './features/drawing'
+  import {
+    setupDrawing,
+    drawPaths,
+    timeSampler,
+    adaptiveSampler,
+    indexSampler,
+  } from './features/drawing'
   import { setupVideo } from './features/video'
   import VideoControls from '../components/video/VideoControls.svelte'
   import { getFittedImageDisplayRect } from '$lib/utils/drawingUtils'
@@ -270,6 +276,7 @@
     const currentPathCount = $drawingState.paths.length
     const newColor = colors[currentPathCount % colors.length]
     timeSampler.reset()
+    adaptiveSampler.reset()
     indexSampler.reset()
 
     if (!$drawingConfig.isTranscriptionMode) {
@@ -323,10 +330,18 @@
     paths.forEach((path, index) => {
       if (path.points.length === 0) return
 
+      const minTime = path.points[0].time
       const maxTime = path.points[path.points.length - 1].time
+      const timeRange = maxTime - minTime
       const csv = path.points
         .map((p) => {
-          const time = isTranscriptionMode ? p.time : (p.time / maxTime) * scaleValue
+          // Transcription mode: use video time as-is
+          // Speculate mode: normalize to [0, scaleValue]
+          const time = isTranscriptionMode
+            ? p.time
+            : timeRange > 0
+              ? ((p.time - minTime) / timeRange) * scaleValue
+              : 0
           return `${p.x},${p.y},${time}`
         })
         .join('\n')

@@ -10,15 +10,29 @@ import {
 import { drawingConfig, getSplitPositionForMode } from '../../stores/drawingConfig'
 import { isInDrawableArea, convertToImageCoordinates } from '../../utils/drawingUtils'
 import { getFittedImageDisplayRect } from '../../utils/drawingUtils'
-import { TimeBasedSampler, IndexBasedSampler } from './samplers'
+import { TimeBasedSampler, AdaptiveSampler, IndexBasedSampler } from './samplers'
 
-export const timeSampler = new TimeBasedSampler(get(drawingConfig).pollingRate / 1000)
-export const indexSampler = new IndexBasedSampler(get(drawingConfig).pollingRate)
+const initialConfig = get(drawingConfig)
+
+// Fixed-interval sampler (original behavior for transcription mode)
+export const timeSampler = new TimeBasedSampler(initialConfig.pollingRate / 1000)
+
+// Adaptive sampler with heartbeat (used for both modes when adaptive is ON)
+export const adaptiveSampler = new AdaptiveSampler(
+  initialConfig.pollingRate / 1000, // activeInterval (fast sampling when moving)
+  initialConfig.heartbeatInterval / 1000, // heartbeatInterval (slow sampling when stationary)
+  2 // minMovement in pixels
+)
+
+// Fixed index-based sampler (original behavior for speculate mode)
+export const indexSampler = new IndexBasedSampler(initialConfig.pollingRate)
 
 export function setupDrawing(p5: p5) {
   drawingConfig.subscribe((config) => {
     timeSampler.setInterval(config.pollingRate / 1000)
-    indexSampler.setStep(config.pollingRate) // or whatever mapping you want
+    adaptiveSampler.setActiveInterval(config.pollingRate / 1000)
+    adaptiveSampler.setHeartbeatInterval(config.heartbeatInterval / 1000)
+    indexSampler.setStep(config.pollingRate)
   })
 
   const addCurrentPoint = () => {
@@ -29,7 +43,6 @@ export function setupDrawing(p5: p5) {
     const curPath = state.paths.find((p) => p.pathId === state.currentPathId)
     if (!curPath) return
 
-    const curPointArray = curPath.points
     const coords = convertToImageCoordinates(p5, p5.mouseX, p5.mouseY)
 
     let time: number
@@ -37,10 +50,24 @@ export function setupDrawing(p5: p5) {
 
     if (config.isTranscriptionMode) {
       time = state.videoTime
-      shouldAdd = timeSampler.shouldSample(time)
+      if (config.useAdaptiveSampling) {
+        // Adaptive sampling: fast when moving, heartbeat when stationary
+        shouldAdd = adaptiveSampler.shouldSample(time, coords)
+      } else {
+        // Fixed interval sampling (original behavior)
+        shouldAdd = timeSampler.shouldSample(time)
+      }
     } else {
-      shouldAdd = indexSampler.shouldSample()
-      time = indexSampler.getPseudoTime()
+      // Speculate mode
+      if (config.useAdaptiveSampling) {
+        // Adaptive sampling with wall-clock time
+        time = performance.now() / 1000
+        shouldAdd = adaptiveSampler.shouldSample(time, coords)
+      } else {
+        // Fixed index-based sampling (original behavior)
+        shouldAdd = indexSampler.shouldSample()
+        time = indexSampler.getPseudoTime()
+      }
     }
 
     if (!shouldAdd) return
@@ -57,13 +84,13 @@ export function setupDrawing(p5: p5) {
   const handleMousePressedVideo = (videoElement?: HTMLVideoElement) => {
     if (isInDrawableArea(p5, p5.mouseX, p5.mouseY)) {
       const state = get(drawingState)
-      const config = get(drawingConfig)
 
       if (videoElement && videoElement.currentTime >= videoElement.duration - 0.1) {
         return
       }
       if (!state.shouldTrackMouse) {
         timeSampler.reset()
+        adaptiveSampler.reset()
         indexSampler.reset()
       }
       toggleDrawing(videoElement)

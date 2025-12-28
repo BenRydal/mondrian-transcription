@@ -531,6 +531,33 @@
           </label>
         </li>
 
+        <!-- Adaptive Sampling Toggle -->
+        <li>
+          <label class="label cursor-pointer flex-col items-start gap-2 w-full">
+            <div class="flex items-center justify-between w-full">
+              <span class="label-text">Adaptive Sampling</span>
+              <div class="tooltip tooltip-left" data-tip="When ON: samples frequently during movement, less when stationary. When OFF: fixed interval sampling.">
+                <IconHelp class="w-4 h-4 text-base-content/50" />
+              </div>
+            </div>
+            <button
+              type="button"
+              class="btn btn-sm w-full transition-colors duration-200"
+              class:bg-blue-800={$drawingConfig.useAdaptiveSampling}
+              class:text-white={$drawingConfig.useAdaptiveSampling}
+              class:bg-gray-200={!$drawingConfig.useAdaptiveSampling}
+              class:text-gray-800={!$drawingConfig.useAdaptiveSampling}
+              on:click={() =>
+                drawingConfig.update((c) => ({
+                  ...c,
+                  useAdaptiveSampling: !c.useAdaptiveSampling,
+                }))}
+            >
+              {#if $drawingConfig.useAdaptiveSampling}ON{:else}OFF{/if}
+            </button>
+          </label>
+        </li>
+
         <!-- Stroke Weight -->
         <li>
           <label class="label cursor-pointer flex-col items-start gap-2">
