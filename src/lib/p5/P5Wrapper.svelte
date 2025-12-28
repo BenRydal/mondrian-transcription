@@ -281,7 +281,13 @@
     }
   }
 
-  export function startNewPath() {
+  export function startNewPath(): boolean {
+    // Don't allow adding a new path if current path is empty
+    const currentPath = $drawingState.paths.find((p) => p.pathId === $drawingState.currentPathId)
+    if (currentPath && currentPath.points.length === 0) {
+      return false
+    }
+
     const currentPathCount = $drawingState.paths.length
     const newColor = colors[currentPathCount % colors.length]
     timeSampler.reset()
@@ -307,6 +313,7 @@
       isDrawing: false,
       isVideoPlaying: false, // always false if no video
     }))
+    return true
   }
 
   export function exportAll(onComplete?: () => void) {

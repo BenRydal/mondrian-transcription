@@ -15,10 +15,18 @@
     debounce,
     type SavedSession,
   } from '$lib/stores/sessionRecovery'
+  import IconWarning from '~icons/material-symbols/warning-outline'
 
   let p5Component: P5Wrapper
   let showRecoveryModal = $state(false)
   let recoveredSession = $state<SavedSession | null>(null)
+  let showEmptyPathWarning = $state(false)
+
+  $effect(() => {
+    if ($drawingState.isDrawing) {
+      showEmptyPathWarning = false
+    }
+  })
 
   // Save function (used by all save triggers)
   function saveNow() {
@@ -190,7 +198,8 @@
   }
 
   function handleNewPath() {
-    p5Component.startNewPath()
+    const created = p5Component.startNewPath()
+    showEmptyPathWarning = !created
   }
 
   function loadExampleData(imageID: string) {
@@ -227,3 +236,14 @@
   <P5Wrapper bind:this={p5Component} />
   <PathStats />
 </div>
+
+{#if showEmptyPathWarning}
+  <div class="fixed top-20 left-4 right-4 flex justify-center pointer-events-none z-50">
+    <div class="alert alert-warning shadow-lg max-w-md pointer-events-auto">
+      <IconWarning class="h-5 w-5" />
+      <span class="text-sm"
+        >Please record some data on the current path before adding a new one.</span
+      >
+    </div>
+  </div>
+{/if}
