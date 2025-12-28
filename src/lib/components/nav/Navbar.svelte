@@ -487,7 +487,7 @@
     <button class="btn btn-neutral gap-2" on:click={onNewPath}> New Path </button>
 
     <!-- Settings Dropdown -->
-    <div class="dropdown dropdown-end" role="none" on:click={preventDrawing}>
+    <div class="dropdown dropdown-end" role="none" on:click={preventDrawing} data-ui-element>
       <button
         tabindex="0"
         class="btn btn-ghost"
@@ -505,6 +505,9 @@
         class="dropdown-content menu bg-base-100 rounded-box z-[1] w-80 p-4 shadow mt-4"
         role="menu"
       >
+        <!-- Sampling Section -->
+        <li class="menu-title text-xs uppercase text-base-content/50 pt-0 text-center">Sampling</li>
+
         <!-- Point Capture Interval -->
         <li>
           <label class="label cursor-pointer flex-col items-start gap-2">
@@ -557,6 +560,11 @@
             </button>
           </label>
         </li>
+
+        <div class="divider my-1"></div>
+
+        <!-- Rendering Section -->
+        <li class="menu-title text-xs uppercase text-base-content/50 text-center">Rendering</li>
 
         <!-- Stroke Weight -->
         <li>
