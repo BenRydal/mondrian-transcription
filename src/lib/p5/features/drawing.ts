@@ -116,7 +116,12 @@ export function setupDrawing(p5: p5) {
     if (isInDrawableArea(p5, p5.mouseX, p5.mouseY)) {
       const state = get(drawingState)
       if (!state.shouldTrackMouse) {
-        resetAllSamplers()
+        // Reset time-based samplers (for fresh movement detection)
+        timeSampler.reset()
+        adaptiveSampler.reset()
+        // Sync index sampler to current path's point count (preserves state after rewind/forward)
+        const curPath = state.paths.find((p) => p.pathId === state.currentPathId)
+        indexSampler.reset(curPath?.points.length ?? 0)
       }
       toggleDrawingNoVideo()
     }
