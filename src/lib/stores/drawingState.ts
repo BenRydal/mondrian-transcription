@@ -38,7 +38,13 @@ const initialState: DrawingState = {
   isJumping: false,
 }
 
-const JUMP_COOLDOWN = 250
+function clearJumpingOnSeek(videoElement: HTMLVideoElement) {
+  const onSeeked = () => {
+    videoElement.removeEventListener('seeked', onSeeked)
+    drawingState.update((state) => ({ ...state, isJumping: false }))
+  }
+  videoElement.addEventListener('seeked', onSeeked)
+}
 
 export function handleRewindSpeculateMode() {
   drawingState.update((state) => {
@@ -136,9 +142,7 @@ export function handleForwardTranscription(videoElement: HTMLVideoElement) {
     return { ...state, isJumping: true, videoTime: newTime, paths: updatedPaths }
   })
 
-  setTimeout(() => {
-    drawingState.update((state) => ({ ...state, isJumping: false }))
-  }, JUMP_COOLDOWN)
+  clearJumpingOnSeek(videoElement)
 }
 
 export function handleRewindTranscription(videoElement: HTMLVideoElement) {
@@ -171,9 +175,7 @@ export function handleRewindTranscription(videoElement: HTMLVideoElement) {
     }
   })
 
-  setTimeout(() => {
-    drawingState.update((state) => ({ ...state, isJumping: false }))
-  }, JUMP_COOLDOWN)
+  clearJumpingOnSeek(videoElement)
 }
 
 export const drawingState = writable<DrawingState>(initialState)
