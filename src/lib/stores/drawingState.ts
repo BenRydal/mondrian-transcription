@@ -52,11 +52,14 @@ export function handleRewindSpeculateMode() {
     if (currentPath.points.length === 0) return state
 
     // Remove last N points directly (works regardless of time units)
-    const updatedPoints = currentPath.points.slice(0, Math.max(0, currentPath.points.length - jumpSteps))
+    const updatedPoints = currentPath.points.slice(
+      0,
+      Math.max(0, currentPath.points.length - jumpSteps)
+    )
     updatedPaths[currentPathIndex] = { ...currentPath, points: updatedPoints }
 
-    const newTime = updatedPoints.length > 0 ? updatedPoints[updatedPoints.length - 1].time : 0
-    indexSampler.reset(newTime)
+    // Reset index sampler with the new point count (not time!)
+    indexSampler.reset(updatedPoints.length)
 
     return { ...state, shouldTrackMouse: false, isDrawing: false, paths: updatedPaths }
   })
@@ -67,15 +70,17 @@ export function handleForwardSpeculateMode() {
     const currentPathIndex = state.paths.findIndex((p) => p.pathId === state.currentPathId)
     if (currentPathIndex === -1) return state
 
-    const { jumpSteps, useAdaptiveSampling, heartbeatInterval, pollingRate } = get(drawingConfig)
+    const { jumpSteps, useAdaptiveSampling, heartbeatInterval } = get(drawingConfig)
     const updatedPaths = [...state.paths]
     const currentPath = updatedPaths[currentPathIndex]
 
     const lastPoint = currentPath.points[currentPath.points.length - 1]
     if (!lastPoint) return state
 
-    // Time increment depends on sampling mode (adaptive uses seconds, index-based uses pollingRate)
-    const timeStep = useAdaptiveSampling ? heartbeatInterval / 1000 : pollingRate
+    // Time increment depends on sampling mode:
+    // - Adaptive: heartbeat interval (seconds) for stationary pause simulation
+    // - Index-based: step value (which equals pollingRate)
+    const timeStep = useAdaptiveSampling ? heartbeatInterval / 1000 : indexSampler.getStep()
 
     // Add stationary points at the last position (simulating a pause/stop)
     const updatedPoints = [...currentPath.points]
@@ -89,8 +94,8 @@ export function handleForwardSpeculateMode() {
     }
     updatedPaths[currentPathIndex] = { ...currentPath, points: updatedPoints }
 
-    const newTime = lastPoint.time + jumpSteps * timeStep
-    indexSampler.reset(newTime)
+    // Reset index sampler with the new point count
+    indexSampler.reset(updatedPoints.length)
 
     return { ...state, paths: updatedPaths }
   })
@@ -118,7 +123,11 @@ export function handleForwardTranscription(videoElement: HTMLVideoElement) {
     const samplingRate = useAdaptiveSampling ? heartbeatInterval / 1000 : pollingRate / 1000
     const updatedPoints = [...currentPath.points]
 
-    for (let t = currentTime + samplingRate; t <= newTime; t += samplingRate) {
+    // Use multiplication to avoid floating point accumulation drift
+    const timeDelta = newTime - currentTime
+    const numPoints = Math.floor(timeDelta / samplingRate)
+    for (let i = 1; i <= numPoints; i++) {
+      const t = currentTime + i * samplingRate
       updatedPoints.push({ x: lastPoint.x, y: lastPoint.y, time: t, pathId: state.currentPathId })
     }
 
@@ -283,15 +292,15 @@ export function deletePathById(pathId: number) {
     const updatedPaths = state.paths.filter((p) => p.pathId !== pathId)
 
     // If no paths remain, create a new empty path (consistent with Clear All behavior)
-    const newPaths = updatedPaths.length === 0
-      ? [{ points: [], color: '#FF0000', pathId: 1 }]
-      : updatedPaths
+    const newPaths =
+      updatedPaths.length === 0 ? [{ points: [], color: '#FF0000', pathId: 1 }] : updatedPaths
 
-    const newCurrentPathId = updatedPaths.length === 0
-      ? 1
-      : state.currentPathId === pathId
-        ? (updatedPaths.at(-1)?.pathId ?? 0)
-        : state.currentPathId
+    const newCurrentPathId =
+      updatedPaths.length === 0
+        ? 1
+        : state.currentPathId === pathId
+          ? (updatedPaths.at(-1)?.pathId ?? 0)
+          : state.currentPathId
 
     return {
       ...state,

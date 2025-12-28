@@ -28,6 +28,13 @@ export const adaptiveSampler = new AdaptiveSampler(
 // Fixed index-based sampler (original behavior for speculate mode)
 export const indexSampler = new IndexBasedSampler(initialConfig.pollingRate)
 
+/** Reset all samplers to initial state. Call when starting a new recording session. */
+export function resetAllSamplers() {
+  timeSampler.reset()
+  adaptiveSampler.reset()
+  indexSampler.reset()
+}
+
 export function setupDrawing(p5: p5) {
   drawingConfig.subscribe((config) => {
     timeSampler.setInterval(config.pollingRate / 1000)
@@ -53,7 +60,8 @@ export function setupDrawing(p5: p5) {
       time = state.videoTime
       if (config.useAdaptiveSampling) {
         // Adaptive sampling: fast when moving, heartbeat when stationary
-        shouldAdd = adaptiveSampler.shouldSample(time, coords)
+        const result = adaptiveSampler.shouldSample(time, coords)
+        shouldAdd = result.shouldAdd
       } else {
         // Fixed interval sampling (original behavior)
         shouldAdd = timeSampler.shouldSample(time)
@@ -61,9 +69,17 @@ export function setupDrawing(p5: p5) {
     } else {
       // Speculate mode
       if (config.useAdaptiveSampling) {
-        // Adaptive sampling with wall-clock time
-        time = performance.now() / 1000
-        shouldAdd = adaptiveSampler.shouldSample(time, coords)
+        // Adaptive sampling: use wall-clock for movement detection,
+        // but store incremental time from last point to avoid jumps
+        const wallTime = performance.now() / 1000
+        const result = adaptiveSampler.shouldSample(wallTime, coords)
+        shouldAdd = result.shouldAdd
+
+        if (shouldAdd) {
+          const lastPoint = curPath.points.at(-1)
+          // First point starts at 0, subsequent points increment by the actual interval used
+          time = lastPoint ? lastPoint.time + result.timeIncrement : 0
+        }
       } else {
         // Fixed index-based sampling (original behavior)
         shouldAdd = indexSampler.shouldSample()
@@ -90,9 +106,7 @@ export function setupDrawing(p5: p5) {
         return
       }
       if (!state.shouldTrackMouse) {
-        timeSampler.reset()
-        adaptiveSampler.reset()
-        indexSampler.reset()
+        resetAllSamplers()
       }
       toggleDrawing(videoElement)
     }
@@ -100,6 +114,10 @@ export function setupDrawing(p5: p5) {
 
   const handleMousePressedSpeculateMode = () => {
     if (isInDrawableArea(p5, p5.mouseX, p5.mouseY)) {
+      const state = get(drawingState)
+      if (!state.shouldTrackMouse) {
+        resetAllSamplers()
+      }
       toggleDrawingNoVideo()
     }
   }

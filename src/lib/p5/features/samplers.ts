@@ -20,6 +20,11 @@ export class TimeBasedSampler {
   }
 }
 
+export interface AdaptiveSampleResult {
+  shouldAdd: boolean
+  timeIncrement: number // The interval that triggered this sample (active or heartbeat)
+}
+
 export class AdaptiveSampler {
   private lastSampleTime: number = 0
   private lastPosition: { x: number; y: number } | null = null
@@ -38,7 +43,7 @@ export class AdaptiveSampler {
     this.heartbeatInterval = interval
   }
 
-  shouldSample(currentTime: number, currentPos: { x: number; y: number }): boolean {
+  shouldSample(currentTime: number, currentPos: { x: number; y: number }): AdaptiveSampleResult {
     const timeDelta = currentTime - this.lastSampleTime
 
     // Calculate distance from last recorded position
@@ -55,10 +60,10 @@ export class AdaptiveSampler {
     if (timeDelta >= requiredInterval) {
       this.lastSampleTime = currentTime
       this.lastPosition = { ...currentPos }
-      return true
+      return { shouldAdd: true, timeIncrement: requiredInterval }
     }
 
-    return false
+    return { shouldAdd: false, timeIncrement: 0 }
   }
 
   reset() {
@@ -88,9 +93,14 @@ export class IndexBasedSampler {
     return this.acceptedCount * this.step
   }
 
-  reset(startIndex: number = 0) {
-    this.eventCounter = startIndex
-    this.acceptedCount = startIndex > 0 ? Math.floor(startIndex / this.step) : 0
+  getStep(): number {
+    return this.step
+  }
+
+  /** Reset sampler state. Call with no args to start fresh, or with pointCount to resume after N accepted samples. */
+  reset(pointCount: number = 0) {
+    this.acceptedCount = pointCount
+    // Set eventCounter so next call is ready to sample (aligned to step boundary)
+    this.eventCounter = pointCount * this.step
   }
 }
-
