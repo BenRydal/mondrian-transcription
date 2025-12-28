@@ -33,6 +33,13 @@
   let pendingValue = get(drawingConfig).isTranscriptionMode ? 'true' : 'false'
   let originalValue = pendingValue
 
+  // Sync when store changes externally (e.g., session recovery)
+  $: if (!showModal) {
+    const storeValue = $drawingConfig.isTranscriptionMode ? 'true' : 'false'
+    pendingValue = storeValue
+    originalValue = storeValue
+  }
+
   // Define modes as strings
   const modes = [
     { label: 'Transcription Mode', value: 'true' },

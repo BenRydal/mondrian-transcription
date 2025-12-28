@@ -15,6 +15,7 @@
   import { setupVideo } from './features/video'
   import VideoControls from '../components/video/VideoControls.svelte'
   import { getFittedImageDisplayRect } from '$lib/utils/drawingUtils'
+  import IconInfo from '~icons/material-symbols/info-outline'
 
   let containerDiv: HTMLDivElement
   let width = 800
@@ -26,6 +27,7 @@
   const colors = ['#FF0000', '#00FF00', '#0000FF', '#FFFF00', '#FF00FF', '#00FFFF']
 
   $: videoHtmlElement = videoElement ? (videoElement as { elt: HTMLVideoElement }).elt : null
+  $: hasRecordedPaths = $drawingState.paths.some((p) => p.points.length > 0)
 
   function handleSplitterDrag(e: MouseEvent) {
     if (isDraggingSplitter) {
@@ -140,9 +142,12 @@
       if (target?.closest('[data-ui-element]')) return
 
       if (!$drawingConfig.isTranscriptionMode) {
+        // Speculate mode: require floor plan
+        if (!$drawingState.imageElement) return
         handleMousePressedSpeculateMode()
       } else {
-        if (!isDraggingSplitter) {
+        // Transcription mode: require video
+        if (!isDraggingSplitter && videoHtmlElement) {
           handleMousePressedVideo(videoHtmlElement)
         }
       }
@@ -153,11 +158,15 @@
   }
 
   export function setVideo(video: HTMLVideoElement) {
+    // Check if this is a recovery scenario (paths exist but no video yet)
+    const isRecovery = hasRecordedPaths && !videoElement
+    const savedVideoTime = $drawingState.videoTime
+
     lastVideoTime = 0
 
     drawingState.update((state) => ({
       ...state,
-      videoTime: 0,
+      videoTime: isRecovery ? state.videoTime : 0,
     }))
 
     if (videoElement) {
@@ -183,23 +192,45 @@
 
       if (p5Instance) {
         p5Instance.redraw()
-        clearDrawing()
+        // Only clear drawing if not recovering
+        if (!isRecovery) {
+          clearDrawing()
+        }
+      }
+
+      // If recovering, seek to saved timestamp once video is ready
+      if (isRecovery && savedVideoTime > 0) {
+        const videoElt = (videoElement as { elt: HTMLVideoElement }).elt
+        videoElt.addEventListener(
+          'loadedmetadata',
+          () => {
+            videoElt.currentTime = Math.min(savedVideoTime, videoElt.duration)
+            lastVideoTime = videoElt.currentTime
+          },
+          { once: true }
+        )
       }
     }
 
-    if ($drawingState.imageElement) startNewPath()
+    // Only start new path if not recovering
+    if (!isRecovery && $drawingState.imageElement) startNewPath()
   }
 
-  export function setImage(image: HTMLImageElement) {
+  export function setImage(image: HTMLImageElement, isRecovery = false) {
+    // Auto-detect recovery: paths exist but no image loaded yet
+    const isImplicitRecovery = !isRecovery && hasRecordedPaths && !$drawingState.imageElement
+
     p5Instance.loadImage(image.src, (p5Img: p5.Image) => {
-      if (!$drawingConfig.isTranscriptionMode) {
-        if (p5Instance) {
-          p5Instance.redraw()
-          clearDrawing()
+      if (!isRecovery && !isImplicitRecovery) {
+        if (!$drawingConfig.isTranscriptionMode) {
+          if (p5Instance) {
+            p5Instance.redraw()
+            clearDrawing()
+          }
+          startNewPath()
+        } else {
+          if (videoElement) startNewPath()
         }
-        startNewPath()
-      } else {
-        if (videoElement) startNewPath()
       }
       drawingState.update((state) => ({
         ...state,
@@ -207,7 +238,32 @@
         imageHeight: image.height,
         imageElement: p5Img,
       }))
+      if (p5Instance) {
+        p5Instance.loop()
+      }
     })
+  }
+
+  /**
+   * Get floor plan image as data URL for saving to localStorage
+   */
+  export function getFloorPlanDataUrl(): string | null {
+    const imageElement = $drawingState?.imageElement
+    if (!imageElement || !p5Instance) return null
+
+    try {
+      const canvas = p5Instance.createGraphics($drawingState.imageWidth, $drawingState.imageHeight)
+      canvas.pixelDensity(1)
+      canvas.image(imageElement, 0, 0)
+      const dataUrl = (canvas as unknown as { canvas: HTMLCanvasElement }).canvas.toDataURL(
+        'image/png'
+      )
+      canvas.remove()
+      return dataUrl
+    } catch (e) {
+      console.warn('Failed to capture floor plan:', e)
+      return null
+    }
   }
 
   export function startNewPath() {
@@ -427,6 +483,29 @@
 
   {#if videoHtmlElement}
     <VideoControls videoElement={videoHtmlElement} />
+  {/if}
+
+  <!-- Assets needed for recovered session -->
+  {#if hasRecordedPaths}
+    {@const alertMessage =
+      $drawingConfig.isTranscriptionMode && !$drawingState.imageElement
+        ? 'Upload your floor plan and video to continue recording'
+        : $drawingConfig.isTranscriptionMode && !videoHtmlElement
+          ? 'Upload your video to continue recording'
+          : !$drawingConfig.isTranscriptionMode && !$drawingState.imageElement
+            ? 'Upload your floor plan to continue recording'
+            : null}
+    {#if alertMessage}
+      <div
+        class="absolute top-4 left-4 right-4 flex justify-center pointer-events-none"
+        data-ui-element
+      >
+        <div class="alert alert-info shadow-lg max-w-md pointer-events-auto">
+          <IconInfo class="h-5 w-5" />
+          <span class="text-sm">{alertMessage}</span>
+        </div>
+      </div>
+    {/if}
   {/if}
 
 </div>

@@ -2,25 +2,149 @@
   import P5Wrapper from '../lib/p5/P5Wrapper.svelte'
   import Navbar from '$lib/components/nav/Navbar.svelte'
   import PathStats from '$lib/components/PathStats.svelte'
+  import RecoveryModal from '$lib/components/RecoveryModal.svelte'
   import { onMount } from 'svelte'
   import { get } from 'svelte/store'
   import { drawingState } from '$lib/stores/drawingState'
+  import { drawingConfig } from '$lib/stores/drawingConfig'
+  import {
+    getRecoverableSession,
+    clearSavedSession,
+    saveSession,
+    hasRecordedData,
+    debounce,
+    type SavedSession,
+  } from '$lib/stores/sessionRecovery'
 
   let p5Component: P5Wrapper
+  let showRecoveryModal = $state(false)
+  let recoveredSession = $state<SavedSession | null>(null)
+
+  // Save function (used by all save triggers)
+  function saveNow() {
+    if (p5Component) {
+      const floorPlanDataUrl = p5Component.getFloorPlanDataUrl()
+      saveSession(floorPlanDataUrl)
+    }
+  }
+
+  // Debounced save for general state changes (renames, config, etc.)
+  const debouncedSave = debounce(saveNow, 2000)
 
   onMount(() => {
+    // Check for recoverable session
+    const session = getRecoverableSession()
+    if (session) {
+      recoveredSession = session
+      showRecoveryModal = true
+    }
+
+    // Track previous recording state to detect when recording stops
+    let wasRecording = false
+    let periodicSaveInterval: ReturnType<typeof setInterval> | null = null
+
+    // Set up auto-save subscription
+    const unsubscribe = drawingState.subscribe((state) => {
+      const hasData = hasRecordedData(state.paths)
+      const isRecording = state.isDrawing
+
+      // Save immediately when recording stops
+      if (wasRecording && !isRecording && hasData) {
+        saveNow()
+      }
+
+      // Start/stop periodic save during recording
+      if (isRecording && !periodicSaveInterval) {
+        // Save every 60 seconds while recording
+        periodicSaveInterval = setInterval(() => {
+          if (hasRecordedData(get(drawingState).paths)) {
+            saveNow()
+          }
+        }, 60000)
+      } else if (!isRecording && periodicSaveInterval) {
+        clearInterval(periodicSaveInterval)
+        periodicSaveInterval = null
+      }
+
+      wasRecording = isRecording
+
+      // Debounced save for other state changes (when not recording)
+      if (!showRecoveryModal && hasData && !isRecording) {
+        debouncedSave()
+      }
+    })
+
+    // Save when page loses visibility (user switches tabs)
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        if (hasRecordedData(get(drawingState).paths)) {
+          saveNow()
+        }
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
+    // Warn before leaving with unsaved data
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      const state = get(drawingState)
-      const hasRecordedData = state.paths.some((p) => p.points.length > 0)
-      if (hasRecordedData) {
+      if (hasRecordedData(get(drawingState).paths)) {
         e.preventDefault()
         e.returnValue = ''
       }
     }
-
     window.addEventListener('beforeunload', handleBeforeUnload)
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      if (periodicSaveInterval) clearInterval(periodicSaveInterval)
+      unsubscribe()
+    }
   })
+
+  function handleRestoreSession() {
+    if (!recoveredSession || !p5Component) return
+
+    // Restore config first
+    drawingConfig.update((config) => ({
+      ...config,
+      isTranscriptionMode: recoveredSession!.config.isTranscriptionMode,
+      pollingRate: recoveredSession!.config.pollingRate,
+      strokeWeight: recoveredSession!.config.strokeWeight,
+      speculateScale: recoveredSession!.config.speculateScale,
+      isContinuousMode: recoveredSession!.config.isContinuousMode,
+    }))
+
+    // Restore paths and state
+    drawingState.update((state) => ({
+      ...state,
+      paths: recoveredSession!.paths,
+      currentPathId: Math.max(...recoveredSession!.paths.map((p) => p.pathId), 0),
+      videoTime: recoveredSession!.videoTime,
+      imageWidth: recoveredSession!.imageWidth,
+      imageHeight: recoveredSession!.imageHeight,
+    }))
+
+    // Restore floor plan image if saved
+    if (recoveredSession.floorPlanDataUrl) {
+      const image = new window.Image()
+      image.onload = () => {
+        p5Component.setImage(image, true)
+      }
+      image.onerror = () => {
+        console.warn('Failed to restore floor plan image from saved session')
+      }
+      image.src = recoveredSession.floorPlanDataUrl
+    }
+
+    showRecoveryModal = false
+    recoveredSession = null
+  }
+
+  function handleDiscardSession() {
+    clearSavedSession()
+    showRecoveryModal = false
+    recoveredSession = null
+  }
 
   function handleVideoUpload(event: Event) {
     const file = (event.target as HTMLInputElement).files?.[0]
@@ -43,18 +167,24 @@
   }
 
   function handleSavePath(onComplete?: () => void) {
-    p5Component.exportAll(onComplete)
+    p5Component.exportAll(() => {
+      // Clear saved session after successful export
+      clearSavedSession()
+      onComplete?.()
+    })
   }
 
   function handleClear() {
     p5Component.clearDrawing()
     p5Component.startNewPath()
+    clearSavedSession()
   }
 
   function handleModeSwitch() {
     p5Component.clearDrawing()
     p5Component.clearVideo()
     p5Component.startNewPath()
+    clearSavedSession()
   }
 
   function handleNewPath() {
@@ -73,6 +203,14 @@
     }
   }
 </script>
+
+{#if showRecoveryModal && recoveredSession}
+  <RecoveryModal
+    session={recoveredSession}
+    onRestore={handleRestoreSession}
+    onDiscard={handleDiscardSession}
+  />
+{/if}
 
 <Navbar
   onSelectExample={loadExampleData}
