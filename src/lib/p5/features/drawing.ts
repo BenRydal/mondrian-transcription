@@ -163,6 +163,7 @@ export function drawPaths(p5: p5) {
   const currentEndpoint = activePath?.points.length
     ? activePath.points[activePath.points.length - 1]
     : null
+
   // Draw pulsing endpoints
   state.paths.forEach((path) => {
     if (path.visible === false || path.points.length === 0) return
@@ -172,12 +173,27 @@ export function drawPaths(p5: p5) {
     if (path.pathId === state.currentPathId) {
       endpoint = currentEndpoint!
     } else if (currentEndpoint) {
-      // find closest point in time
-      endpoint = path.points.reduce((closest, pt) => {
-        const prevDiff = Math.abs(closest.time - currentEndpoint.time)
-        const currDiff = Math.abs(pt.time - currentEndpoint.time)
-        return currDiff < prevDiff ? pt : closest
-      }, path.points[0])
+      if (config.isTranscriptionMode) {
+        // Transcription mode: find closest point in time (all paths share video time)
+        endpoint = path.points.reduce((closest, pt) => {
+          const prevDiff = Math.abs(closest.time - currentEndpoint.time)
+          const currDiff = Math.abs(pt.time - currentEndpoint.time)
+          return currDiff < prevDiff ? pt : closest
+        }, path.points[0])
+      } else {
+        // Speculate mode: sync by elapsed time (normalize from each path's start)
+        const activeStartTime = activePath!.points[0].time
+        const currentElapsed = currentEndpoint.time - activeStartTime
+
+        const pathStartTime = path.points[0].time
+        endpoint = path.points.reduce((closest, pt) => {
+          const ptElapsed = pt.time - pathStartTime
+          const closestElapsed = closest.time - pathStartTime
+          return Math.abs(ptElapsed - currentElapsed) < Math.abs(closestElapsed - currentElapsed)
+            ? pt
+            : closest
+        }, path.points[0])
+      }
     } else {
       endpoint = path.points[0]
     }
