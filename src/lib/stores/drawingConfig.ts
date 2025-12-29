@@ -4,10 +4,14 @@ interface DrawingConfig {
   strokeWeight: number
   strokeColor: string
   splitPosition: number // percentage (0-100)
-  pollingRate: number // milliseconds
+  pollingRate: number // milliseconds - sampling interval when moving (or fixed interval if adaptive is off)
+  heartbeatInterval: number // milliseconds - sampling interval when stationary (adaptive mode only)
+  useAdaptiveSampling: boolean // true = adaptive/heartbeat, false = fixed interval
   isTranscriptionMode: boolean
   speculateScale: number // optional scale for speculate mode
   isContinuousMode: boolean
+  jumpSeconds: number // transcription mode: fast forward/rewind duration in seconds (5-60)
+  jumpSteps: number // speculate mode: undo steps (5-50)
 }
 
 const defaultConfig: DrawingConfig = {
@@ -15,9 +19,13 @@ const defaultConfig: DrawingConfig = {
   strokeColor: '#000000',
   splitPosition: 50,
   pollingRate: 4,
+  heartbeatInterval: 500, // 500ms heartbeat when stationary
+  useAdaptiveSampling: true, // default to adaptive sampling
   isTranscriptionMode: true,
   speculateScale: 1,
   isContinuousMode: true,
+  jumpSeconds: 5,
+  jumpSteps: 10,
 }
 
 export const drawingConfig = writable<DrawingConfig>(defaultConfig)

@@ -6,19 +6,41 @@ import {
   addPointToCurrentPath,
   toggleDrawing,
   toggleDrawingNoVideo,
+  type PathData,
 } from '../../stores/drawingState'
 import { drawingConfig, getSplitPositionForMode } from '../../stores/drawingConfig'
 import { isInDrawableArea, convertToImageCoordinates } from '../../utils/drawingUtils'
 import { getFittedImageDisplayRect } from '../../utils/drawingUtils'
-import { TimeBasedSampler, IndexBasedSampler } from './samplers'
+import { TimeBasedSampler, AdaptiveSampler, IndexBasedSampler } from './samplers'
 
-export const timeSampler = new TimeBasedSampler(get(drawingConfig).pollingRate / 1000)
-export const indexSampler = new IndexBasedSampler(get(drawingConfig).pollingRate)
+const initialConfig = get(drawingConfig)
+
+// Fixed-interval sampler (original behavior for transcription mode)
+export const timeSampler = new TimeBasedSampler(initialConfig.pollingRate / 1000)
+
+// Adaptive sampler with heartbeat (used for both modes when adaptive is ON)
+export const adaptiveSampler = new AdaptiveSampler(
+  initialConfig.pollingRate / 1000, // activeInterval (fast sampling when moving)
+  initialConfig.heartbeatInterval / 1000, // heartbeatInterval (slow sampling when stationary)
+  2 // minMovement in pixels
+)
+
+// Fixed index-based sampler (original behavior for speculate mode)
+export const indexSampler = new IndexBasedSampler(initialConfig.pollingRate)
+
+/** Reset all samplers to initial state. Call when starting a new recording session. */
+export function resetAllSamplers() {
+  timeSampler.reset()
+  adaptiveSampler.reset()
+  indexSampler.reset()
+}
 
 export function setupDrawing(p5: p5) {
   drawingConfig.subscribe((config) => {
     timeSampler.setInterval(config.pollingRate / 1000)
-    indexSampler.setStep(config.pollingRate) // or whatever mapping you want
+    adaptiveSampler.setActiveInterval(config.pollingRate / 1000)
+    adaptiveSampler.setHeartbeatInterval(config.heartbeatInterval / 1000)
+    indexSampler.setStep(config.pollingRate)
   })
 
   const addCurrentPoint = () => {
@@ -29,7 +51,6 @@ export function setupDrawing(p5: p5) {
     const curPath = state.paths.find((p) => p.pathId === state.currentPathId)
     if (!curPath) return
 
-    const curPointArray = curPath.points
     const coords = convertToImageCoordinates(p5, p5.mouseX, p5.mouseY)
 
     let time: number
@@ -37,10 +58,33 @@ export function setupDrawing(p5: p5) {
 
     if (config.isTranscriptionMode) {
       time = state.videoTime
-      shouldAdd = timeSampler.shouldSample(time)
+      if (config.useAdaptiveSampling) {
+        // Adaptive sampling: fast when moving, heartbeat when stationary
+        const result = adaptiveSampler.shouldSample(time, coords)
+        shouldAdd = result.shouldAdd
+      } else {
+        // Fixed interval sampling (original behavior)
+        shouldAdd = timeSampler.shouldSample(time)
+      }
     } else {
-      shouldAdd = indexSampler.shouldSample()
-      time = indexSampler.getPseudoTime()
+      // Speculate mode
+      if (config.useAdaptiveSampling) {
+        // Adaptive sampling: use wall-clock for movement detection,
+        // but store incremental time from last point to avoid jumps
+        const wallTime = performance.now() / 1000
+        const result = adaptiveSampler.shouldSample(wallTime, coords)
+        shouldAdd = result.shouldAdd
+
+        if (shouldAdd) {
+          const lastPoint = curPath.points.at(-1)
+          // First point starts at 0, subsequent points increment by the actual interval used
+          time = lastPoint ? lastPoint.time + result.timeIncrement : 0
+        }
+      } else {
+        // Fixed index-based sampling (original behavior)
+        shouldAdd = indexSampler.shouldSample()
+        time = indexSampler.getPseudoTime()
+      }
     }
 
     if (!shouldAdd) return
@@ -57,14 +101,12 @@ export function setupDrawing(p5: p5) {
   const handleMousePressedVideo = (videoElement?: HTMLVideoElement) => {
     if (isInDrawableArea(p5, p5.mouseX, p5.mouseY)) {
       const state = get(drawingState)
-      const config = get(drawingConfig)
 
       if (videoElement && videoElement.currentTime >= videoElement.duration - 0.1) {
         return
       }
       if (!state.shouldTrackMouse) {
-        timeSampler.reset()
-        indexSampler.reset()
+        resetAllSamplers()
       }
       toggleDrawing(videoElement)
     }
@@ -72,6 +114,15 @@ export function setupDrawing(p5: p5) {
 
   const handleMousePressedSpeculateMode = () => {
     if (isInDrawableArea(p5, p5.mouseX, p5.mouseY)) {
+      const state = get(drawingState)
+      if (!state.shouldTrackMouse) {
+        // Reset time-based samplers (for fresh movement detection)
+        timeSampler.reset()
+        adaptiveSampler.reset()
+        // Sync index sampler to current path's point count (preserves state after rewind/forward)
+        const curPath = state.paths.find((p) => p.pathId === state.currentPathId)
+        indexSampler.reset(curPath?.points.length ?? 0)
+      }
       toggleDrawingNoVideo()
     }
   }
@@ -87,92 +138,130 @@ export function drawPaths(p5: p5) {
   const state = get(drawingState)
   const config = get(drawingConfig)
 
-  const imgW = state.imageWidth
-  const imgH = state.imageHeight
+  const { imageWidth: imgW, imageHeight: imgH } = state
   if (!imgW || !imgH) return
 
-  const r = getFittedImageDisplayRect(p5, getSplitPositionForMode(), imgW, imgH)
-  const ENDPOINT_MARKER_SIZE = 15
+  const rect = getFittedImageDisplayRect(p5, getSplitPositionForMode(), imgW, imgH)
+  const toDisplay = (pt: { x: number; y: number }) => ({
+    x: rect.x + (pt.x / imgW) * rect.w,
+    y: rect.y + (pt.y / imgH) * rect.h,
+  })
 
   p5.push()
 
-  const toDisplay = (pt: { x: number; y: number }) => ({
-    x: r.x + (pt.x / imgW) * r.w,
-    y: r.y + (pt.y / imgH) * r.h,
-  })
-
-  const isContinuousMode = config.isContinuousMode
-
-  // Draw All paths
+  // Draw all path lines
   state.paths.forEach((path) => {
-    if (path.visible === false) return
-
-    p5.strokeWeight(config.strokeWeight)
-    p5.stroke(path.color)
-    p5.noFill()
-
-    if (isContinuousMode) {
-      if (path.points.length > 1) {
-        p5.beginShape()
-        path.points.forEach((pt) => {
-          const { x, y } = toDisplay(pt)
-          p5.vertex(x, y)
-        })
-        p5.endShape()
-      } else if (path.points.length === 1) {
-        const { x, y } = toDisplay(path.points[0])
-        p5.point(x, y)
-      }
-    } else {
-      path.points.forEach((pt) => {
-        const { x, y } = toDisplay(pt)
-        p5.circle(x, y, config.strokeWeight)
-      })
-    }
+    drawPathLine(p5, path, toDisplay, config.strokeWeight, config.isContinuousMode)
   })
 
-  // Determine active endpoint
-  const activePath = state.paths.find((p) => p.pathId === state.currentPathId)
-  const currentEndpoint = activePath?.points.length
-    ? activePath.points[activePath.points.length - 1]
-    : null
   // Draw pulsing endpoints
+  const activePath = state.paths.find((p) => p.pathId === state.currentPathId)
+  const currentEndpoint = activePath?.points.at(-1) ?? null
+
   state.paths.forEach((path) => {
     if (path.visible === false || path.points.length === 0) return
 
-    let endpoint: { x: number; y: number } | null = null
+    const endpoint =
+      path.pathId === state.currentPathId
+        ? currentEndpoint!
+        : findSyncedEndpoint(path, activePath, currentEndpoint, config.isTranscriptionMode)
 
-    if (path.pathId === state.currentPathId) {
-      endpoint = currentEndpoint!
-    } else if (currentEndpoint) {
-      // find closest point in time
-      endpoint = path.points.reduce((closest, pt) => {
-        const prevDiff = Math.abs(closest.time - currentEndpoint.time)
-        const currDiff = Math.abs(pt.time - currentEndpoint.time)
-        return currDiff < prevDiff ? pt : closest
-      }, path.points[0])
-    } else {
-      endpoint = path.points[0]
-    }
-
-    const display = toDisplay(endpoint)
-
-    const pulseScale = (Math.sin(p5.frameCount * 0.05) + 1) * 0.25 + 0.5
-
-    p5.noStroke()
-    const c = p5.color(path.color)
-    c.setAlpha(50)
-    p5.fill(c)
-
-    for (let i = 4; i > 0; i--) {
-      const size = ENDPOINT_MARKER_SIZE * (1.5 + i * 0.5) * pulseScale
-      p5.circle(display.x, display.y, size)
-    }
-
-    p5.circle(display.x, display.y, ENDPOINT_MARKER_SIZE * pulseScale)
-    p5.fill(255)
-    p5.circle(display.x, display.y, ENDPOINT_MARKER_SIZE * 0.5 * pulseScale)
+    const { x, y } = toDisplay(endpoint)
+    drawPulsingMarker(p5, x, y, path.color, p5.frameCount)
   })
 
   p5.pop()
+}
+
+/** Draw a single path as a continuous line or discrete points */
+function drawPathLine(
+  p5: p5,
+  path: PathData,
+  toDisplay: (pt: { x: number; y: number }) => { x: number; y: number },
+  strokeWeight: number,
+  isContinuousMode: boolean
+) {
+  if (path.visible === false) return
+
+  p5.strokeWeight(strokeWeight)
+  p5.stroke(path.color)
+  p5.noFill()
+
+  if (isContinuousMode) {
+    if (path.points.length > 1) {
+      p5.beginShape()
+      path.points.forEach((pt) => p5.vertex(...(Object.values(toDisplay(pt)) as [number, number])))
+      p5.endShape()
+    } else if (path.points.length === 1) {
+      const { x, y } = toDisplay(path.points[0])
+      p5.point(x, y)
+    }
+  } else {
+    path.points.forEach((pt) => {
+      const { x, y } = toDisplay(pt)
+      p5.circle(x, y, strokeWeight)
+    })
+  }
+}
+
+/** Find the synced endpoint for a path based on the current active path's position */
+function findSyncedEndpoint(
+  path: PathData,
+  activePath: PathData | undefined,
+  currentEndpoint: Point | null,
+  isTranscriptionMode: boolean
+): Point {
+  if (!currentEndpoint || !activePath) {
+    return path.points[0]
+  }
+
+  if (isTranscriptionMode) {
+    // Transcription mode: find closest point in time (all paths share video time)
+    return path.points.reduce((closest, pt) => {
+      const prevDiff = Math.abs(closest.time - currentEndpoint.time)
+      const currDiff = Math.abs(pt.time - currentEndpoint.time)
+      return currDiff < prevDiff ? pt : closest
+    }, path.points[0])
+  } else {
+    // Speculate mode: sync by elapsed time (normalize from each path's start)
+    const activeStartTime = activePath.points[0].time
+    const currentElapsed = currentEndpoint.time - activeStartTime
+    const pathStartTime = path.points[0].time
+
+    return path.points.reduce((closest, pt) => {
+      const ptElapsed = pt.time - pathStartTime
+      const closestElapsed = closest.time - pathStartTime
+      return Math.abs(ptElapsed - currentElapsed) < Math.abs(closestElapsed - currentElapsed)
+        ? pt
+        : closest
+    }, path.points[0])
+  }
+}
+
+/** Draw a pulsing marker at the given position */
+function drawPulsingMarker(
+  p5: p5,
+  x: number,
+  y: number,
+  color: string,
+  frameCount: number,
+  markerSize: number = 15
+) {
+  const pulseScale = (Math.sin(frameCount * 0.05) + 1) * 0.25 + 0.5
+
+  p5.noStroke()
+  const c = p5.color(color)
+  c.setAlpha(50)
+  p5.fill(c)
+
+  // Draw expanding rings
+  for (let i = 4; i > 0; i--) {
+    const size = markerSize * (1.5 + i * 0.5) * pulseScale
+    p5.circle(x, y, size)
+  }
+
+  // Draw center dot
+  p5.circle(x, y, markerSize * pulseScale)
+  p5.fill(255)
+  p5.circle(x, y, markerSize * 0.5 * pulseScale)
 }
