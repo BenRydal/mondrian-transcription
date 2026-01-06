@@ -168,7 +168,7 @@
       return
     }
 
-    showUploadModal = false
+    // Keep modal open so user can upload additional files
     ;(event.target as HTMLInputElement).value = ''
   }
 
@@ -205,7 +205,7 @@
       window.alert('Please upload a video or image file')
       return
     }
-    showUploadModal = false
+    // Keep modal open so user can upload additional files
   }
 
   function preventDrawing(e: MouseEvent) {
@@ -892,7 +892,7 @@
     </div>
 
     <div class="modal-action">
-      <button class="btn" on:click={() => (showUploadModal = false)}>Cancel</button>
+      <button class="btn btn-primary" on:click={() => (showUploadModal = false)}>Done</button>
     </div>
   </div>
   <form method="dialog" class="modal-backdrop">

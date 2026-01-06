@@ -13,6 +13,8 @@
     handleForwardSpeculateMode,
     handleRewindSpeculateMode,
   } from '../stores/drawingState'
+  import IconRewind from '~icons/material-symbols/fast-rewind'
+  import IconForward from '~icons/material-symbols/fast-forward'
   import {
     setupDrawing,
     drawPaths,
@@ -37,13 +39,17 @@
   $: videoHtmlElement = videoElement ? (videoElement as { elt: HTMLVideoElement }).elt : null
   $: hasRecordedPaths = $drawingState.paths.some((p) => p.points.length > 0)
 
-  function handleSplitterDrag(e: MouseEvent) {
+  function handleSplitterDrag(e: MouseEvent | TouchEvent) {
     if (isDraggingSplitter) {
       e.preventDefault()
       e.stopPropagation()
 
+      // Guard against empty touches array (e.g., touchend)
+      if ('touches' in e && !e.touches.length) return
+
       const rect = containerDiv.getBoundingClientRect()
-      const position = ((e.clientX - rect.left) / rect.width) * 100
+      const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX
+      const position = ((clientX - rect.left) / rect.width) * 100
       const minVideoWidth = 30
       const minImageWidth = 30
       const constrainedPosition = Math.min(Math.max(position, minVideoWidth), 100 - minImageWidth)
@@ -151,22 +157,50 @@
       }
     }
 
-    p5.mousePressed = (event: MouseEvent) => {
-      // Ignore clicks on UI elements (modals, buttons, etc.)
+    // Update p5's mouseX/mouseY from touch coordinates
+    const updateMouseFromTouch = (event: TouchEvent): boolean => {
+      if (!event.touches?.length) return false
+      const canvas = containerDiv.querySelector('canvas')
+      if (!canvas) return false
+      const rect = canvas.getBoundingClientRect()
+      const touch = event.touches[0]
+      const setP5Prop = (p5 as unknown as { _setProperty: (k: string, v: number) => void })
+        ._setProperty
+      setP5Prop.call(p5, 'mouseX', touch.clientX - rect.left)
+      setP5Prop.call(p5, 'mouseY', touch.clientY - rect.top)
+      return true
+    }
+
+    // Shared handler for mouse/touch press on canvas
+    const handleCanvasPress = (event: MouseEvent | TouchEvent): boolean | void => {
       const target = event?.target as HTMLElement
-      if (target?.closest('[data-ui-element]')) return
+      if (target?.closest('[data-ui-element]')) return false
 
       if (!$drawingConfig.isTranscriptionMode) {
-        // Speculate mode: require floor plan
-        if (!$drawingState.imageElement) return
+        if (!$drawingState.imageElement) return false
         handleMousePressedSpeculateMode()
       } else {
-        // Transcription mode: require video
         if (!isDraggingSplitter && videoHtmlElement) {
           handleMousePressedVideo(videoHtmlElement)
         }
       }
     }
+
+    p5.mousePressed = (event: MouseEvent) => {
+      handleCanvasPress(event)
+    }
+
+    p5.touchStarted = (event: TouchEvent) => {
+      if (!updateMouseFromTouch(event)) return false
+      handleCanvasPress(event)
+      return false // Prevent default
+    }
+
+    p5.touchMoved = (event: TouchEvent) => {
+      updateMouseFromTouch(event)
+      return false // Prevent scrolling
+    }
+
     if (p5Instance) {
       p5Instance.loop()
     }
@@ -454,10 +488,13 @@
 
 <div
   bind:this={containerDiv}
-  class="relative w-full h-[calc(100vh-64px)]"
+  class="relative w-full h-[calc(100vh-64px)] touch-none"
   on:mousemove={handleSplitterDrag}
   on:mouseup={handleSplitterEnd}
   on:mouseleave={handleSplitterEnd}
+  on:touchmove={handleSplitterDrag}
+  on:touchend={handleSplitterEnd}
+  on:touchcancel={handleSplitterEnd}
   on:keydown={(e) => {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault()
@@ -486,20 +523,19 @@
   {/if}
 
   {#if $drawingConfig.isTranscriptionMode}
+    {@const startSplitterDrag = (e: Event) => {
+      e.preventDefault()
+      e.stopPropagation()
+      isDraggingSplitter = true
+    }}
     <button
-      class="absolute top-0 bottom-0 w-8 bg-transparent cursor-col-resize hover:bg-base-content/5"
+      class="absolute top-0 bottom-0 w-8 bg-transparent cursor-col-resize hover:bg-base-content/5 touch-none"
       style="left: calc({$drawingConfig.splitPosition}% - 16px)"
       data-ui-element
-      on:mousedown={(e) => {
-        e.preventDefault()
-        e.stopPropagation()
-        isDraggingSplitter = true
-      }}
+      on:mousedown={startSplitterDrag}
+      on:touchstart={startSplitterDrag}
       on:keydown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault()
-          isDraggingSplitter = true
-        }
+        if (e.key === 'Enter' || e.key === ' ') startSplitterDrag(e)
       }}
       role="separator"
       aria-label="Resize panels"
@@ -514,6 +550,29 @@
 
   {#if videoHtmlElement}
     <VideoControls videoElement={videoHtmlElement} />
+  {:else if !$drawingConfig.isTranscriptionMode && $drawingState.imageElement}
+    <!-- Speculate mode controls (forward/rewind buttons) -->
+    <div
+      class="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 bg-base-200/80 backdrop-blur-sm rounded-lg p-2 shadow-lg"
+      data-ui-element
+    >
+      <button
+        class="btn btn-ghost btn-sm btn-circle"
+        on:click={handleRewindSpeculateMode}
+        aria-label="Rewind"
+        title="Rewind (R)"
+      >
+        <IconRewind class="h-5 w-5" />
+      </button>
+      <button
+        class="btn btn-ghost btn-sm btn-circle"
+        on:click={handleForwardSpeculateMode}
+        aria-label="Forward"
+        title="Forward (F)"
+      >
+        <IconForward class="h-5 w-5" />
+      </button>
+    </div>
   {/if}
 
   <!-- Assets needed for recovered session -->
