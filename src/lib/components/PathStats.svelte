@@ -55,24 +55,33 @@
     if (e.key === 'Escape') editingPathId = null
   }
 
-  function startDrag(e: MouseEvent) {
+  const getPointerCoords = (e: MouseEvent | TouchEvent) =>
+    'touches' in e ? { x: e.touches[0].clientX, y: e.touches[0].clientY } : { x: e.clientX, y: e.clientY }
+
+  function startDrag(e: MouseEvent | TouchEvent) {
     if ((e.target as HTMLElement).closest('button, input')) return
     isDragging = true
     const rect = (e.currentTarget as HTMLElement).parentElement!.getBoundingClientRect()
-    dragStart = { x: e.clientX - rect.left, y: e.clientY - rect.top }
+    const { x, y } = getPointerCoords(e)
+    dragStart = { x: x - rect.left, y: y - rect.top }
     window.addEventListener('mousemove', onDrag)
     window.addEventListener('mouseup', stopDrag)
+    window.addEventListener('touchmove', onDrag)
+    window.addEventListener('touchend', stopDrag)
   }
 
-  function onDrag(e: MouseEvent) {
+  function onDrag(e: MouseEvent | TouchEvent) {
     if (!isDragging) return
-    position = { x: e.clientX - dragStart.x, y: e.clientY - dragStart.y }
+    const { x, y } = getPointerCoords(e)
+    position = { x: x - dragStart.x, y: y - dragStart.y }
   }
 
   function stopDrag() {
     isDragging = false
     window.removeEventListener('mousemove', onDrag)
     window.removeEventListener('mouseup', stopDrag)
+    window.removeEventListener('touchmove', onDrag)
+    window.removeEventListener('touchend', stopDrag)
   }
 
   function confirmDelete() {
@@ -103,6 +112,7 @@
     <div
       class="flex items-center justify-between p-3 cursor-move select-none"
       on:mousedown={startDrag}
+      on:touchstart={startDrag}
       role="heading"
       aria-level="2"
     >

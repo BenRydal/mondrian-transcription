@@ -1,5 +1,11 @@
 <script lang="ts">
   import { onMount, afterUpdate } from 'svelte'
+  import {
+    handleForwardTranscription,
+    handleRewindTranscription,
+  } from '../../stores/drawingState'
+  import IconRewind from '~icons/material-symbols/fast-rewind'
+  import IconForward from '~icons/material-symbols/fast-forward'
 
   export let videoElement: HTMLVideoElement
 
@@ -27,11 +33,12 @@
     }
   }
 
-  function handleProgressBarClick(e: MouseEvent) {
+  function handleProgressBarClick(e: MouseEvent | TouchEvent) {
     if (!videoElement || !progressBarElement) return
 
     const rect = progressBarElement.getBoundingClientRect()
-    const pos = (e.clientX - rect.left) / rect.width
+    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX
+    const pos = (clientX - rect.left) / rect.width
     videoElement.currentTime = pos * videoElement.duration
   }
 
@@ -47,7 +54,7 @@
     }
   }
 
-  function handleProgressBarDrag(e: MouseEvent) {
+  function handleProgressBarDrag(e: MouseEvent | TouchEvent) {
     if (isDraggingProgress && progressBarElement) {
       handleProgressBarClick(e)
     }
@@ -93,16 +100,30 @@
   }
 </script>
 
-<div class="video-controls p-2 rounded-b-lg">
-  <div class="w-full flex items-center">
+<div class="video-controls p-2 rounded-b-lg" data-ui-element>
+  <div class="w-full flex items-center gap-2">
+    <!-- Rewind button -->
+    <button
+      class="btn btn-ghost btn-sm btn-circle"
+      on:click={() => handleRewindTranscription(videoElement)}
+      aria-label="Rewind 5 seconds"
+      title="Rewind 5s (R)"
+    >
+      <IconRewind class="h-5 w-5" />
+    </button>
+
     <div
       bind:this={progressBarElement}
-      class="progress progress-secondary flex-1 cursor-pointer relative"
+      class="progress progress-secondary flex-1 cursor-pointer relative touch-none"
       on:mousedown={() => (isDraggingProgress = true)}
       on:mousemove={handleProgressBarDrag}
       on:mouseup={() => (isDraggingProgress = false)}
       on:mouseleave={() => (isDraggingProgress = false)}
       on:click={handleProgressBarClick}
+      on:touchstart={() => (isDraggingProgress = true)}
+      on:touchmove={handleProgressBarDrag}
+      on:touchend={() => (isDraggingProgress = false)}
+      on:touchcancel={() => (isDraggingProgress = false)}
       on:keydown={handleKeyPress}
       role="slider"
       aria-label="Video progress"
@@ -116,6 +137,16 @@
         style="width: {progress}%"
       ></div>
     </div>
+
+    <!-- Forward button -->
+    <button
+      class="btn btn-ghost btn-sm btn-circle"
+      on:click={() => handleForwardTranscription(videoElement)}
+      aria-label="Forward 5 seconds"
+      title="Forward 5s (F)"
+    >
+      <IconForward class="h-5 w-5" />
+    </button>
   </div>
 
   <div class="flex justify-between items-center mt-1 text-sm">
