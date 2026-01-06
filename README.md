@@ -1,12 +1,23 @@
-# Mondrian Transcription
+<h1 align="center">Mondrian Transcription</h1>
 
-![Demo](./static/cover.gif)
+<p align="center"><strong>A browser-based tool for transcribing movement from video or speculating about how people move through space.</strong></p>
 
-**A browser-based tool for transcribing movement from video or speculating about how people move through space.**
+<p align="center">
+  <a href="https://www.gnu.org/licenses/gpl-3.0"><img src="https://img.shields.io/badge/License-GPLv3-blue.svg" alt="License: GPL v3"></a>
+  <img src="https://img.shields.io/badge/Svelte-5-FF3E00?logo=svelte&logoColor=white" alt="Svelte">
+  <img src="https://img.shields.io/badge/TypeScript-5.9-3178C6?logo=typescript&logoColor=white" alt="TypeScript">
+</p>
 
-[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
-![Svelte](https://img.shields.io/badge/Svelte-5-FF3E00?logo=svelte&logoColor=white)
-![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178C6?logo=typescript&logoColor=white)
+<p align="center">
+  <a href="https://mondrian.interactiongeography.org">Live Demo</a> ·
+  <a href="https://www.youtube.com/watch?v=mgbNzikyucQ">Watch Video</a> ·
+  <a href="https://github.com/BenRydal/mondrian-transcription/issues">Report Bug</a> ·
+  <a href="https://github.com/BenRydal/mondrian-transcription/issues">Request Feature</a>
+</p>
+
+<p align="center">
+  <img src="./static/cover.gif" alt="Demo">
+</p>
 
 ---
 
