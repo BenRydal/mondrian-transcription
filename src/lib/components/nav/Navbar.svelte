@@ -8,9 +8,11 @@
   import IconVideo from '~icons/material-symbols/videocam'
   import IconMenu from '~icons/material-symbols/menu'
   import IconClose from '~icons/material-symbols/close'
+  import IconRotateLeft from '~icons/material-symbols/rotate-left'
+  import IconRotateRight from '~icons/material-symbols/rotate-right'
   import { onMount, onDestroy } from 'svelte'
   import { get } from 'svelte/store'
-  import { drawingConfig } from '$lib/stores/drawingConfig'
+  import { drawingConfig, rotateFloorPlan } from '$lib/stores/drawingConfig'
   import { drawingState } from '$lib/stores/drawingState'
   import { getRecoverableSession } from '$lib/stores/sessionRecovery'
   import WelcomeModal from '$lib/components/WelcomeModal.svelte'
@@ -56,6 +58,7 @@
   $: paths = $drawingState.paths
   $: hasImage = $drawingState.imageElement !== null
   $: hasExportableData = hasImage || paths.some(p => p.points.length > 0)
+  $: isRecording = $drawingState.shouldTrackMouse
 
   onMount(() => {
     // Skip welcome modal if there's a recoverable session (RecoveryModal will show instead)
@@ -342,6 +345,30 @@
       Upload
     </button>
 
+    <!-- Rotation Controls (only when floor plan is loaded, disabled during recording) -->
+    {#if hasImage}
+      <div class="flex items-center gap-1" data-ui-element>
+        <button
+          class="btn btn-ghost btn-sm btn-square"
+          class:opacity-30={isRecording}
+          on:click={() => rotateFloorPlan('ccw')}
+          title={isRecording ? "Stop recording to rotate" : "Rotate counterclockwise"}
+          disabled={isRecording}
+        >
+          <IconRotateLeft class="w-5 h-5" />
+        </button>
+        <button
+          class="btn btn-ghost btn-sm btn-square"
+          class:opacity-30={isRecording}
+          on:click={() => rotateFloorPlan('cw')}
+          title={isRecording ? "Stop recording to rotate" : "Rotate clockwise"}
+          disabled={isRecording}
+        >
+          <IconRotateRight class="w-5 h-5" />
+        </button>
+      </div>
+    {/if}
+
     <div class="divider divider-horizontal"></div>
 
     <!-- Mode -->
@@ -520,6 +547,27 @@
     <button class="btn btn-ghost btn-sm" on:click={handleExport} title="Export">
       <IconDownload class="w-5 h-5" />
     </button>
+    <!-- Rotation buttons on mobile (only when floor plan loaded, disabled during recording) -->
+    {#if hasImage}
+      <button
+        class="btn btn-ghost btn-sm btn-square"
+        class:opacity-30={isRecording}
+        on:click={() => rotateFloorPlan('ccw')}
+        title={isRecording ? "Stop recording to rotate" : "Rotate counterclockwise"}
+        disabled={isRecording}
+      >
+        <IconRotateLeft class="w-5 h-5" />
+      </button>
+      <button
+        class="btn btn-ghost btn-sm btn-square"
+        class:opacity-30={isRecording}
+        on:click={() => rotateFloorPlan('cw')}
+        title={isRecording ? "Stop recording to rotate" : "Rotate clockwise"}
+        disabled={isRecording}
+      >
+        <IconRotateRight class="w-5 h-5" />
+      </button>
+    {/if}
     <button class="btn btn-neutral btn-sm" on:click={onNewPath} title="New Path">
       New Path
     </button>

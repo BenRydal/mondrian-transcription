@@ -9,8 +9,12 @@ import {
   type PathData,
 } from '../../stores/drawingState'
 import { drawingConfig, getSplitPositionForMode } from '../../stores/drawingConfig'
-import { isInDrawableArea, convertToImageCoordinates } from '../../utils/drawingUtils'
-import { getFittedImageDisplayRect } from '../../utils/drawingUtils'
+import {
+  isInDrawableArea,
+  convertToImageCoordinates,
+  getFittedImageDisplayRect,
+  applyForwardRotation,
+} from '../../utils/drawingUtils'
 import { TimeBasedSampler, AdaptiveSampler, IndexBasedSampler } from './samplers'
 
 const initialConfig = get(drawingConfig)
@@ -141,11 +145,17 @@ export function drawPaths(p5: p5) {
   const { imageWidth: imgW, imageHeight: imgH } = state
   if (!imgW || !imgH) return
 
-  const rect = getFittedImageDisplayRect(p5, getSplitPositionForMode(), imgW, imgH)
-  const toDisplay = (pt: { x: number; y: number }) => ({
-    x: rect.x + (pt.x / imgW) * rect.w,
-    y: rect.y + (pt.y / imgH) * rect.h,
-  })
+  const rotation = config.floorPlanRotation
+  const rect = getFittedImageDisplayRect(p5, getSplitPositionForMode(), imgW, imgH, rotation)
+
+  // Convert stored original image coords to rotated display coords
+  const toDisplay = (pt: { x: number; y: number }) => {
+    const { nx, ny } = applyForwardRotation(pt.x, pt.y, imgW, imgH, rotation)
+    return {
+      x: rect.x + nx * rect.w,
+      y: rect.y + ny * rect.h,
+    }
+  }
 
   p5.push()
 

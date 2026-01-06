@@ -1,5 +1,7 @@
 import { writable, get } from 'svelte/store'
 
+export type RotationAngle = 0 | 90 | 180 | 270
+
 interface DrawingConfig {
   strokeWeight: number
   strokeColor: string
@@ -12,6 +14,7 @@ interface DrawingConfig {
   isContinuousMode: boolean
   jumpSeconds: number // transcription mode: fast forward/rewind duration in seconds (5-60)
   jumpSteps: number // speculate mode: undo steps (5-50)
+  floorPlanRotation: RotationAngle // rotation angle for floor plan display (0, 90, 180, 270)
 }
 
 const defaultConfig: DrawingConfig = {
@@ -26,6 +29,7 @@ const defaultConfig: DrawingConfig = {
   isContinuousMode: true,
   jumpSeconds: 5,
   jumpSteps: 10,
+  floorPlanRotation: 0,
 }
 
 export const drawingConfig = writable<DrawingConfig>(defaultConfig)
@@ -49,4 +53,17 @@ export const updatePollingRate = (rate: number) => {
 export function getSplitPositionForMode() {
   const { isTranscriptionMode, splitPosition } = get(drawingConfig)
   return isTranscriptionMode ? splitPosition : 0
+}
+
+const ROTATION_ANGLES: RotationAngle[] = [0, 90, 180, 270]
+
+export function rotateFloorPlan(direction: 'cw' | 'ccw') {
+  drawingConfig.update((config) => {
+    const currentIndex = ROTATION_ANGLES.indexOf(config.floorPlanRotation)
+    const newIndex =
+      direction === 'cw'
+        ? (currentIndex + 1) % 4
+        : (currentIndex - 1 + 4) % 4
+    return { ...config, floorPlanRotation: ROTATION_ANGLES[newIndex] }
+  })
 }
