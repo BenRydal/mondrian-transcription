@@ -121,40 +121,47 @@
       }
     }
 
+    // Helper to draw rotated floor plan image
+    const drawRotatedImage = () => {
+      const img = $drawingState.imageElement
+      const imgW = $drawingState.imageWidth
+      const imgH = $drawingState.imageHeight
+      if (!img || !imgW || !imgH) return
+
+      const rotation = $drawingConfig.floorPlanRotation
+      const r = getFittedImageDisplayRect(p5, getSplitPositionForMode(), imgW, imgH, rotation)
+
+      if (rotation === 0) {
+        p5.image(img, r.x, r.y, r.w, r.h)
+      } else {
+        p5.push()
+        p5.translate(r.x + r.w / 2, r.y + r.h / 2)
+        p5.rotate((rotation * Math.PI) / 180)
+        // For 90°/270°, display rect dimensions are swapped relative to original image
+        // so we draw with swapped dimensions and offsets
+        if (rotation === 90 || rotation === 270) {
+          p5.image(img, -r.h / 2, -r.w / 2, r.h, r.w)
+        } else {
+          p5.image(img, -r.w / 2, -r.h / 2, r.w, r.h)
+        }
+        p5.pop()
+      }
+    }
+
     p5.draw = () => {
       p5.background(255)
-      if ($drawingConfig.isTranscriptionMode) {
-        if (videoElement) {
-          const { updateVideoTime, drawVideo, checkVideoEnd } = setupVideo(p5)
-          lastVideoTime = updateVideoTime(videoElement, lastVideoTime)
-          checkVideoEnd(videoElement)
-          drawVideo(p5, videoElement)
-        }
 
-        const img = $drawingState.imageElement
-        const imgW = $drawingState.imageWidth
-        const imgH = $drawingState.imageHeight
-
-        if (img && imgW && imgH) {
-          const r = getFittedImageDisplayRect(p5, getSplitPositionForMode(), imgW, imgH)
-          p5.image(img, r.x, r.y, r.w, r.h)
-        }
-
-        addCurrentPoint()
-        drawPaths(p5)
-      } else {
-        const img = $drawingState.imageElement
-        const imgW = $drawingState.imageWidth
-        const imgH = $drawingState.imageHeight
-
-        if (img && imgW && imgH) {
-          const r = getFittedImageDisplayRect(p5, getSplitPositionForMode(), imgW, imgH)
-          p5.image(img, r.x, r.y, r.w, r.h)
-        }
-
-        addCurrentPoint()
-        drawPaths(p5)
+      // Draw video in transcription mode
+      if ($drawingConfig.isTranscriptionMode && videoElement) {
+        const { updateVideoTime, drawVideo, checkVideoEnd } = setupVideo(p5)
+        lastVideoTime = updateVideoTime(videoElement, lastVideoTime)
+        checkVideoEnd(videoElement)
+        drawVideo(p5, videoElement)
       }
+
+      drawRotatedImage()
+      addCurrentPoint()
+      drawPaths(p5)
     }
 
     // Update p5's mouseX/mouseY from touch coordinates
@@ -271,6 +278,9 @@
 
     p5Instance.loadImage(image.src, (p5Img: p5.Image) => {
       if (!isRecovery && !isImplicitRecovery) {
+        // Reset rotation for new floor plans (not recovery)
+        drawingConfig.update((c) => ({ ...c, floorPlanRotation: 0 }))
+
         if (!$drawingConfig.isTranscriptionMode) {
           if (p5Instance) {
             p5Instance.redraw()

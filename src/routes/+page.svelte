@@ -122,6 +122,7 @@
       strokeWeight: recoveredSession!.config.strokeWeight,
       speculateScale: recoveredSession!.config.speculateScale,
       isContinuousMode: recoveredSession!.config.isContinuousMode,
+      floorPlanRotation: recoveredSession!.config.floorPlanRotation ?? 0,
     }))
 
     // Restore paths and state

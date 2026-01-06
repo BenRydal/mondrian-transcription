@@ -1,6 +1,6 @@
 import { get } from 'svelte/store'
 import { drawingState, type PathData } from './drawingState'
-import { drawingConfig } from './drawingConfig'
+import { drawingConfig, type RotationAngle } from './drawingConfig'
 
 const STORAGE_KEY = 'mondrian-session'
 const SESSION_MAX_AGE = 24 * 60 * 60 * 1000 // 24 hours
@@ -23,6 +23,7 @@ export interface SavedSession {
     strokeWeight: number
     speculateScale: number
     isContinuousMode: boolean
+    floorPlanRotation?: RotationAngle // optional for backwards compatibility
   }
   floorPlanDataUrl: string | null
   imageWidth: number
@@ -55,6 +56,7 @@ export function saveSession(floorPlanDataUrl: string | null = null): boolean {
       strokeWeight: config.strokeWeight,
       speculateScale: config.speculateScale,
       isContinuousMode: config.isContinuousMode,
+      floorPlanRotation: config.floorPlanRotation,
     },
     imageWidth: state.imageWidth,
     imageHeight: state.imageHeight,
