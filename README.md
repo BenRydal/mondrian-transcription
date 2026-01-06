@@ -1,6 +1,6 @@
 # Mondrian Transcription
 
-![Demo](./docs/images/cover.gif)
+![Demo](./static/cover.gif)
 
 **A browser-based tool for transcribing movement from video or speculating about how people move through space.**
 

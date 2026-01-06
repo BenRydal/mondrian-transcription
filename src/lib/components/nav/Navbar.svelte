@@ -3,22 +3,17 @@
   import IconSettings from '~icons/material-symbols/settings'
   import IconUpload from '~icons/material-symbols/upload'
   import IconDownload from '~icons/material-symbols/download'
-  import IconDelete from '~icons/material-symbols/delete-outline'
   import IconDeleteAll from '~icons/material-symbols/delete-sweep-outline'
-  import IconPlayArrow from '~icons/material-symbols/play-arrow'
-  import IconFastForward from '~icons/material-symbols/fast-forward'
-  import IconRewind from '~icons/material-symbols/fast-rewind'
   import IconImage from '~icons/material-symbols/image'
   import IconVideo from '~icons/material-symbols/videocam'
-  import IconStylusNote from '~icons/material-symbols/stylus-note'
-  import IconPrivacyTip from '~icons/material-symbols/privacy-tip'
-  import IconClick from '~icons/material-symbols/touch-app'
   import IconMenu from '~icons/material-symbols/menu'
   import IconClose from '~icons/material-symbols/close'
   import { onMount, onDestroy } from 'svelte'
   import { get } from 'svelte/store'
   import { drawingConfig } from '$lib/stores/drawingConfig'
   import { drawingState } from '$lib/stores/drawingState'
+  import { getRecoverableSession } from '$lib/stores/sessionRecovery'
+  import WelcomeModal from '$lib/components/WelcomeModal.svelte'
 
   export let onImageUpload: (event: Event) => void
   export let onVideoUpload: (event: Event) => void
@@ -63,7 +58,11 @@
   $: hasExportableData = hasImage || paths.some(p => p.points.length > 0)
 
   onMount(() => {
-    openHelpModal()
+    // Skip welcome modal if there's a recoverable session (RecoveryModal will show instead)
+    const hasRecoverableSession = getRecoverableSession() !== null
+    if (!hasRecoverableSession) {
+      openWelcomeModal()
+    }
   })
 
   const strokeWeights = [1, 2, 3, 4, 5, 8, 10]
@@ -213,12 +212,37 @@
     e.stopPropagation()
   }
 
-  function openHelpModal() {
-    const modal = window.document.getElementById('help_modal')
+  function openWelcomeModal() {
+    const modal = window.document.getElementById('welcome_modal')
     if (modal instanceof HTMLDialogElement) {
       modal.showModal()
     }
   }
+
+  function closeWelcomeModal() {
+    const modal = window.document.getElementById('welcome_modal')
+    if (modal instanceof HTMLDialogElement) {
+      modal.close()
+    }
+  }
+
+  function handleTryExample() {
+    // Switch to Speculate mode if in Transcription mode
+    if ($drawingConfig.isTranscriptionMode) {
+      onModeSwitch()
+      drawingConfig.update((c) => ({
+        ...c,
+        isTranscriptionMode: false,
+      }))
+      pendingValue = 'false'
+      originalValue = 'false'
+    }
+    // Load classroom example
+    onSelectExample('classroom')
+    // Close modal
+    closeWelcomeModal()
+  }
+
 
   // Config update helpers to reduce duplication
   function setPollingRate(e: Event) {
@@ -482,7 +506,7 @@
     </div>
 
     <!-- Help -->
-    <button class="btn btn-ghost" on:click={openHelpModal}>
+    <button class="btn btn-ghost" on:click={openWelcomeModal}>
       <IconHelp class="w-5 h-5" />
     </button>
   </div>
@@ -671,7 +695,7 @@
         <button
           class="btn btn-ghost justify-start"
           on:click={() => {
-            openHelpModal()
+            openWelcomeModal()
             showMobileMenu = false
           }}
         >
@@ -876,115 +900,5 @@
   </form>
 </dialog>
 
-<dialog id="help_modal" class="modal" data-ui-element>
-  <div class="modal-box w-11/12 max-w-3xl">
-    <h3 class="font-bold text-3xl mb-4 text-center flex items-center justify-center gap-2">
-      <IconHelp /> Mondrian Transcription Software
-    </h3>
-
-    <div class="space-y-4 text-base">
-      <p>
-        Welcome to <strong>Mondrian Transcription</strong>! This tool allows you to
-        <em>transcribe </em>
-        movement data from video or <em>speculate</em> about how movement could occur over space and
-        time. To get started:
-      </p>
-      <ul class="space-y-2">
-        <li class="flex items-start gap-2">
-          <IconUpload class="text-xl mt-1" />
-          <span
-            >Load a <strong>floor plan/image</strong> (PNG/JPG) and <strong>video</strong> (MP4)
-            using the top buttons.<br /><em
-              >* If using Speculate Mode you only need a floor plan/image</em
-            ></span
-          >
-        </li>
-        <li class="flex items-start gap-2">
-          <IconClick class="text-xl mt-1" />
-          <span
-            ><strong>Click</strong> once on the floor plan to start recording movement data synchronized
-            to video.</span
-          >
-        </li>
-        <li class="flex items-start gap-2">
-          <IconStylusNote class="text-xl mt-1" />
-          <span>As you <strong>move your cursor</strong>, positioning data is recorded.</span>
-        </li>
-        <li class="flex items-start gap-2">
-          <IconClick class="text-xl mt-1" />
-          <span><strong>Click</strong> again on the floor plan to play/pause recording.</span>
-        </li>
-        <li class="flex items-start gap-2">
-          <IconFastForward class="text-xl mt-1" />
-          <span
-            >Press <kbd class="border px-1 rounded">f</kbd> on your keyboard to fast forward video and
-            recording.</span
-          >
-        </li>
-        <li class="flex items-start gap-2">
-          <IconRewind class="text-xl mt-1" />
-          <span
-            >Press <kbd class="border px-1 rounded">r</kbd> on your keyboard to rewind video and recording.</span
-          >
-        </li>
-        <li class="flex items-start gap-2">
-          <IconDownload class="text-xl mt-1" />
-          <span>
-            <strong>Save</strong> your recorded data as a CSV file or <IconDelete
-              class="inline-block text-xl"
-            /> <strong>clear</strong> your data to start over.</span
-          >
-        </li>
-      </ul>
-
-      <p class="text-success font-medium flex items-center gap-2">
-        <IconPrivacyTip class="text-xl" />
-        All your data stays local on your device. Nothing is uploaded or stored externally.
-      </p>
-
-      <p class="text-center">
-        <a
-          href="https://youtu.be/mgbNzikyucQ"
-          target="_blank"
-          rel="noopener noreferrer"
-          class="inline-block px-4 py-2 bg-base-300 text-base-content rounded-lg shadow hover:bg-base-200 transition"
-        >
-          <IconPlayArrow class="inline-block mr-2 text-lg" /> Watch Demonstration Video
-        </a>
-      </p>
-    </div>
-
-    <details class="mt-6 text-sm text-base-content/60">
-      <summary class="cursor-pointer hover:text-base-content">Credits & Citation</summary>
-      <p class="mt-2 italic">
-        <a
-          href="https://github.com/BenRydal/mondrian-transcription"
-          class="text-primary underline"
-          target="_blank">Open-source project</a
-        > built with Svelte, JavaScript, and p5.js (GPL 3.0). Developed by Ben Rydal Shapiro, Edwin Zhao,
-        and contributors, with support from the National Science Foundation (#1623690, #2100784). If
-        using Mondrian Transcription in your work, kindly reference: Shapiro, B.R., Hall, R. and Owens,
-        D. (2017). Developing & Using Interaction Geography in a Museum. International Journal of Computer-Supported
-        Collaborative Learning, 12(4), 377-399.
-        <a
-          href="https://par.nsf.gov/servlets/purl/10074100"
-          class="text-primary underline"
-          target="_blank">DOI</a
-        >
-      </p>
-    </details>
-
-    <div class="modal-action mt-6">
-      <a href="https://forms.gle/jfV6zntsvua4k3XdA" target="_blank" class="btn btn-base-100">
-        Feedback
-      </a>
-      <form method="dialog">
-        <button class="btn btn-neutral">Close</button>
-      </form>
-    </div>
-  </div>
-
-  <form method="dialog" class="modal-backdrop">
-    <button>close</button>
-  </form>
-</dialog>
+<!-- Welcome Modal Component -->
+<WelcomeModal onClose={closeWelcomeModal} onTryExample={handleTryExample} />
