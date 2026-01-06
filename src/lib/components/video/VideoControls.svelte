@@ -120,7 +120,10 @@
       on:mouseup={() => (isDraggingProgress = false)}
       on:mouseleave={() => (isDraggingProgress = false)}
       on:click={handleProgressBarClick}
-      on:touchstart={() => (isDraggingProgress = true)}
+      on:touchstart={(e) => {
+        isDraggingProgress = true
+        handleProgressBarClick(e) // Seek immediately on tap
+      }}
       on:touchmove={handleProgressBarDrag}
       on:touchend={() => (isDraggingProgress = false)}
       on:touchcancel={() => (isDraggingProgress = false)}

@@ -44,6 +44,9 @@
       e.preventDefault()
       e.stopPropagation()
 
+      // Guard against empty touches array (e.g., touchend)
+      if ('touches' in e && !e.touches.length) return
+
       const rect = containerDiv.getBoundingClientRect()
       const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX
       const position = ((clientX - rect.left) / rect.width) * 100

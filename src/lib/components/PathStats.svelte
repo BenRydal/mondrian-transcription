@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onMount } from 'svelte'
   import { drawingState, renamePathById, deletePathById, togglePathVisibility, updatePathColor } from '$lib/stores/drawingState'
   import { drawingConfig } from '$lib/stores/drawingConfig'
   import IconVisibility from '~icons/material-symbols/visibility'
@@ -55,13 +56,19 @@
     if (e.key === 'Escape') editingPathId = null
   }
 
-  const getPointerCoords = (e: MouseEvent | TouchEvent) =>
-    'touches' in e ? { x: e.touches[0].clientX, y: e.touches[0].clientY } : { x: e.clientX, y: e.clientY }
+  const getPointerCoords = (e: MouseEvent | TouchEvent) => {
+    if ('touches' in e && e.touches.length > 0) {
+      return { x: e.touches[0].clientX, y: e.touches[0].clientY }
+    }
+    return { x: (e as MouseEvent).clientX, y: (e as MouseEvent).clientY }
+  }
 
   function startDrag(e: MouseEvent | TouchEvent) {
     if ((e.target as HTMLElement).closest('button, input')) return
+    const parent = (e.currentTarget as HTMLElement).parentElement
+    if (!parent) return
     isDragging = true
-    const rect = (e.currentTarget as HTMLElement).parentElement!.getBoundingClientRect()
+    const rect = parent.getBoundingClientRect()
     const { x, y } = getPointerCoords(e)
     dragStart = { x: x - rect.left, y: y - rect.top }
     window.addEventListener('mousemove', onDrag)
@@ -83,6 +90,10 @@
     window.removeEventListener('touchmove', onDrag)
     window.removeEventListener('touchend', stopDrag)
   }
+
+  // Clean up listeners if component is destroyed while dragging
+  // onMount only runs in browser, so its cleanup function is also browser-only
+  onMount(() => stopDrag)
 
   function confirmDelete() {
     if (pendingDeletePathId !== null) {
