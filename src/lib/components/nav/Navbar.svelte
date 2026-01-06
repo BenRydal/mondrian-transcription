@@ -345,7 +345,7 @@
     <div class="divider divider-horizontal"></div>
 
     <!-- Mode -->
-    <div>
+    <div data-ui-element>
       <label class="label cursor-pointer flex-col items-start">
         <select
           id="mode-select"
@@ -550,7 +550,7 @@
   >
     <div class="p-4 space-y-3">
       <!-- Mode Selector -->
-      <div class="form-control">
+      <div class="form-control" data-ui-element>
         <label class="label" for="mobile-mode-select">
           <span class="label-text font-medium">Mode</span>
         </label>
