@@ -198,14 +198,24 @@
     }
 
     p5.touchStarted = (event: TouchEvent) => {
-      if (!updateMouseFromTouch(event)) return false
+      // Only prevent default for canvas touches, not UI elements
+      const target = event?.target as HTMLElement
+      if (target?.closest('[data-ui-element]') || !target?.closest('canvas')) {
+        return
+      }
+      if (!updateMouseFromTouch(event)) return
       handleCanvasPress(event)
-      return false // Prevent default
+      return false // Prevent default only for canvas touches
     }
 
     p5.touchMoved = (event: TouchEvent) => {
+      // Only prevent default for canvas touches, not UI elements
+      const target = event?.target as HTMLElement
+      if (target?.closest('[data-ui-element]') || !target?.closest('canvas')) {
+        return
+      }
       updateMouseFromTouch(event)
-      return false // Prevent scrolling
+      return false // Prevent scrolling only for canvas touches
     }
 
     if (p5Instance) {
