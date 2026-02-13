@@ -177,7 +177,7 @@ export function drawPaths(p5: p5) {
         : findSyncedEndpoint(path, activePath, currentEndpoint, config.isTranscriptionMode)
 
     const { x, y } = toDisplay(endpoint)
-    drawPulsingMarker(p5, x, y, path.color, p5.frameCount)
+    drawPulsingMarker(p5, x, y, path.color, state.isDrawing ? p5.frameCount : 0)
   })
 
   p5.pop()
