@@ -115,23 +115,14 @@
       </div>
     </div>
 
-    <!-- Credits (collapsible) -->
-    <details class="border-t border-base-300 bg-base-200/50">
-      <summary class="px-4 py-2 text-xs text-base-content/50 cursor-pointer hover:text-base-content/70">
-        Credits & Citation
-      </summary>
-      <div class="px-4 pb-3 text-xs text-base-content/60">
-        <p>
-          <a
-            href="https://github.com/BenRydal/mondrian-transcription"
-            class="text-primary underline"
-            target="_blank">Open-source project</a
-          > built with Svelte and p5.js (GPL 3.0). Developed by Ben Rydal Shapiro, Edwin Zhao,
-          and contributors. If using Mondrian in your work, kindly reference: Shapiro, B.R., Silvis, D., & Hall, R. (2025). Visualization as Theory and Experience. Journal of the Learning Sciences.
-          <a href="https://doi.org/10.1080/10508406.2025.2537945" class="text-primary underline" target="_blank">DOI: 10.1080/10508406.2025.2537945</a>
-        </p>
-      </div>
-    </details>
+    <!-- Footer -->
+    <div class="border-t border-base-300 bg-base-200/50 px-4 py-3 text-sm text-base-content/50 flex flex-wrap items-center justify-center gap-x-3 gap-y-1">
+      <a href="https://github.com/BenRydal/mondrian-transcription" class="hover:underline" target="_blank">Open source (GPL v3)</a>
+      <span>·</span>
+      <a href="https://doi.org/10.1080/10508406.2025.2537945" target="_blank" class="text-primary hover:underline"
+        >Shapiro, Silvis, & Hall (2025). <em>Visualization as Theory and Experience</em></a
+      >
+    </div>
   </div>
 
   <form method="dialog" class="modal-backdrop">

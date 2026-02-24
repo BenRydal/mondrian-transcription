@@ -155,8 +155,26 @@ Contributions are welcome! Please open an issue first to discuss major changes. 
 
 If you use Mondrian Transcription in your research, please cite:
 
-> Shapiro, B.R., Hall, R. and Owens, D. (2017). Developing & Using Interaction Geography in a Museum. _International Journal of Computer-Supported Collaborative Learning_, 12(4), 377-399.
-> https://doi.org/10.1007/s11412-017-9264-8
+> Shapiro, B. R., Silvis, D., & Hall, R. (2025). Visualization as theory and experience: Interactive qualitative data visualization for the learning sciences. *Journal of the Learning Sciences, 34*(5), 840–871. https://doi.org/10.1080/10508406.2025.2537945
+
+<details>
+<summary>BibTeX</summary>
+
+```bibtex
+@article{shapiro2025visualization,
+  title={Visualization as theory and experience: Interactive qualitative data visualization for the learning sciences},
+  author={Shapiro, Ben Rydal and Silvis, Deborah and Hall, Rogers},
+  journal={Journal of the Learning Sciences},
+  volume={34},
+  number={5},
+  pages={840--871},
+  year={2025},
+  publisher={Taylor \& Francis},
+  doi={10.1080/10508406.2025.2537945}
+}
+```
+
+</details>
 
 ---
 
