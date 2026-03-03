@@ -4,8 +4,7 @@
     getSessionAge,
     getTotalPointCount,
   } from '$lib/stores/sessionRecovery'
-  import IconRestore from '~icons/material-symbols/history'
-  import IconInfo from '~icons/material-symbols/info-outline'
+  import { History, Info } from '@lucide/svelte'
 
   interface Props {
     session: SavedSession
@@ -25,7 +24,7 @@
 <div class="modal modal-open" data-ui-element>
   <div class="modal-box max-w-md">
     <h3 class="font-bold text-lg flex items-center gap-2">
-      <IconRestore class="h-6 w-6 text-warning" />
+      <History size={24} class="text-warning" />
       Recover Previous Session?
     </h3>
 
@@ -55,7 +54,7 @@
 
       {#if session.config.isTranscriptionMode}
         <div class="alert alert-info text-sm py-2">
-          <IconInfo class="h-5 w-5 shrink-0" />
+          <Info size={20} class="shrink-0" />
           {#if !hasFloorPlan}
             <span>You'll need to re-upload your floor plan and video to continue recording.</span>
           {:else}
@@ -64,7 +63,7 @@
         </div>
       {:else if !hasFloorPlan}
         <div class="alert alert-info text-sm py-2">
-          <IconInfo class="h-5 w-5 shrink-0" />
+          <Info size={20} class="shrink-0" />
           <span>You'll need to re-upload your floor plan to continue recording.</span>
         </div>
       {/if}

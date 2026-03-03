@@ -1,15 +1,5 @@
 <script lang="ts">
-  import IconHelp from '~icons/material-symbols/help-outline'
-  import IconSettings from '~icons/material-symbols/settings'
-  import IconUpload from '~icons/material-symbols/upload'
-  import IconDownload from '~icons/material-symbols/download'
-  import IconDeleteAll from '~icons/material-symbols/delete-sweep-outline'
-  import IconImage from '~icons/material-symbols/image'
-  import IconVideo from '~icons/material-symbols/videocam'
-  import IconMenu from '~icons/material-symbols/menu'
-  import IconClose from '~icons/material-symbols/close'
-  import IconRotateLeft from '~icons/material-symbols/rotate-left'
-  import IconRotateRight from '~icons/material-symbols/rotate-right'
+  import { CircleHelp, Settings, Upload, Download, Trash2, Image, Video, Menu, X, RotateCcw, RotateCw } from '@lucide/svelte'
   import { onMount, onDestroy } from 'svelte'
   import { get } from 'svelte/store'
   import { drawingConfig, rotateFloorPlan } from '$lib/stores/drawingConfig'
@@ -328,7 +318,7 @@
   <div class="hidden lg:flex justify-end items-center gap-2">
     <!-- Clear All Button -->
     <button class="btn btn-ghost" on:click={() => (showClearAllModal = true)} title="Clear all paths">
-      <IconDeleteAll class="w-5 h-5" />
+      <Trash2 size={20} />
       Clear All
     </button>
 
@@ -336,12 +326,12 @@
 
     <!-- Export Data -->
     <button class="btn btn-ghost" on:click={handleExport}
-      ><IconDownload class="w-5 h-5" />Export</button
+      ><Download size={20} />Export</button
     >
 
     <!-- File Upload -->
     <button class="btn btn-ghost" on:click={() => (showUploadModal = true)}>
-      <IconUpload class="w-5 h-5" />
+      <Upload size={20} />
       Upload
     </button>
 
@@ -355,7 +345,7 @@
           title={isRecording ? "Stop recording to rotate" : "Rotate counterclockwise"}
           disabled={isRecording}
         >
-          <IconRotateLeft class="w-5 h-5" />
+          <RotateCcw size={20} />
         </button>
         <button
           class="btn btn-ghost btn-sm btn-square"
@@ -364,7 +354,7 @@
           title={isRecording ? "Stop recording to rotate" : "Rotate clockwise"}
           disabled={isRecording}
         >
-          <IconRotateRight class="w-5 h-5" />
+          <RotateCw size={20} />
         </button>
       </div>
     {/if}
@@ -392,7 +382,7 @@
       <!-- Example Data Dropdown -->
       <div class="dropdown dropdown-end">
         <div tabindex="0" role="button" class="btn btn-neutral flex items-center gap-2">
-          <IconImage class="w-5 h-5" />
+          <Image size={20} />
           <span>Example Data</span>
         </div>
 
@@ -424,7 +414,7 @@
         on:click={() => (showSettingsMenu = !showSettingsMenu)}
         aria-label="Settings menu"
       >
-        <IconSettings class="w-5 h-5" />
+        <Settings size={20} />
       </button>
 
       {#if showSettingsMenu}
@@ -453,16 +443,16 @@
             <div class="flex items-center justify-between mb-1">
               <span class="label-text">Adaptive Sampling</span>
               <div class="tooltip tooltip-left" data-tip="When ON: samples frequently during movement, less when stationary. When OFF: fixed interval sampling.">
-                <IconHelp class="w-4 h-4 text-base-content/50" />
+                <CircleHelp size={16} class="text-base-content/50" />
               </div>
             </div>
             <button
               type="button"
               class="btn btn-sm w-full"
-              class:bg-blue-800={$drawingConfig.useAdaptiveSampling}
-              class:text-white={$drawingConfig.useAdaptiveSampling}
-              class:bg-gray-200={!$drawingConfig.useAdaptiveSampling}
-              class:text-gray-800={!$drawingConfig.useAdaptiveSampling}
+              class:bg-secondary={$drawingConfig.useAdaptiveSampling}
+              class:text-secondary-content={$drawingConfig.useAdaptiveSampling}
+              class:bg-base-200={!$drawingConfig.useAdaptiveSampling}
+              class:text-base-content={!$drawingConfig.useAdaptiveSampling}
               on:click={toggleAdaptiveSampling}
             >
               {$drawingConfig.useAdaptiveSampling ? 'ON' : 'OFF'}
@@ -519,10 +509,10 @@
             <button
               type="button"
               class="btn btn-sm w-full"
-              class:bg-blue-800={$drawingConfig.isContinuousMode}
-              class:text-white={$drawingConfig.isContinuousMode}
-              class:bg-gray-200={!$drawingConfig.isContinuousMode}
-              class:text-gray-800={!$drawingConfig.isContinuousMode}
+              class:bg-secondary={$drawingConfig.isContinuousMode}
+              class:text-secondary-content={$drawingConfig.isContinuousMode}
+              class:bg-base-200={!$drawingConfig.isContinuousMode}
+              class:text-base-content={!$drawingConfig.isContinuousMode}
               on:click={toggleContinuousMode}
             >
               {$drawingConfig.isContinuousMode ? 'ON' : 'OFF'}
@@ -534,7 +524,7 @@
 
     <!-- Help -->
     <button class="btn btn-ghost" on:click={openWelcomeModal}>
-      <IconHelp class="w-5 h-5" />
+      <CircleHelp size={20} />
     </button>
   </div>
 
@@ -542,10 +532,10 @@
   <div class="flex lg:hidden items-center gap-1">
     <!-- Quick action buttons always visible on mobile -->
     <button class="btn btn-ghost btn-sm" on:click={() => (showUploadModal = true)} title="Upload">
-      <IconUpload class="w-5 h-5" />
+      <Upload size={20} />
     </button>
     <button class="btn btn-ghost btn-sm" on:click={handleExport} title="Export">
-      <IconDownload class="w-5 h-5" />
+      <Download size={20} />
     </button>
     <!-- Rotation buttons on mobile (only when floor plan loaded, disabled during recording) -->
     {#if hasImage}
@@ -556,7 +546,7 @@
         title={isRecording ? "Stop recording to rotate" : "Rotate counterclockwise"}
         disabled={isRecording}
       >
-        <IconRotateLeft class="w-5 h-5" />
+        <RotateCcw size={20} />
       </button>
       <button
         class="btn btn-ghost btn-sm btn-square"
@@ -565,7 +555,7 @@
         title={isRecording ? "Stop recording to rotate" : "Rotate clockwise"}
         disabled={isRecording}
       >
-        <IconRotateRight class="w-5 h-5" />
+        <RotateCw size={20} />
       </button>
     {/if}
     <button class="btn btn-neutral btn-sm" on:click={onNewPath} title="New Path">
@@ -579,9 +569,9 @@
       aria-label="Toggle menu"
     >
       {#if showMobileMenu}
-        <IconClose class="w-6 h-6" />
+        <X size={24} />
       {:else}
-        <IconMenu class="w-6 h-6" />
+        <Menu size={24} />
       {/if}
     </button>
   </div>
@@ -662,7 +652,7 @@
           <span class="label-text">Adaptive Sampling</span>
           <input
             type="checkbox"
-            class="toggle [--tglbg:#1e40af] checked:bg-blue-800 checked:border-blue-800"
+            class="toggle [--tglbg:var(--color-secondary)] checked:bg-secondary checked:border-secondary"
             checked={$drawingConfig.useAdaptiveSampling}
             on:change={toggleAdaptiveSampling}
           />
@@ -719,7 +709,7 @@
           <span class="label-text">Continuous Mode</span>
           <input
             type="checkbox"
-            class="toggle [--tglbg:#1e40af] checked:bg-blue-800 checked:border-blue-800"
+            class="toggle [--tglbg:var(--color-secondary)] checked:bg-secondary checked:border-secondary"
             checked={$drawingConfig.isContinuousMode}
             on:change={toggleContinuousMode}
           />
@@ -737,7 +727,7 @@
             showMobileMenu = false
           }}
         >
-          <IconDeleteAll class="w-5 h-5" />
+          <Trash2 size={20} />
           Clear All Paths
         </button>
         <button
@@ -747,7 +737,7 @@
             showMobileMenu = false
           }}
         >
-          <IconHelp class="w-5 h-5" />
+          <CircleHelp size={20} />
           Help
         </button>
       </div>
@@ -855,7 +845,7 @@
     <div class="bg-base-200 rounded-lg p-3 space-y-2 max-h-64 overflow-y-auto">
       {#if hasImage}
         <div class="flex items-center gap-2 text-sm">
-          <IconImage class="w-4 h-4 text-primary" />
+          <Image size={16} class="text-primary" />
           <span class="font-mono">floor-plan.png</span>
         </div>
       {/if}
@@ -893,7 +883,7 @@
           <span class="loading loading-spinner loading-sm"></span>
           Exporting...
         {:else}
-          <IconDownload class="w-4 h-4" />
+          <Download size={16} />
           Download ZIP
         {/if}
       </button>
@@ -918,7 +908,7 @@
       role="button"
       tabindex="0"
     >
-      <IconUpload class="w-12 h-12 mx-auto mb-3 text-base-content/40" />
+      <Upload size={48} class="mx-auto mb-3 text-base-content/40" />
       <p class="text-base-content/70 mb-1">Drag & drop files here</p>
       <p class="text-sm text-base-content/50">or use the buttons below</p>
     </div>
@@ -926,13 +916,13 @@
     <!-- File Type Buttons -->
     <div class="flex gap-3 mt-4">
       <label class="btn btn-outline flex-1">
-        <IconImage class="w-5 h-5" />
+        <Image size={20} />
         Floor Plan
         <input type="file" class="hidden" accept="image/*" on:change={handleFileUpload} />
       </label>
       {#if $drawingConfig.isTranscriptionMode}
         <label class="btn btn-outline flex-1">
-          <IconVideo class="w-5 h-5" />
+          <Video size={20} />
           Video
           <input type="file" class="hidden" accept="video/*" on:change={handleFileUpload} />
         </label>

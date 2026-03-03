@@ -13,8 +13,7 @@
     handleForwardSpeculateMode,
     handleRewindSpeculateMode,
   } from '../stores/drawingState'
-  import IconRewind from '~icons/material-symbols/fast-rewind'
-  import IconForward from '~icons/material-symbols/fast-forward'
+  import { Rewind, FastForward, Info } from '@lucide/svelte'
   import {
     setupDrawing,
     drawPaths,
@@ -25,7 +24,6 @@
   import { setupVideo } from './features/video'
   import VideoControls from '../components/video/VideoControls.svelte'
   import { getFittedImageDisplayRect } from '$lib/utils/drawingUtils'
-  import IconInfo from '~icons/material-symbols/info-outline'
 
   let containerDiv: HTMLDivElement
   let width = 800
@@ -582,7 +580,7 @@
         aria-label="Rewind"
         title="Rewind (R)"
       >
-        <IconRewind class="h-5 w-5" />
+        <Rewind size={20} />
       </button>
       <button
         class="btn btn-ghost btn-sm btn-circle"
@@ -590,7 +588,7 @@
         aria-label="Forward"
         title="Forward (F)"
       >
-        <IconForward class="h-5 w-5" />
+        <FastForward size={20} />
       </button>
     </div>
   {/if}
@@ -611,7 +609,7 @@
         data-ui-element
       >
         <div class="alert alert-info shadow-lg max-w-md pointer-events-auto">
-          <IconInfo class="h-5 w-5" />
+          <Info size={20} />
           <span class="text-sm">{alertMessage}</span>
         </div>
       </div>

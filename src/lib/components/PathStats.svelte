@@ -2,8 +2,7 @@
   import { onMount } from 'svelte'
   import { drawingState, renamePathById, deletePathById, togglePathVisibility, updatePathColor } from '$lib/stores/drawingState'
   import { drawingConfig } from '$lib/stores/drawingConfig'
-  import IconVisibility from '~icons/material-symbols/visibility'
-  import IconVisibilityOff from '~icons/material-symbols/visibility-off'
+  import { Eye, EyeOff } from '@lucide/svelte'
 
   let expanded = true
   let editingPathId: number | null = null
@@ -199,9 +198,9 @@
               title={path.visible === false ? 'Show path' : 'Hide path'}
             >
               {#if path.visible === false}
-                <IconVisibilityOff class="w-4 h-4" />
+                <EyeOff size={16} />
               {:else}
-                <IconVisibility class="w-4 h-4" />
+                <Eye size={16} />
               {/if}
             </button>
 

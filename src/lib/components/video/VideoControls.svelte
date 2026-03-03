@@ -4,8 +4,8 @@
     handleForwardTranscription,
     handleRewindTranscription,
   } from '../../stores/drawingState'
-  import IconRewind from '~icons/material-symbols/fast-rewind'
-  import IconForward from '~icons/material-symbols/fast-forward'
+  import { Z_INDEX } from '$lib/styles/z-index'
+  import { Rewind, FastForward } from '@lucide/svelte'
 
   export let videoElement: HTMLVideoElement
 
@@ -100,7 +100,7 @@
   }
 </script>
 
-<div class="video-controls p-2 rounded-b-lg" data-ui-element>
+<div class="video-controls p-2 rounded-b-lg" style="z-index: {Z_INDEX.NAVBAR};" data-ui-element>
   <div class="w-full flex items-center gap-2">
     <!-- Rewind button -->
     <button
@@ -109,7 +109,7 @@
       aria-label="Rewind 5 seconds"
       title="Rewind 5s (R)"
     >
-      <IconRewind class="h-5 w-5" />
+      <Rewind size={20} />
     </button>
 
     <div
@@ -148,7 +148,7 @@
       aria-label="Forward 5 seconds"
       title="Forward 5s (F)"
     >
-      <IconForward class="h-5 w-5" />
+      <FastForward size={20} />
     </button>
   </div>
 
@@ -163,12 +163,12 @@
     position: absolute;
     bottom: 0;
     left: 0;
-    z-index: 10;
+    /* z-index set via inline style using Z_INDEX.NAVBAR */
     width: var(--split-width);
   }
 
   .progress:focus {
-    outline: 2px solid #3b82f6;
+    outline: 2px solid var(--color-info);
     outline-offset: 2px;
   }
 
