@@ -23,7 +23,7 @@
     indexSampler,
   } from './features/drawing'
   import { setupVideo } from './features/video'
-  import VideoControls from '../components/video/VideoControls.svelte'
+  import { VideoTimeline } from '../timeline-migration'
   import { getFittedImageDisplayRect } from '$lib/utils/drawingUtils'
   import IconInfo from '~icons/material-symbols/info-outline'
 
@@ -569,7 +569,7 @@
   {/if}
 
   {#if videoHtmlElement}
-    <VideoControls videoElement={videoHtmlElement} />
+    <VideoTimeline videoElement={videoHtmlElement} />
   {:else if !$drawingConfig.isTranscriptionMode && $drawingState.imageElement}
     <!-- Speculate mode controls (forward/rewind buttons) -->
     <div

@@ -2928,6 +2928,7 @@ __metadata:
     svelte: "npm:^5.40.1"
     svelte-check: "npm:^4.3.3"
     svelte-icons: "npm:^2.1.0"
+    svelte-interactive-timeline: "npm:^0.1.0"
     svelte-preprocess: "npm:^6.0.3"
     tailwindcss: "npm:^4.1.14"
     toolcool-range-slider: "npm:^4.0.28"
@@ -3789,6 +3790,15 @@ __metadata:
   version: 2.1.0
   resolution: "svelte-icons@npm:2.1.0"
   checksum: 10c0/1150b9f67302e3b3b2b7d403d5695a5e11d3f77a10393516b719ce3b306e9a300a0fc02be9ff328a2488723feccdad7709329a97c7d43d55605ab00566a482f2
+  languageName: node
+  linkType: hard
+
+"svelte-interactive-timeline@npm:^0.1.0":
+  version: 0.1.0
+  resolution: "svelte-interactive-timeline@npm:0.1.0"
+  peerDependencies:
+    svelte: ^5.0.0
+  checksum: 10c0/7c9d881e417292106d8b2f90c5f37cf9f075d226fdb545178cabd224bde3189859a7c809067ae732cb11e3812b1de8b9147de4ea64372e52f724045f79eb7fe4
   languageName: node
   linkType: hard
 
