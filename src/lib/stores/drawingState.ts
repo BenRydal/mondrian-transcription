@@ -257,6 +257,7 @@ export function addPointToCurrentPath(point: Point) {
     if (!state.shouldTrackMouse) return state
 
     const currentPathIndex = state.paths.findIndex((p) => p.pathId === state.currentPathId)
+    if (currentPathIndex === -1) return state
 
     const updatedPaths = [...state.paths]
     updatedPaths[currentPathIndex] = {

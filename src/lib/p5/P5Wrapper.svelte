@@ -476,31 +476,6 @@
     }
   }
 
-  export function clearCurrentPath() {
-    if (videoElement) {
-      const htmlVideo = (videoElement as { elt: HTMLVideoElement }).elt
-      if (htmlVideo) {
-        htmlVideo.currentTime = 0
-        htmlVideo.pause()
-      }
-    }
-
-    drawingState.update((state) => {
-      const { paths } = state
-      if (paths.length === 0) return state
-      const newPaths = paths.slice(0, -1) // Remove last path
-
-      return {
-        ...state,
-        paths: newPaths,
-        currentPathId: newPaths.length,
-        shouldTrackMouse: false,
-        isDrawing: false,
-        isVideoPlaying: false,
-      }
-    })
-  }
-
   $: if (containerDiv && $drawingConfig) {
     containerDiv.style.setProperty('--split-width', `${$drawingConfig.splitPosition}%`)
   }
@@ -617,5 +592,4 @@
       </div>
     {/if}
   {/if}
-
 </div>

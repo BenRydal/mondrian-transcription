@@ -233,18 +233,11 @@ function findSyncedEndpoint(
       return currDiff < prevDiff ? pt : closest
     }, path.points[0])
   } else {
-    // Speculate mode: sync by elapsed time (normalize from each path's start)
-    const activeStartTime = activePath.points[0].time
-    const currentElapsed = currentEndpoint.time - activeStartTime
-    const pathStartTime = path.points[0].time
-
-    return path.points.reduce((closest, pt) => {
-      const ptElapsed = pt.time - pathStartTime
-      const closestElapsed = closest.time - pathStartTime
-      return Math.abs(ptElapsed - currentElapsed) < Math.abs(closestElapsed - currentElapsed)
-        ? pt
-        : closest
-    }, path.points[0])
+    // Speculate mode: sync by point index. Synthetic time values differ across paths
+    // (heartbeat vs active sampling rates), making elapsed-time comparison unreliable.
+    const activeIndex = activePath.points.length - 1
+    const targetIndex = Math.min(activeIndex, path.points.length - 1)
+    return path.points[targetIndex]
   }
 }
 
