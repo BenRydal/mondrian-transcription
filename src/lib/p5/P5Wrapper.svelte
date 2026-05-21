@@ -393,7 +393,11 @@
         bytes[i] = binaryString.charCodeAt(i)
       }
       files['floor-plan.png'] = bytes
-      canvas.remove()
+      try {
+        canvas.remove()
+      } catch {
+        // p5.Graphics cleanup can throw in some builds; safe to ignore
+      }
     }
 
     // Add each path as CSV
