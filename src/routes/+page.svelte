@@ -16,11 +16,27 @@
     type SavedSession,
   } from '$lib/stores/sessionRecovery'
   import IconWarning from '~icons/material-symbols/warning-outline'
+  import { openIgs, sendWhenReady, toFiles, type HandoffResult } from '$lib/handoff/igs-handoff'
 
   let p5Component: P5Wrapper
   let showRecoveryModal = $state(false)
   let recoveredSession = $state<SavedSession | null>(null)
   let showEmptyPathWarning = $state(false)
+  let videoFile: File | null = null
+  let handoffStatus = $state<{ message: string; ok: boolean } | null>(null)
+
+  const HANDOFF_STATUS: Record<HandoffResult, { message: string; ok: boolean }> = {
+    sent: { message: 'Sent to IGS. Your ZIP was saved too.', ok: true },
+    blocked: {
+      message:
+        'Your browser blocked the IGS tab. Allow pop-ups for this site and try again; your ZIP was saved.',
+      ok: false,
+    },
+    timeout: {
+      message: "IGS didn't respond. Your ZIP was saved; you can import it in IGS.",
+      ok: false,
+    },
+  }
 
   $effect(() => {
     if ($drawingState.isDrawing) {
@@ -160,6 +176,7 @@
   function handleVideoUpload(event: Event) {
     const file = (event.target as HTMLInputElement).files?.[0]
     if (file) {
+      videoFile = file
       const video = window.document.createElement('video')
       video.src = window.URL.createObjectURL(file)
       video.autoplay = false
@@ -185,6 +202,16 @@
     })
   }
 
+  function handleSendToIgs(onComplete?: () => void) {
+    const igs = openIgs()
+    handleSavePath(onComplete)
+    const files = Promise.resolve(toFiles(p5Component.buildExportFiles(), videoFile))
+    sendWhenReady(igs, files).then((result) => {
+      handoffStatus = HANDOFF_STATUS[result]
+      setTimeout(() => (handoffStatus = null), 6000)
+    })
+  }
+
   function handleClear() {
     p5Component.clearDrawing()
     p5Component.startNewPath()
@@ -194,6 +221,7 @@
   function handleModeSwitch() {
     p5Component.clearDrawing()
     p5Component.clearVideo()
+    videoFile = null
     p5Component.startNewPath()
     clearSavedSession()
   }
@@ -229,6 +257,7 @@
   onImageUpload={handleImageUpload}
   onVideoUpload={handleVideoUpload}
   onSavePath={handleSavePath}
+  onSendToIgs={handleSendToIgs}
   onClear={handleClear}
   onNewPath={handleNewPath}
   onModeSwitch={handleModeSwitch}
@@ -237,6 +266,19 @@
   <P5Wrapper bind:this={p5Component} />
   <PathStats />
 </div>
+
+{#if handoffStatus}
+  <div class="fixed top-20 left-4 right-4 flex justify-center pointer-events-none z-50">
+    <div
+      class="alert shadow-lg max-w-md pointer-events-auto"
+      class:alert-success={handoffStatus.ok}
+      class:alert-warning={!handoffStatus.ok}
+      role="status"
+    >
+      <span class="text-sm">{handoffStatus.message}</span>
+    </div>
+  </div>
+{/if}
 
 {#if showEmptyPathWarning}
   <div class="fixed top-20 left-4 right-4 flex justify-center pointer-events-none z-50">

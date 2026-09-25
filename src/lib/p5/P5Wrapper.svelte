@@ -370,7 +370,8 @@
     return true
   }
 
-  export function exportAll(onComplete?: () => void) {
+  /** The export's files: the floor plan PNG and one CSV per non-empty path. */
+  export function buildExportFiles(): Record<string, Uint8Array> {
     const paths = $drawingState.paths
     const imageElement = $drawingState?.imageElement
     const isTranscriptionMode = $drawingConfig.isTranscriptionMode
@@ -424,8 +425,12 @@
       files[filename] = new TextEncoder().encode(`x,y,time\n${csv}`)
     })
 
+    return files
+  }
+
+  export function exportAll(onComplete?: () => void) {
     // Generate ZIP asynchronously (uses Web Workers, won't block UI)
-    zip(files, (err, data) => {
+    zip(buildExportFiles(), (err, data) => {
       if (err) {
         window.console.error('Error creating ZIP:', err)
         onComplete?.()

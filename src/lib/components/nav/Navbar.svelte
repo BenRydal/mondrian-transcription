@@ -3,6 +3,7 @@
   import IconSettings from '~icons/material-symbols/settings'
   import IconUpload from '~icons/material-symbols/upload'
   import IconDownload from '~icons/material-symbols/download'
+  import IconOpenInNew from '~icons/material-symbols/open-in-new'
   import IconDeleteAll from '~icons/material-symbols/delete-sweep-outline'
   import IconImage from '~icons/material-symbols/image'
   import IconVideo from '~icons/material-symbols/videocam'
@@ -20,6 +21,7 @@
   export let onImageUpload: (event: Event) => void
   export let onVideoUpload: (event: Event) => void
   export let onSavePath: (onComplete?: () => void) => void
+  export let onSendToIgs: ((onComplete?: () => void) => void) | undefined = undefined
   export let onClear: () => void
   export let onNewPath: () => void
   export let onSelectExample: (data: string) => void
@@ -57,7 +59,7 @@
   $: scaleSeconds = minutes * 60 + seconds
   $: paths = $drawingState.paths
   $: hasImage = $drawingState.imageElement !== null
-  $: hasExportableData = hasImage || paths.some(p => p.points.length > 0)
+  $: hasExportableData = hasImage || paths.some((p) => p.points.length > 0)
   $: isRecording = $drawingState.shouldTrackMouse
 
   onMount(() => {
@@ -108,6 +110,15 @@
   function confirmExport() {
     isExporting = true
     onSavePath(() => {
+      isExporting = false
+      showExportPreviewModal = false
+    })
+  }
+
+  function confirmSendToIgs() {
+    if (!onSendToIgs) return
+    isExporting = true
+    onSendToIgs(() => {
       isExporting = false
       showExportPreviewModal = false
     })
@@ -246,7 +257,6 @@
     closeWelcomeModal()
   }
 
-
   // Config update helpers to reduce duplication
   function setPollingRate(e: Event) {
     drawingConfig.update((c) => ({
@@ -284,7 +294,7 @@
     }))
   }
 
-  function getPollingRateLabel(rate: typeof pollingRates[number]): string {
+  function getPollingRateLabel(rate: (typeof pollingRates)[number]): string {
     return $drawingConfig.isTranscriptionMode ? rate.labelVideo : rate.labelSpeculate
   }
 
@@ -321,13 +331,19 @@
 >
   <!-- Logo - always visible -->
   <div class="flex-1">
-    <a class="btn btn-ghost text-lg md:text-xl px-2" href="https://interactiongeography.org">Mondrian</a>
+    <a class="btn btn-ghost text-lg md:text-xl px-2" href="https://interactiongeography.org"
+      >Mondrian</a
+    >
   </div>
 
   <!-- Desktop Navigation - hidden on small screens -->
   <div class="hidden lg:flex justify-end items-center gap-2">
     <!-- Clear All Button -->
-    <button class="btn btn-ghost" on:click={() => (showClearAllModal = true)} title="Clear all paths">
+    <button
+      class="btn btn-ghost"
+      on:click={() => (showClearAllModal = true)}
+      title="Clear all paths"
+    >
       <IconDeleteAll class="w-5 h-5" />
       Clear All
     </button>
@@ -352,7 +368,7 @@
           class="btn btn-ghost btn-sm btn-square"
           class:opacity-30={isRecording}
           on:click={() => rotateFloorPlan('ccw')}
-          title={isRecording ? "Stop recording to rotate" : "Rotate counterclockwise"}
+          title={isRecording ? 'Stop recording to rotate' : 'Rotate counterclockwise'}
           disabled={isRecording}
         >
           <IconRotateLeft class="w-5 h-5" />
@@ -361,7 +377,7 @@
           class="btn btn-ghost btn-sm btn-square"
           class:opacity-30={isRecording}
           on:click={() => rotateFloorPlan('cw')}
-          title={isRecording ? "Stop recording to rotate" : "Rotate clockwise"}
+          title={isRecording ? 'Stop recording to rotate' : 'Rotate clockwise'}
           disabled={isRecording}
         >
           <IconRotateRight class="w-5 h-5" />
@@ -452,7 +468,10 @@
           <div class="form-control mb-3">
             <div class="flex items-center justify-between mb-1">
               <span class="label-text">Adaptive Sampling</span>
-              <div class="tooltip tooltip-left" data-tip="When ON: samples frequently during movement, less when stationary. When OFF: fixed interval sampling.">
+              <div
+                class="tooltip tooltip-left"
+                data-tip="When ON: samples frequently during movement, less when stationary. When OFF: fixed interval sampling."
+              >
                 <IconHelp class="w-4 h-4 text-base-content/50" />
               </div>
             </div>
@@ -474,7 +493,9 @@
             <div class="flex items-center justify-between mb-1">
               <span class="label-text">Fast Forward / Rewind</span>
               <span class="label-text text-base-content/50">
-                {$drawingConfig.isTranscriptionMode ? `${$drawingConfig.jumpSeconds}s` : `${$drawingConfig.jumpSteps} steps`}
+                {$drawingConfig.isTranscriptionMode
+                  ? `${$drawingConfig.jumpSeconds}s`
+                  : `${$drawingConfig.jumpSteps} steps`}
               </span>
             </div>
             <input
@@ -482,7 +503,9 @@
               min="5"
               max={$drawingConfig.isTranscriptionMode ? 60 : 50}
               step="5"
-              value={$drawingConfig.isTranscriptionMode ? $drawingConfig.jumpSeconds : $drawingConfig.jumpSteps}
+              value={$drawingConfig.isTranscriptionMode
+                ? $drawingConfig.jumpSeconds
+                : $drawingConfig.jumpSteps}
               on:input={setJumpValue}
               class="range range-sm w-full"
             />
@@ -553,7 +576,7 @@
         class="btn btn-ghost btn-sm btn-square"
         class:opacity-30={isRecording}
         on:click={() => rotateFloorPlan('ccw')}
-        title={isRecording ? "Stop recording to rotate" : "Rotate counterclockwise"}
+        title={isRecording ? 'Stop recording to rotate' : 'Rotate counterclockwise'}
         disabled={isRecording}
       >
         <IconRotateLeft class="w-5 h-5" />
@@ -562,15 +585,13 @@
         class="btn btn-ghost btn-sm btn-square"
         class:opacity-30={isRecording}
         on:click={() => rotateFloorPlan('cw')}
-        title={isRecording ? "Stop recording to rotate" : "Rotate clockwise"}
+        title={isRecording ? 'Stop recording to rotate' : 'Rotate clockwise'}
         disabled={isRecording}
       >
         <IconRotateRight class="w-5 h-5" />
       </button>
     {/if}
-    <button class="btn btn-neutral btn-sm" on:click={onNewPath} title="New Path">
-      New Path
-    </button>
+    <button class="btn btn-neutral btn-sm" on:click={onNewPath} title="New Path"> New Path </button>
 
     <!-- Hamburger Menu Button -->
     <button
@@ -674,7 +695,9 @@
         <div class="flex items-center justify-between">
           <span class="label-text">Fast Forward / Rewind</span>
           <span class="label-text text-base-content/50">
-            {$drawingConfig.isTranscriptionMode ? `${$drawingConfig.jumpSeconds}s` : `${$drawingConfig.jumpSteps} steps`}
+            {$drawingConfig.isTranscriptionMode
+              ? `${$drawingConfig.jumpSeconds}s`
+              : `${$drawingConfig.jumpSteps} steps`}
           </span>
         </div>
         <input
@@ -682,7 +705,9 @@
           min="5"
           max={$drawingConfig.isTranscriptionMode ? 60 : 50}
           step="5"
-          value={$drawingConfig.isTranscriptionMode ? $drawingConfig.jumpSeconds : $drawingConfig.jumpSteps}
+          value={$drawingConfig.isTranscriptionMode
+            ? $drawingConfig.jumpSeconds
+            : $drawingConfig.jumpSteps}
           on:input={setJumpValue}
           class="range range-sm w-full mt-1"
         />
@@ -762,8 +787,8 @@
   <div class="modal-box w-80">
     <h2 class="text-lg font-semibold mb-4">Set Time Scale</h2>
     <p class="mb-4 text-sm">
-      In <strong>Speculate Mode</strong>, recorded data is stretched over a chosen duration.
-      Enter total time below:
+      In <strong>Speculate Mode</strong>, recorded data is stretched over a chosen duration. Enter
+      total time below:
     </p>
 
     <div class="flex gap-2 mb-2">
@@ -831,9 +856,7 @@
 <dialog id="clear_all_modal" class="modal" class:modal-open={showClearAllModal} data-ui-element>
   <div class="modal-box w-80">
     <h2 class="text-lg font-semibold mb-4">Clear All Paths?</h2>
-    <p class="mb-6 text-sm">
-      This will delete all recorded paths. This action cannot be undone.
-    </p>
+    <p class="mb-6 text-sm">This will delete all recorded paths. This action cannot be undone.</p>
     <div class="modal-action">
       <button class="btn" on:click={cancelClearAll}>Cancel</button>
       <button class="btn btn-error" on:click={confirmClearAll}>Clear All</button>
@@ -845,7 +868,12 @@
 </dialog>
 
 <!-- Export Preview Modal -->
-<dialog id="export_preview_modal" class="modal" class:modal-open={showExportPreviewModal} data-ui-element>
+<dialog
+  id="export_preview_modal"
+  class="modal"
+  class:modal-open={showExportPreviewModal}
+  data-ui-element
+>
   <div class="modal-box w-96 max-w-[90vw]">
     <h2 class="text-lg font-semibold mb-4">Export Preview</h2>
     <p class="mb-4 text-sm text-base-content/70">
@@ -884,6 +912,17 @@
 
     <div class="modal-action">
       <button class="btn" on:click={cancelExport}>Cancel</button>
+      {#if onSendToIgs}
+        <button
+          class="btn"
+          on:click={confirmSendToIgs}
+          disabled={!hasExportableData || isExporting}
+          title="Download the ZIP and open the data in IGS"
+        >
+          <IconOpenInNew class="w-4 h-4" />
+          Send to IGS
+        </button>
+      {/if}
       <button
         class="btn btn-primary"
         on:click={confirmExport}
@@ -911,7 +950,9 @@
 
     <!-- Drag & Drop Zone -->
     <div
-      class="border-2 border-dashed rounded-lg p-8 text-center transition-colors {isDraggingFile ? 'border-primary bg-primary/5' : 'border-base-300'}"
+      class="border-2 border-dashed rounded-lg p-8 text-center transition-colors {isDraggingFile
+        ? 'border-primary bg-primary/5'
+        : 'border-base-300'}"
       on:dragover={handleDragOver}
       on:dragleave={handleDragLeave}
       on:drop={handleDrop}
