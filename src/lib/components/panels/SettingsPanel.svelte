@@ -4,6 +4,12 @@
   import { drawingConfig, rotateFloorPlan } from '$lib/stores/drawingConfig'
   import { drawingState } from '$lib/stores/drawingState'
   import PanelSection from './PanelSection.svelte'
+  import { TRAIL_LENGTHS, viewPrefs, type RecordingMode } from '$lib/stores/viewPrefs'
+
+  const recordingModes: { value: RecordingMode; label: string }[] = [
+    { value: 'toggle', label: 'Click to toggle' },
+    { value: 'hold', label: 'Hold to draw' },
+  ]
 
   const strokeWeights = [1, 2, 3, 4, 5, 8, 10]
   const exportSampleRates = [1, 2, 5, 10, 20, 30, 60]
@@ -28,6 +34,11 @@
     drawingConfig.update((c) => ({ ...c, strokeWeight }))
   }
 
+  function setTrailSeconds(e: Event) {
+    const trailSeconds = parseInt((e.currentTarget as HTMLSelectElement).value)
+    viewPrefs.update((p) => ({ ...p, trailSeconds }))
+  }
+
   function toggleContinuousMode() {
     drawingConfig.update((c) => ({ ...c, isContinuousMode: !c.isContinuousMode }))
   }
@@ -42,6 +53,32 @@
 </script>
 
 <div class="flex flex-col gap-6 px-3 py-4">
+  <PanelSection title="Recording">
+    <div class="join w-full" role="group" aria-label="Recording">
+      {#each recordingModes as mode (mode.value)}
+        {@const active = $viewPrefs.recordingMode === mode.value}
+        <button
+          class="btn btn-sm join-item flex-1"
+          class:btn-active={active}
+          aria-pressed={active}
+          disabled={isRecording}
+          onclick={() => viewPrefs.update((p) => ({ ...p, recordingMode: mode.value }))}
+        >
+          {mode.label}
+        </button>
+      {/each}
+    </div>
+    <p class="text-xs text-base-content/60">
+      {#if isRecording}
+        Stop recording to change this.
+      {:else if $viewPrefs.recordingMode === 'hold'}
+        Records only while you hold the mouse, pen or finger down.
+      {:else}
+        Click once to start recording and again to pause.
+      {/if}
+    </p>
+  </PanelSection>
+
   <PanelSection title="Sampling">
     <div class="flex flex-col gap-1">
       <label for="export-sample-rate" class="text-sm">Export Sample Rate</label>
@@ -92,6 +129,23 @@
           <option value={weight}>{weight}px</option>
         {/each}
       </select>
+    </div>
+
+    <div class="flex flex-col gap-1">
+      <label for="trail-length" class="text-sm">Trails for Other Paths</label>
+      <select
+        id="trail-length"
+        class="select select-bordered select-sm w-full"
+        value={$viewPrefs.trailSeconds}
+        onchange={setTrailSeconds}
+      >
+        {#each TRAIL_LENGTHS as seconds (seconds)}
+          <option value={seconds}>{seconds === 0 ? 'Off' : `Last ${seconds}s`}</option>
+        {/each}
+      </select>
+      <p class="text-xs text-base-content/60">
+        Highlights where other paths just moved, while recording or playing.
+      </p>
     </div>
 
     <label class="flex items-center justify-between gap-2 cursor-pointer">

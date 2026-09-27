@@ -17,3 +17,14 @@ export function isShortcutEvent(e: {
 }): boolean {
   return !e.ctrlKey && !e.metaKey && !e.altKey && !isEditableTarget(e.target)
 }
+
+/** Ctrl/Cmd+S saves a checkpoint from anywhere, inputs included, instead of the browser's Save. */
+export function isCheckpointShortcut(e: {
+  key: string
+  ctrlKey: boolean
+  metaKey: boolean
+  shiftKey: boolean
+  altKey: boolean
+}): boolean {
+  return (e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === 's'
+}

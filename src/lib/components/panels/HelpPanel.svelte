@@ -2,6 +2,7 @@
   import IconHelp from '~icons/material-symbols/help-outline'
   import { drawingConfig } from '$lib/stores/drawingConfig'
   import PanelSection from './PanelSection.svelte'
+  import { viewPrefs } from '$lib/stores/viewPrefs'
 
   let { onOpenWelcome }: { onOpenWelcome: () => void } = $props()
 
@@ -11,20 +12,29 @@
           { key: 'F', action: `Forward ${$drawingConfig.jumpSeconds}s` },
           { key: 'R', action: `Rewind ${$drawingConfig.jumpSeconds}s` },
           { key: 'S', action: 'Pause or resume 3D spin' },
+          { key: '← / →', action: 'Step one frame (paused)' },
+          { key: 'Shift ← / →', action: 'Step one second (paused)' },
+          { key: '[', action: 'Slower playback' },
+          { key: ']', action: 'Faster playback' },
         ]
       : [
           { key: 'F', action: `Forward ${$drawingConfig.speculateJumpSeconds}s` },
           { key: 'R', action: `Rewind ${$drawingConfig.speculateJumpSeconds}s` },
           { key: 'S', action: 'Pause or resume 3D spin' },
         ]),
-    { key: 'Ctrl/⌘ S', action: 'Save checkpoint' },
+    { key: 'Ctrl/⌘ S', action: 'Save checkpoint, even while typing' },
   ])
 </script>
 
 <div class="flex flex-col gap-6 px-3 py-4">
   <PanelSection title="Getting Started">
     <p class="text-sm text-base-content/70">
-      Click the floor plan to start tracing, click again to pause.
+      {#if $viewPrefs.recordingMode === 'hold'}
+        Hold the mouse, pen or finger down on the floor plan to trace; let go to pause.
+      {:else}
+        Click the floor plan to start tracing, click again to pause.
+      {/if}
+      Change this under Settings, Recording.
     </p>
     <button class="btn btn-sm btn-outline" onclick={onOpenWelcome}>
       <IconHelp class="w-4 h-4" />
@@ -50,7 +60,7 @@
     <dl class="flex flex-col gap-2 text-sm">
       {#each shortcuts as shortcut (shortcut.key)}
         <div class="flex items-center gap-2">
-          <dt><kbd class="kbd kbd-sm">{shortcut.key}</kbd></dt>
+          <dt class="shrink-0"><kbd class="kbd kbd-sm whitespace-nowrap">{shortcut.key}</kbd></dt>
           <dd>{shortcut.action}</dd>
         </div>
       {/each}

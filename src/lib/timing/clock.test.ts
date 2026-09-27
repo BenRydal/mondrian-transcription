@@ -89,6 +89,20 @@ describe('MediaClock', () => {
     expect(clock.timeAt(700)).toBeCloseTo(4.2)
   })
 
+  it('records media time, not wall time, for a stroke drawn at 0.5x', () => {
+    const clock = new MediaClock()
+    const rate = 0.5
+    const times: number[] = []
+    for (let perf = 0; perf <= 4000; perf += 16.7) {
+      const media = 10 + Math.floor((perf / 1000) * rate * 30) / 30
+      clock.observe(media, perf, true, rate)
+      for (let e = 0; e < 16; e += 4) times.push(clock.timeAt(perf + e))
+    }
+    const recorded = times.at(-1)! - times[0]
+    expect(recorded).toBeGreaterThan(1.95)
+    expect(recorded).toBeLessThan(2.05)
+  })
+
   it('never reports a time before the observed media time', () => {
     const clock = new MediaClock()
     clock.observe(0, 1000, true, 1)

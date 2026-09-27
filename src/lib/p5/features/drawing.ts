@@ -17,6 +17,8 @@ import {
   applyForwardRotation,
 } from '../../utils/drawingUtils'
 import { mediaClock, speculateClock, syncSpeculateClock } from '../../timing/sessionClocks'
+import { lastIndexAtOrBefore, trailRange } from '../../timing/timeWindow'
+import { viewPrefs } from '../../stores/viewPrefs'
 
 type CanvasPos = { x: number; y: number }
 
@@ -72,33 +74,66 @@ export function setupDrawing(p5: p5, getCanvas: () => HTMLCanvasElement | null) 
     addPointsToCurrentPath(points)
   }
 
-  const handlePressVideo = (event: PointerEvent, video: HTMLVideoElement) => {
-    if (!isDrawableEvent(event)) return
-    if (video.currentTime >= video.duration - 0.1) return
+  const startVideoTake = (event: PointerEvent, video: HTMLVideoElement) => {
+    mediaClock.reset()
+    toggleDrawing(video)
+    recordPointerEvent(event, video)
+  }
 
-    if (get(drawingState).shouldTrackMouse) {
-      observeVideo(video, performance.now())
-      appendFinalPoint(mediaClock.timeAt(event.timeStamp))
-      toggleDrawing(video)
-    } else {
-      mediaClock.reset()
-      toggleDrawing(video)
-      recordPointerEvent(event, video)
-    }
+  const stopVideoTake = (event: PointerEvent, video: HTMLVideoElement) => {
+    observeVideo(video, performance.now())
+    appendFinalPoint(mediaClock.timeAt(event.timeStamp))
+    toggleDrawing(video)
+  }
+
+  const startSpeculateTake = (event: PointerEvent) => {
+    speculateClock.start(event.timeStamp)
+    toggleDrawingNoVideo()
+    recordPointerEvent(event)
+  }
+
+  const stopSpeculateTake = (event: PointerEvent) => {
+    appendFinalPoint(speculateClock.timeAt(event.timeStamp))
+    speculateClock.pause(event.timeStamp)
+    toggleDrawingNoVideo()
+  }
+
+  const isAtVideoEnd = (video: HTMLVideoElement) => video.currentTime >= video.duration - 0.1
+
+  const handlePressVideo = (event: PointerEvent, video: HTMLVideoElement) => {
+    if (!isDrawableEvent(event) || isAtVideoEnd(video)) return
+    if (get(drawingState).shouldTrackMouse) stopVideoTake(event, video)
+    else startVideoTake(event, video)
   }
 
   const handlePressSpeculate = (event: PointerEvent) => {
     if (!isDrawableEvent(event)) return
     syncSpeculateClockToCurrentPath(performance.now())
+    if (get(drawingState).shouldTrackMouse) stopSpeculateTake(event)
+    else startSpeculateTake(event)
+  }
 
-    if (get(drawingState).shouldTrackMouse) {
-      appendFinalPoint(speculateClock.timeAt(event.timeStamp))
-      speculateClock.pause(event.timeStamp)
-      toggleDrawingNoVideo()
+  /** Hold mode: start a take on press; returns whether one started. */
+  const handleHoldStart = (event: PointerEvent, video: HTMLVideoElement | null): boolean => {
+    if (get(drawingState).shouldTrackMouse || !isDrawableEvent(event)) return false
+    if (get(drawingConfig).isTranscriptionMode) {
+      if (!video || isAtVideoEnd(video)) return false
+      startVideoTake(event, video)
     } else {
-      speculateClock.start(event.timeStamp)
-      toggleDrawingNoVideo()
-      recordPointerEvent(event)
+      syncSpeculateClockToCurrentPath(performance.now())
+      startSpeculateTake(event)
+    }
+    return true
+  }
+
+  /** Hold mode: record the release sample, then stop with a final held point. */
+  const handleHoldEnd = (event: PointerEvent, video: HTMLVideoElement | null) => {
+    if (!get(drawingState).shouldTrackMouse) return
+    recordPointerEvent(event, video)
+    if (get(drawingConfig).isTranscriptionMode) {
+      if (video) stopVideoTake(event, video)
+    } else {
+      stopSpeculateTake(event)
     }
   }
 
@@ -107,7 +142,7 @@ export function setupDrawing(p5: p5, getCanvas: () => HTMLCanvasElement | null) 
     recordPointerEvent(event, video)
   }
 
-  return { handlePressVideo, handlePressSpeculate, handleMove }
+  return { handlePressVideo, handlePressSpeculate, handleHoldStart, handleHoldEnd, handleMove }
 }
 
 /** Stop the current take (e.g. before switching paths), keeping a final held point. */
@@ -156,6 +191,14 @@ export function drawPaths(p5: p5) {
   const currentEndpoint = activePath?.points.at(-1) ?? null
   const sessionTime = getSessionTime(config.isTranscriptionMode, state.videoTime)
 
+  const { trailSeconds } = get(viewPrefs)
+  if (trailSeconds > 0 && (state.isDrawing || state.isVideoPlaying)) {
+    for (const path of state.paths) {
+      if (path.pathId === state.currentPathId || path.visible === false) continue
+      drawTrail(p5, path, sessionTime, trailSeconds, toDisplay, config.strokeWeight)
+    }
+  }
+
   state.paths.forEach((path) => {
     if (path.visible === false || path.points.length === 0) return
 
@@ -201,7 +244,11 @@ function drawPathLine(
 }
 
 function getSessionTime(isTranscriptionMode: boolean, videoTime: number): number {
-  if (isTranscriptionMode) return videoTime
+  return isTranscriptionMode ? videoTime : speculateNow()
+}
+
+/** Speculate session time now, synced to the current path's end the first time it is read. */
+export function speculateNow(): number {
   const now = performance.now()
   syncSpeculateClockToCurrentPath(now)
   return speculateClock.timeAt(now)
@@ -209,12 +256,45 @@ function getSessionTime(isTranscriptionMode: boolean, videoTime: number): number
 
 /** Latest point of a path at or before the shared session time. */
 function findSyncedEndpoint(path: PathData, sessionTime: number): Point {
-  let endpoint = path.points[0]
-  for (const pt of path.points) {
-    if (pt.time > sessionTime) break
-    endpoint = pt
+  return path.points[Math.max(0, lastIndexAtOrBefore(path.points, sessionTime))]
+}
+
+const TRAIL_BANDS = 8
+
+/** Recent history behind a path's marker, fading out towards its oldest end. */
+function drawTrail(
+  p5: p5,
+  path: PathData,
+  sessionTime: number,
+  seconds: number,
+  toDisplay: (pt: { x: number; y: number }) => { x: number; y: number },
+  strokeWeight: number
+) {
+  const range = trailRange(path.points, sessionTime, seconds)
+  if (!range || range.end === range.start) return
+  const { points } = path
+  const tStart = sessionTime - seconds
+  const band = (i: number) =>
+    Math.min(TRAIL_BANDS - 1, Math.floor(((points[i].time - tStart) / seconds) * TRAIL_BANDS))
+  const color = p5.color(path.color)
+
+  p5.noFill()
+  p5.strokeWeight(strokeWeight * 2)
+  let i = range.start
+  while (i < range.end) {
+    const b = band(i + 1)
+    color.setAlpha((255 * (b + 1)) / TRAIL_BANDS)
+    p5.stroke(color)
+    p5.beginShape()
+    const first = toDisplay(points[i])
+    p5.vertex(first.x, first.y)
+    while (i < range.end && band(i + 1) === b) {
+      i++
+      const { x, y } = toDisplay(points[i])
+      p5.vertex(x, y)
+    }
+    p5.endShape()
   }
-  return endpoint
 }
 
 /** Draw a pulsing marker at the given position */

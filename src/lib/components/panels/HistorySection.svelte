@@ -58,7 +58,7 @@
 </script>
 
 <PanelSection title="History">
-  <form class="flex gap-2" onsubmit={save}>
+  <form class="flex gap-2" onsubmit={save} data-checkpoint-form>
     <input
       type="text"
       class="input input-sm flex-1 min-w-0"

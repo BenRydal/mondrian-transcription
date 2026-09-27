@@ -9,6 +9,11 @@ import {
   invalidateSpeculateClock,
 } from '../timing/sessionClocks'
 
+/** Autosave spots changed points by identity, so dev builds make in-place edits throw. */
+export const freezePoint: (point: Point) => Point = import.meta.env.DEV
+  ? (point) => Object.freeze(point)
+  : (point) => point
+
 export interface PathData {
   points: Point[]
   color: string
@@ -97,7 +102,12 @@ export function handleForwardSpeculateMode() {
     const newTime = from + get(drawingConfig).speculateJumpSeconds
     speculateClock.seek(newTime, now)
 
-    const holdPoint = { x: lastPoint.x, y: lastPoint.y, time: newTime, pathId: state.currentPathId }
+    const holdPoint = freezePoint({
+      x: lastPoint.x,
+      y: lastPoint.y,
+      time: newTime,
+      pathId: state.currentPathId,
+    })
     updatedPaths[currentPathIndex] = { ...currentPath, points: [...currentPath.points, holdPoint] }
 
     return { ...state, paths: updatedPaths }
@@ -124,12 +134,9 @@ export function handleForwardTranscription(videoElement: HTMLVideoElement) {
 
     const updatedPoints = [...currentPath.points]
     if (newTime > lastPoint.time) {
-      updatedPoints.push({
-        x: lastPoint.x,
-        y: lastPoint.y,
-        time: newTime,
-        pathId: state.currentPathId,
-      })
+      updatedPoints.push(
+        freezePoint({ x: lastPoint.x, y: lastPoint.y, time: newTime, pathId: state.currentPathId })
+      )
     }
     updatedPaths[currentPathIndex] = { ...currentPath, points: updatedPoints }
 
@@ -259,7 +266,9 @@ export function addPointsToCurrentPath(points: Point[]) {
     const currentPath = state.paths[currentPathIndex]
     const updatedPoints = [...currentPath.points]
     for (const point of points) {
-      if (shouldKeepPoint(updatedPoints.at(-1)?.time, point.time)) updatedPoints.push(point)
+      if (shouldKeepPoint(updatedPoints.at(-1)?.time, point.time)) {
+        updatedPoints.push(freezePoint(point))
+      }
     }
     if (updatedPoints.length === currentPath.points.length) return state
 

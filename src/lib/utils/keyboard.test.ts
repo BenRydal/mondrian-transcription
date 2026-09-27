@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { isEditableTarget, isShortcutEvent } from './keyboard'
+import { isCheckpointShortcut, isEditableTarget, isShortcutEvent } from './keyboard'
 
 const key = (
   target: unknown,
@@ -40,5 +40,28 @@ describe('isShortcutEvent', () => {
     expect(isShortcutEvent(key({ tagName: 'BODY' }, { ctrlKey: true }))).toBe(false)
     expect(isShortcutEvent(key({ tagName: 'BODY' }, { metaKey: true }))).toBe(false)
     expect(isShortcutEvent(key({ tagName: 'BODY' }, { altKey: true }))).toBe(false)
+  })
+})
+
+describe('isCheckpointShortcut', () => {
+  const chord = (key: string, mods: Partial<Record<string, boolean>> = {}) => ({
+    key,
+    ctrlKey: false,
+    metaKey: false,
+    shiftKey: false,
+    altKey: false,
+    ...mods,
+  })
+
+  it('accepts Ctrl+S and Cmd+S, whatever has focus', () => {
+    expect(isCheckpointShortcut(chord('s', { ctrlKey: true }))).toBe(true)
+    expect(isCheckpointShortcut(chord('S', { metaKey: true }))).toBe(true)
+  })
+
+  it('ignores a bare S and other chords', () => {
+    expect(isCheckpointShortcut(chord('s'))).toBe(false)
+    expect(isCheckpointShortcut(chord('s', { ctrlKey: true, shiftKey: true }))).toBe(false)
+    expect(isCheckpointShortcut(chord('s', { ctrlKey: true, altKey: true }))).toBe(false)
+    expect(isCheckpointShortcut(chord('r', { ctrlKey: true }))).toBe(false)
   })
 })

@@ -14,10 +14,16 @@
   import { get } from 'svelte/store'
   import HistorySection from '$lib/components/panels/HistorySection.svelte'
   import SessionSection from '$lib/components/panels/SessionSection.svelte'
-  import { drawingState, deletePathById, type PathData } from '$lib/stores/drawingState'
+  import {
+    drawingState,
+    deletePathById,
+    freezePoint,
+    type PathData,
+  } from '$lib/stores/drawingState'
   import { drawingConfig } from '$lib/stores/drawingConfig'
   import { invalidateSpeculateClock } from '$lib/timing/sessionClocks'
   import { hasRecordedData, formatBytes } from '$lib/stores/sessionRecovery'
+  import { isCheckpointShortcut } from '$lib/utils/keyboard'
   import { createAutosave, SessionBusyError, type AutosaveState } from '$lib/storage/autosave'
   import type {
     AssetInput,
@@ -254,10 +260,11 @@
       }
     }
     window.addEventListener('beforeunload', handleBeforeUnload)
-    window.addEventListener('keydown', handleCheckpointShortcut)
+    // Capture phase: the panel's text inputs stop keydown from bubbling.
+    window.addEventListener('keydown', handleCheckpointShortcut, { capture: true })
 
     return () => {
-      window.removeEventListener('keydown', handleCheckpointShortcut)
+      window.removeEventListener('keydown', handleCheckpointShortcut, { capture: true })
       window.removeEventListener('beforeunload', handleBeforeUnload)
       window.removeEventListener('pagehide', flushNow)
       document.removeEventListener('visibilitychange', handleVisibilityChange)
@@ -270,10 +277,10 @@
   })
 
   function handleCheckpointShortcut(e: KeyboardEvent) {
-    if (!(e.ctrlKey || e.metaKey) || e.shiftKey || e.altKey || e.key.toLowerCase() !== 's') return
-    const target = e.target as HTMLElement | null
-    if (target?.closest?.('input, textarea, select, [contenteditable]')) return
+    if (!isCheckpointShortcut(e)) return
     e.preventDefault()
+    const form = (e.target as HTMLElement | null)?.closest?.('form[data-checkpoint-form]')
+    if (form instanceof HTMLFormElement) return form.requestSubmit()
     if (!hasRecordedData(get(drawingState).paths)) return showNotice('Nothing to save yet.')
     void pin(null).then((result) => result && showNotice('Checkpoint saved.'))
   }
@@ -393,7 +400,7 @@
       const index = paths.findIndex((p) => p.pathId === pathId)
       if (mode === 'copy') {
         const id = Math.max(state.currentPathId, ...paths.map((p) => p.pathId)) + 1
-        const points = path.points.map((p) => ({ ...p, pathId: id }))
+        const points = path.points.map((p) => freezePoint({ ...p, pathId: id }))
         paths.push({ ...path, pathId: id, points, name: `${label} (restored)` } as PathData)
       } else if (index >= 0) {
         paths[index] = path

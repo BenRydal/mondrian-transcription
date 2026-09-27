@@ -16,7 +16,14 @@
   } from '../stores/drawingState'
   import IconRewind from '~icons/material-symbols/fast-rewind'
   import IconForward from '~icons/material-symbols/fast-forward'
-  import { setupDrawing, drawPaths, endCurrentTake, observeVideo } from './features/drawing'
+  import {
+    setupDrawing,
+    drawPaths,
+    endCurrentTake,
+    observeVideo,
+    speculateNow,
+  } from './features/drawing'
+  import { formatClock } from '$lib/utils/time'
   import { resamplePath, sessionScale } from '$lib/timing/sampling'
   import { setupVideo } from './features/video'
   import VideoControls from '../components/video/VideoControls.svelte'
@@ -26,6 +33,13 @@
   import { clamp } from '$lib/spacetime/geometry'
   import { speculateClock } from '$lib/timing/sessionClocks'
   import SpaceTimeView from '../components/spacetime/SpaceTimeView.svelte'
+  import { stepPlaybackRate, viewPrefs } from '$lib/stores/viewPrefs'
+  import {
+    FrameRateEstimator,
+    currentFrameStart,
+    frameStepTarget,
+    watchVideoFrames,
+  } from '$lib/timing/frameStep'
 
   let containerDiv: HTMLDivElement
   let width = 800
@@ -52,6 +66,56 @@
     return $drawingConfig.isTranscriptionMode
       ? $drawingState.videoTime
       : speculateClock.timeAt(performance.now())
+  }
+
+  const showSpeculateControls = $derived(
+    !$drawingConfig.isTranscriptionMode && $drawingState.imageElement !== null
+  )
+  const isDrawing = $derived($drawingState.isDrawing)
+  const currentPoints = $derived(
+    $drawingState.paths.find((p) => p.pathId === $drawingState.currentPathId)?.points ?? []
+  )
+  const pathStart = $derived(currentPoints[0]?.time)
+  const pathEnd = $derived(currentPoints.at(-1)?.time)
+  let speculateTime = $state(0)
+
+  $effect(() => {
+    // Rewind, forward and path switches move the clock without drawing.
+    void [pathStart, pathEnd, $drawingState.currentPathId]
+    if (showSpeculateControls) speculateTime = speculateNow()
+  })
+
+  $effect(() => {
+    if (!showSpeculateControls || !isDrawing) return
+    let raf = requestAnimationFrame(function tick() {
+      speculateTime = speculateNow()
+      raf = requestAnimationFrame(tick)
+    })
+    return () => {
+      cancelAnimationFrame(raf)
+      speculateTime = speculateNow()
+    }
+  })
+
+  let frameEstimator = new FrameRateEstimator()
+  $effect(() => {
+    if (!videoHtmlElement) return
+    frameEstimator = new FrameRateEstimator()
+    return watchVideoFrames(videoHtmlElement, frameEstimator)
+  })
+
+  /** Paused only: one frame, or one second with Shift. */
+  function stepVideo(video: HTMLVideoElement, direction: 1 | -1, bySecond: boolean) {
+    if (!video.paused || !(video.duration > 0)) return
+    const fd = frameEstimator.frameDuration
+    video.currentTime = bySecond
+      ? Math.min(Math.max(video.currentTime + direction, 0), video.duration)
+      : frameStepTarget(
+          currentFrameStart(video.currentTime, fd, frameEstimator.displayedTime),
+          fd,
+          direction,
+          video.duration
+        )
   }
 
   function handleSplitterDrag(e: MouseEvent | TouchEvent) {
@@ -97,6 +161,21 @@
         } else {
           handleRewindSpeculateMode()
         }
+      } else if (
+        (e.key === 'ArrowLeft' || e.key === 'ArrowRight') &&
+        !e.defaultPrevented &&
+        $drawingConfig.isTranscriptionMode &&
+        videoHtmlElement
+      ) {
+        e.preventDefault()
+        stepVideo(videoHtmlElement, e.key === 'ArrowRight' ? 1 : -1, e.shiftKey)
+      } else if ((e.key === '[' || e.key === ']') && $drawingConfig.isTranscriptionMode) {
+        e.preventDefault()
+        const direction = e.key === ']' ? 1 : -1
+        viewPrefs.update((p) => ({
+          ...p,
+          playbackRate: stepPlaybackRate(p.playbackRate, direction),
+        }))
       }
     }
 
@@ -122,14 +201,27 @@
 
   const sketch: SketchFn = (p5) => {
     let canvasElt: HTMLCanvasElement | null = null
-    const { handlePressVideo, handlePressSpeculate, handleMove } = setupDrawing(p5, () => canvasElt)
+    const { handlePressVideo, handlePressSpeculate, handleHoldStart, handleHoldEnd, handleMove } =
+      setupDrawing(p5, () => canvasElt)
+    let holdPointerId: number | null = null
+
+    const canRecord = () =>
+      $drawingConfig.isTranscriptionMode
+        ? !dragAxis && videoHtmlElement !== null
+        : $drawingState.imageElement !== null
 
     const handlePointerDown = (event: PointerEvent) => {
-      if (!event.isPrimary) return
-      if (!$drawingConfig.isTranscriptionMode) {
-        if (!$drawingState.imageElement) return
+      if (!event.isPrimary || !canRecord()) return
+      if ($viewPrefs.recordingMode === 'hold') {
+        if (event.pointerType === 'mouse' && event.button !== 0) return
+        if (handleHoldStart(event, videoHtmlElement)) {
+          holdPointerId = event.pointerId
+          // Capture keeps pointerup coming to the canvas if the pointer leaves it mid-stroke.
+          canvasElt?.setPointerCapture(event.pointerId)
+        }
+      } else if (!$drawingConfig.isTranscriptionMode) {
         handlePressSpeculate(event)
-      } else if (!dragAxis && videoHtmlElement) {
+      } else if (videoHtmlElement) {
         handlePressVideo(event, videoHtmlElement)
       }
     }
@@ -138,13 +230,23 @@
       if (event.isPrimary) handleMove(event, videoHtmlElement)
     }
 
+    const handlePointerUp = (event: PointerEvent) => {
+      if (event.pointerId === holdPointerId) {
+        holdPointerId = null
+        handleHoldEnd(event, videoHtmlElement)
+      } else {
+        handlePointerMove(event)
+      }
+    }
+
     p5.setup = () => {
       const canvas = p5.createCanvas(width, height)
       canvas.parent(containerDiv)
       canvasElt = (canvas as unknown as { elt: HTMLCanvasElement }).elt
       canvasElt.addEventListener('pointerdown', handlePointerDown)
       canvasElt.addEventListener('pointermove', handlePointerMove)
-      canvasElt.addEventListener('pointerup', handlePointerMove)
+      canvasElt.addEventListener('pointerup', handlePointerUp)
+      canvasElt.addEventListener('pointercancel', handlePointerUp)
       p5.strokeCap(p5.ROUND)
       p5.strokeJoin(p5.ROUND)
 
@@ -525,7 +627,7 @@
 
   {#if videoHtmlElement}
     <VideoControls videoElement={videoHtmlElement} />
-  {:else if !$drawingConfig.isTranscriptionMode && $drawingState.imageElement}
+  {:else if showSpeculateControls}
     <!-- Speculate mode controls (forward/rewind buttons) -->
     <div
       class="absolute bottom-4 -translate-x-1/2 flex gap-2 bg-base-200/80 backdrop-blur-sm rounded-lg p-2 shadow-lg"
@@ -548,6 +650,18 @@
       >
         <IconForward class="h-5 w-5" />
       </button>
+      <div class="flex flex-col justify-center pl-1 pr-2 leading-tight tabular-nums">
+        <span class="text-sm font-medium" aria-label="Session time"
+          >{formatClock(speculateTime)}</span
+        >
+        <span class="text-xs text-base-content/60">
+          {#if pathStart !== undefined && pathEnd !== undefined}
+            Path {formatClock(pathStart)}–{formatClock(pathEnd)}
+          {:else}
+            Path not started
+          {/if}
+        </span>
+      </div>
     </div>
   {/if}
 
