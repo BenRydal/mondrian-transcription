@@ -44,8 +44,8 @@ export function fitScene(
   }
 }
 
-export function timeExtent(paths: { points: TimedPoint[] }[], now: number, duration = 0): number {
-  let max = Math.max(now, Number.isFinite(duration) ? duration : 0)
+export function timeExtent(paths: { points: TimedPoint[] }[], now: number): number {
+  let max = Number.isFinite(now) ? now : 0
   for (const path of paths) {
     const last = path.points.at(-1)
     if (last && last.time > max) max = last.time

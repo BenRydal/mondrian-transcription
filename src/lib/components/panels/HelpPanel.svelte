@@ -27,7 +27,7 @@
     { key: 'R', action: `Rewind ${jump}s` },
     { key: 'S', action: 'Pause or resume 3D spin' },
     ...($drawingConfig.isTranscriptionMode ? videoShortcuts : []),
-    { key: 'Ctrl/⌘ S', action: 'Save checkpoint, even while typing' },
+    { key: 'Ctrl/⌘ S', action: 'Save checkpoint (listed under History), even while typing' },
   ])
 </script>
 
@@ -50,8 +50,8 @@
   <PanelSection title="3D Space-Time View">
     <p class="text-sm text-base-content/70">
       Turn on <span class="font-medium">3D</span> in the top bar to see your paths rise through time
-      above the floor plan. Keep drawing on the flat floor plan; the 3D view follows along. The shaded
-      plane marks the current time.
+      above the floor plan. Keep drawing on the flat floor plan; the 3D view follows along. A pulsing
+      dot marks where each path is while you record.
     </p>
     <ul class="flex flex-col gap-1 text-sm text-base-content/70">
       <li>Drag to rotate, scroll to zoom</li>

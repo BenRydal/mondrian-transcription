@@ -82,15 +82,21 @@ describe('timeExtent', () => {
     { points: [] },
   ]
 
-  it('covers the latest point, the clock and the video length', () => {
+  it('covers the latest point and the clock', () => {
     expect(timeExtent(paths, 5)).toBe(42)
     expect(timeExtent(paths, 60)).toBe(60)
-    expect(timeExtent(paths, 5, 120)).toBe(120)
+  })
+
+  it('grows with what is recorded rather than the video length', () => {
+    const recorded = [{ points: [{ x: 0, y: 0, time: 30 }] }]
+    expect(timeExtent(recorded, 12)).toBe(30)
+    recorded[0].points.push({ x: 0, y: 0, time: 75 })
+    expect(timeExtent(recorded, 12)).toBe(75)
   })
 
   it('never collapses below the minimum span', () => {
     expect(timeExtent([], 0)).toBe(MIN_TIME_SPAN)
-    expect(timeExtent([], 0, Number.NaN)).toBe(MIN_TIME_SPAN)
+    expect(timeExtent([], Number.NaN)).toBe(MIN_TIME_SPAN)
   })
 })
 

@@ -8,6 +8,7 @@
   import { PathGeometryCache, type WebglP5 } from '$lib/spacetime/pathGeometryCache'
   import { isShortcutEvent } from '$lib/utils/keyboard'
   import { clamp } from '$lib/utils/math'
+  import { prefersReducedMotion, pulseClock, pulseScale } from '$lib/utils/pulse'
   import {
     coast,
     DEFAULT_PITCH,
@@ -34,18 +35,15 @@
   import IconPause from '~icons/material-symbols/pause'
   import IconPlay from '~icons/material-symbols/play-arrow'
 
-  let {
-    getNow,
-    getDuration = () => 0,
-    class: className = '',
-  }: { getNow: () => number; getDuration?: () => number; class?: string } = $props()
+  let { getNow, class: className = '' }: { getNow: () => number; class?: string } = $props()
 
   const SPIN_RADIANS_PER_SECOND = 0.25
   const DRAG_RADIANS_PER_PIXEL = 0.008
-  const NOW_COLOR = '#6d28d9'
   const MAX_FRAME_DT = 0.05
   const TICK_FADE_IN_REACH = 1.02
   const UNCAPPED_FPS = 1000
+  const HALO_ALPHA = 60
+  const HALO_SCALE = 2.5
 
   let container: HTMLDivElement
   let instance = $state.raw<WebglP5 | null>(null)
@@ -104,7 +102,7 @@
 
       const fit = fitScene(p.width, p.height, imgW, imgH, rotation)
       const now = getNow()
-      const extent = timeExtent(state.paths, now, getDuration())
+      const extent = timeExtent(state.paths, now)
       const axis = timeAxis(extent)
       const ease = reducedMotion ? Infinity : dt
       shownSpan = easeSpan(shownSpan, axis.span, extent, ease)
@@ -169,7 +167,7 @@
       }
       p.pop()
 
-      const zNow = now * zScale
+      const pulse = pulseScale(pulseClock(state.isDrawing, reducedMotion))
       const floorMark = Math.max(fit.floorW, fit.floorH) * 0.03
       for (const path of state.paths) {
         if (path.visible === false) continue
@@ -183,11 +181,15 @@
         p.stroke(faint)
         p.strokeWeight(1)
         p.line(sx, sy, 0, sx, sy, sz)
+        const radius = isCurrent ? 5 : 3.5
         p.push()
         p.translate(sx, sy, sz)
         p.noStroke()
         p.fill(path.color)
-        p.sphere(isCurrent ? 5 : 3.5, 12, 8)
+        p.sphere(radius * (pulse + 0.25), 12, 8)
+        faint.setAlpha(HALO_ALPHA)
+        p.fill(faint)
+        p.sphere(radius * HALO_SCALE * pulse, 12, 8)
         p.pop()
         p.push()
         p.translate(sx, sy, 0.5)
@@ -197,19 +199,6 @@
         p.circle(0, 0, isCurrent ? floorMark * 1.4 : floorMark)
         p.pop()
       }
-
-      p.push()
-      p.translate(0, 0, zNow)
-      const nowFill = p.color(NOW_COLOR)
-      nowFill.setAlpha(16)
-      p.noStroke()
-      p.fill(nowFill)
-      p.plane(fit.floorW, fit.floorH, 1, 1)
-      p.noFill()
-      p.stroke(NOW_COLOR)
-      p.strokeWeight(1.5)
-      p.rect(left, top, fit.floorW, fit.floorH)
-      p.pop()
     }
   }
 
@@ -278,7 +267,7 @@
   }
 
   onMount(() => {
-    reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    reducedMotion = prefersReducedMotion()
     spinning = !reducedMotion
 
     const onKeydown = (e: KeyboardEvent) => {

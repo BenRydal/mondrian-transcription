@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { PLAYBACK_RATES, sanitizeViewPrefs, stepPlaybackRate } from './viewPrefs'
+import { get } from 'svelte/store'
+import {
+  PLAYBACK_RATES,
+  sanitizeViewPrefs,
+  stepPlaybackRate,
+  toggleSection,
+  viewPrefs,
+} from './viewPrefs'
 
 describe('stepPlaybackRate', () => {
   it('moves one step through the list', () => {
@@ -32,5 +39,25 @@ describe('sanitizeViewPrefs', () => {
     expect(sanitizeViewPrefs({ trailSeconds: 4 }).trailSeconds).toBe(3)
     expect(sanitizeViewPrefs({ newPathStart: 'current' }).newPathStart).toBe('current')
     expect(sanitizeViewPrefs({ newPathStart: 'later' }).newPathStart).toBe('zero')
+  })
+})
+
+describe('openSections', () => {
+  it('starts with every collapsible section closed', () => {
+    expect(sanitizeViewPrefs(null).openSections).toEqual([])
+    expect(sanitizeViewPrefs({ openSections: 'session' }).openSections).toEqual([])
+  })
+
+  it('keeps only section ids from stored prefs', () => {
+    expect(sanitizeViewPrefs({ openSections: ['session', 3, null] }).openSections).toEqual([
+      'session',
+    ])
+  })
+
+  it('toggles a section open and closed', () => {
+    toggleSection('versions')
+    expect(get(viewPrefs).openSections).toContain('versions')
+    toggleSection('versions')
+    expect(get(viewPrefs).openSections).not.toContain('versions')
   })
 })

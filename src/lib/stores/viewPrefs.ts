@@ -16,6 +16,7 @@ interface ViewPrefs {
   recordingMode: RecordingMode
   trailSeconds: number
   newPathStart: NewPathStart
+  openSections: string[]
 }
 
 const STORAGE_KEY = 'mondrian-view-prefs'
@@ -30,16 +31,19 @@ const defaultViewPrefs: ViewPrefs = {
   recordingMode: 'toggle',
   trailSeconds: 3,
   newPathStart: 'zero',
+  openSections: [],
 }
 
 export function sanitizeViewPrefs(raw: unknown): ViewPrefs {
-  const prefs = { ...defaultViewPrefs }
+  const prefs = { ...defaultViewPrefs, openSections: [] as string[] }
   if (!raw || typeof raw !== 'object') return prefs
   const r = raw as Record<string, unknown>
   if (isOneOf(PLAYBACK_RATES, r.playbackRate)) prefs.playbackRate = r.playbackRate
   if (isOneOf(RECORDING_MODES, r.recordingMode)) prefs.recordingMode = r.recordingMode
   if (isOneOf(TRAIL_LENGTHS, r.trailSeconds)) prefs.trailSeconds = r.trailSeconds
   if (isOneOf(NEW_PATH_STARTS, r.newPathStart)) prefs.newPathStart = r.newPathStart
+  if (Array.isArray(r.openSections))
+    prefs.openSections = r.openSections.filter((id): id is string => typeof id === 'string')
   return prefs
 }
 
@@ -48,7 +52,7 @@ function load(): ViewPrefs {
     const text = browserStorage()?.getItem(STORAGE_KEY)
     return sanitizeViewPrefs(text ? JSON.parse(text) : null)
   } catch {
-    return { ...defaultViewPrefs }
+    return sanitizeViewPrefs(null)
   }
 }
 
@@ -64,6 +68,15 @@ function saveIfStorageAllowed(prefs: ViewPrefs): boolean {
 }
 
 viewPrefs.subscribe(saveIfStorageAllowed)
+
+export function toggleSection(id: string) {
+  viewPrefs.update((prefs) => ({
+    ...prefs,
+    openSections: prefs.openSections.includes(id)
+      ? prefs.openSections.filter((open) => open !== id)
+      : [...prefs.openSections, id],
+  }))
+}
 
 export function stepPlaybackRate(
   rate: number,

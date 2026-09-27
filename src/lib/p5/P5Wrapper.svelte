@@ -575,11 +575,7 @@
       style:top="{videoHeight < 100 ? videoHeight : 0}%"
       style:width="{$drawingConfig.splitPosition}%"
     >
-      <SpaceTimeView
-        getNow={spaceTimeNow}
-        getDuration={() => source?.duration ?? 0}
-        class="inset-0"
-      />
+      <SpaceTimeView getNow={spaceTimeNow} class="inset-0" />
     </div>
   {/if}
 

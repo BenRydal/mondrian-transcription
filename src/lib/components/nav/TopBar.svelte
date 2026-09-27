@@ -1,6 +1,7 @@
 <script lang="ts">
   import IconAdd from '~icons/material-symbols/add'
   import Icon3D from '~icons/material-symbols/view-in-ar-outline'
+  import IconDownload from '~icons/material-symbols/download'
   import { drawingConfig } from '$lib/stores/drawingConfig'
   import ConfirmDialog from '$lib/components/dialogs/ConfirmDialog.svelte'
   import SegmentedControl from '$lib/components/SegmentedControl.svelte'
@@ -8,10 +9,12 @@
   let {
     fileLabel,
     onNewPath,
+    onExport,
     onModeSwitch,
   }: {
     fileLabel: string
     onNewPath: () => void
+    onExport: () => void
     onModeSwitch: () => void
   } = $props()
 
@@ -72,6 +75,11 @@
     <button class="btn btn-sm btn-neutral" onclick={onNewPath} aria-label="New Path">
       <IconAdd class="w-4 h-4" />
       <span class="hidden sm:inline">New Path</span>
+    </button>
+
+    <button class="btn btn-sm btn-primary" onclick={onExport} aria-label="Export">
+      <IconDownload class="w-4 h-4" />
+      <span class="hidden sm:inline">Export</span>
     </button>
   </div>
 </header>

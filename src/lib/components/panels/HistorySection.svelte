@@ -57,7 +57,7 @@
   }
 </script>
 
-<PanelSection title="History">
+<PanelSection title="Versions & checkpoints" collapsibleId="versions">
   <form class="flex gap-2" onsubmit={save} data-checkpoint-form>
     <input
       type="text"

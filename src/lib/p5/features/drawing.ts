@@ -23,6 +23,7 @@ import { mediaClock, speculateClock } from '../../timing/sessionClocks'
 import { lastIndexAtOrBefore, trailRange } from '../../timing/timeWindow'
 import { viewPrefs } from '../../stores/viewPrefs'
 import { applyAffine, imageToDisplay, type PathLayer } from './pathLayer'
+import { pulseClock, pulseScale } from '../../utils/pulse'
 
 type CanvasPos = { x: number; y: number }
 
@@ -214,6 +215,7 @@ export function drawPaths(p5: p5, layer: PathLayer) {
     }
   }
 
+  const pulse = pulseScale(pulseClock(state.isDrawing))
   state.paths.forEach((path) => {
     if (path.visible === false || path.points.length === 0) return
 
@@ -222,7 +224,7 @@ export function drawPaths(p5: p5, layer: PathLayer) {
     if (!endpoint) return
 
     const { x, y } = toDisplay(endpoint)
-    drawPulsingMarker(p5, x, y, path.color, state.isDrawing ? p5.frameCount : 0)
+    drawPulsingMarker(p5, x, y, path.color, pulse)
   })
 
   p5.pop()
@@ -285,11 +287,9 @@ function drawPulsingMarker(
   x: number,
   y: number,
   color: string,
-  frameCount: number,
+  pulse: number,
   markerSize: number = 15
 ) {
-  const pulseScale = (Math.sin(frameCount * 0.05) + 1) * 0.25 + 0.5
-
   p5.noStroke()
   const c = p5.color(color)
   c.setAlpha(50)
@@ -297,12 +297,12 @@ function drawPulsingMarker(
 
   // Draw expanding rings
   for (let i = 4; i > 0; i--) {
-    const size = markerSize * (1.5 + i * 0.5) * pulseScale
+    const size = markerSize * (1.5 + i * 0.5) * pulse
     p5.circle(x, y, size)
   }
 
   // Draw center dot
-  p5.circle(x, y, markerSize * pulseScale)
+  p5.circle(x, y, markerSize * pulse)
   p5.fill(255)
-  p5.circle(x, y, markerSize * 0.5 * pulseScale)
+  p5.circle(x, y, markerSize * 0.5 * pulse)
 }

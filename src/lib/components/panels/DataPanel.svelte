@@ -1,15 +1,12 @@
 <script lang="ts">
   import IconUpload from '~icons/material-symbols/upload'
-  import IconDownload from '~icons/material-symbols/download'
-  import IconDeleteAll from '~icons/material-symbols/delete-sweep-outline'
   import IconImage from '~icons/material-symbols/image'
   import IconVideo from '~icons/material-symbols/videocam'
   import IconInfo from '~icons/material-symbols/info-outline'
   import { drawingConfig } from '$lib/stores/drawingConfig'
   import type { AutosaveStatus } from '$lib/storage/autosave'
-  import type { Snippet } from 'svelte'
   import type { VideoMeta } from '$lib/storage/sessionDb'
-  import { formatBytes, formatClockTime } from '$lib/utils/format'
+  import { formatBytes } from '$lib/utils/format'
   import { formatDuration } from '$lib/utils/time'
   import PanelSection from './PanelSection.svelte'
   import { groupVideoExamples, type VideoExample } from '$lib/examples/videoExamples'
@@ -19,43 +16,16 @@
     onVideoUpload,
     onSelectExample,
     onSelectVideoExample,
-    onExport,
-    onClearAll,
     autosave,
     reattachVideo = null,
-    storageLabel = null,
-    sessionSection,
-    historySection,
   }: {
     onImageUpload: (event: Event) => void
     onVideoUpload: (event: Event) => void
     onSelectExample: (id: string) => void
     onSelectVideoExample: (example: VideoExample) => void
-    onExport: () => void
-    onClearAll: () => void
     autosave: AutosaveStatus
     reattachVideo?: VideoMeta | null
-    storageLabel?: string | null
-    sessionSection?: Snippet
-    historySection?: Snippet
   } = $props()
-
-  const autosaveLabel = $derived.by(() => {
-    switch (autosave.state) {
-      case 'unavailable':
-        return 'Unavailable in this window. Use Export to keep your work.'
-      case 'other-tab':
-        return 'Paused: Mondrian is open in another tab.'
-      case 'error':
-        return 'Last save failed. Retrying on the next change.'
-      case 'saving':
-        return 'Saving…'
-      default:
-        return autosave.lastSavedAt
-          ? `Last saved ${formatClockTime(autosave.lastSavedAt)}`
-          : 'Not saved yet'
-    }
-  })
 
   const examples = [
     { id: 'classroom', label: 'Classroom Space' },
@@ -140,15 +110,6 @@
         </label>
       {/if}
     </div>
-  </PanelSection>
-
-  {@render sessionSection?.()}
-
-  <PanelSection title="Autosave">
-    <p class="text-sm text-base-content/70" data-testid="autosave-status">{autosaveLabel}</p>
-    {#if storageLabel}
-      <p class="text-xs text-base-content/50" data-testid="storage-used">{storageLabel}</p>
-    {/if}
     {#if autosave.videoStatus === 'needs-reattach' && !reattachVideo}
       <p class="text-xs text-base-content/50">
         The video is too large to keep in the browser; you'll re-attach it after a reload.
@@ -167,8 +128,6 @@
       </div>
     {/if}
   </PanelSection>
-
-  {@render historySection?.()}
 
   {#if !$drawingConfig.isTranscriptionMode}
     <PanelSection title="Example Data">
@@ -205,18 +164,4 @@
       </ul>
     </PanelSection>
   {/if}
-
-  <PanelSection title="Export">
-    <button class="btn btn-sm btn-primary" onclick={onExport}>
-      <IconDownload class="w-4 h-4" />
-      Export
-    </button>
-  </PanelSection>
-
-  <PanelSection title="Clear">
-    <button class="btn btn-sm btn-outline btn-error" onclick={onClearAll}>
-      <IconDeleteAll class="w-4 h-4" />
-      Clear All Paths
-    </button>
-  </PanelSection>
 </div>

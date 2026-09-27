@@ -8,10 +8,12 @@
   import IconVisibility from '~icons/material-symbols/visibility'
   import IconVisibilityOff from '~icons/material-symbols/visibility-off'
   import IconClose from '~icons/material-symbols/close'
+  import IconDeleteAll from '~icons/material-symbols/delete-sweep-outline'
   import { formatPoints } from '$lib/utils/format'
   import { formatHms } from '$lib/utils/time'
 
-  let { onDelete }: { onDelete: (pathId: number) => void } = $props()
+  let { onDelete, onClearAll }: { onDelete: (pathId: number) => void; onClearAll: () => void } =
+    $props()
 
   let editingPathId = $state<number | null>(null)
   let editValue = $state('')
@@ -136,4 +138,8 @@
       {/each}
     </ul>
   {/if}
+  <button class="btn btn-sm btn-outline btn-error self-start mt-4" onclick={onClearAll}>
+    <IconDeleteAll class="w-4 h-4" />
+    Clear All Paths
+  </button>
 </div>

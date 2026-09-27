@@ -7,6 +7,7 @@
   import PathsPanel from '$lib/components/panels/PathsPanel.svelte'
   import SettingsPanel from '$lib/components/panels/SettingsPanel.svelte'
   import HelpPanel from '$lib/components/panels/HelpPanel.svelte'
+  import HistoryPanel from '$lib/components/panels/HistoryPanel.svelte'
   import ConfirmDialog from '$lib/components/dialogs/ConfirmDialog.svelte'
   import ExportDialog from '$lib/components/dialogs/ExportDialog.svelte'
   import { CanvasFrame, ActivityBar, SidePanel, type ActivityBarItem } from 'svelte-p5-components'
@@ -49,15 +50,18 @@
     unpackSession,
   } from '$lib/storage/sessionArchive'
   import IconWarning from '~icons/material-symbols/warning-outline'
+  import IconInfo from '~icons/material-symbols/info-outline'
   import IconData from '~icons/material-symbols/folder-open-outline'
   import IconPaths from '~icons/material-symbols/route'
+  import IconHistory from '~icons/material-symbols/history'
   import IconSettings from '~icons/material-symbols/settings-outline'
   import IconHelp from '~icons/material-symbols/help-outline'
 
-  type PanelId = 'data' | 'paths' | 'settings' | 'help'
+  type PanelId = 'data' | 'paths' | 'history' | 'settings' | 'help'
   const PANEL_LABELS: Record<PanelId, string> = {
     data: 'Data',
     paths: 'Paths',
+    history: 'History',
     settings: 'Settings',
     help: 'Help',
   }
@@ -79,6 +83,7 @@
       icon: pathsIcon,
       badge: $drawingState.paths.length,
     },
+    { id: 'history', label: PANEL_LABELS.history, icon: historyIcon },
     { id: 'settings', label: PANEL_LABELS.settings, icon: settingsIcon },
     { id: 'help', label: PANEL_LABELS.help, icon: helpIcon },
   ])
@@ -154,7 +159,7 @@
   let historyLoading: Promise<void> | null = null
   let historyAgain = false
   function refreshHistory() {
-    if (activePanel !== 'data') {
+    if (activePanel !== 'history') {
       historyStale = true
       return
     }
@@ -181,7 +186,7 @@
     })()
   }
   $effect(() => {
-    if (activePanel === 'data' && historyStale) refreshHistory()
+    if (activePanel === 'history' && historyStale) refreshHistory()
   })
 
   async function pin(label: string | null) {
@@ -427,7 +432,7 @@
     await autosave.newSession()
     resetWorkspace()
     refreshHistory()
-    showNotice('Started a new session. Your other sessions are in the Data panel.')
+    showNotice('Started a new session. Your other sessions are in the History panel.')
   }
 
   async function confirmDeleteSession() {
@@ -648,13 +653,19 @@
 
 {#snippet dataIcon()}<IconData />{/snippet}
 {#snippet pathsIcon()}<IconPaths />{/snippet}
+{#snippet historyIcon()}<IconHistory />{/snippet}
 {#snippet settingsIcon()}<IconSettings />{/snippet}
 {#snippet helpIcon()}<IconHelp />{/snippet}
 
 <div class="app-frame">
   <CanvasFrame>
     {#snippet top()}
-      <TopBar {fileLabel} onNewPath={handleNewPath} onModeSwitch={handleModeSwitch} />
+      <TopBar
+        {fileLabel}
+        onNewPath={handleNewPath}
+        onExport={() => exportDialog.start()}
+        onModeSwitch={handleModeSwitch}
+      />
     {/snippet}
 
     {#snippet leftRail()}
@@ -685,12 +696,16 @@
                 onVideoUpload={handleVideoUpload}
                 onSelectExample={loadExampleData}
                 onSelectVideoExample={loadVideoExample}
-                onExport={() => exportDialog.start()}
-                onClearAll={() => (showClearAllModal = true)}
                 autosave={$autosaveStatus}
                 {reattachVideo}
-                {storageLabel}
-              >
+              />
+            {:else if renderedPanel === 'paths'}
+              <PathsPanel
+                onDelete={(id) => (pendingDeletePathId = id)}
+                onClearAll={() => (showClearAllModal = true)}
+              />
+            {:else if renderedPanel === 'history'}
+              <HistoryPanel autosave={$autosaveStatus} {storageLabel}>
                 {#snippet sessionSection()}
                   <SessionSection
                     {sessions}
@@ -719,9 +734,7 @@
                     onDelete={(id) => autosave.deleteSnapshot(id).then(refreshHistory)}
                   />
                 {/snippet}
-              </DataPanel>
-            {:else if renderedPanel === 'paths'}
-              <PathsPanel onDelete={(id) => (pendingDeletePathId = id)} />
+              </HistoryPanel>
             {:else if renderedPanel === 'settings'}
               <SettingsPanel />
             {:else if renderedPanel === 'help'}
@@ -788,7 +801,11 @@
 {#snippet toast(alertClass: string, message: string, role?: 'status')}
   <div class="fixed top-20 left-4 right-4 flex justify-center pointer-events-none z-50">
     <div class="alert {alertClass} shadow-lg max-w-md pointer-events-auto" {role}>
-      <IconWarning class="h-5 w-5" />
+      {#if alertClass === 'alert-warning'}
+        <IconWarning class="h-5 w-5" />
+      {:else}
+        <IconInfo class="h-5 w-5" />
+      {/if}
       <span class="text-sm">{message}</span>
     </div>
   </div>

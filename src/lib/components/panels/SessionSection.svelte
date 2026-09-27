@@ -77,7 +77,7 @@
   />
 {/snippet}
 
-<PanelSection title="Session">
+<PanelSection title="Session" collapsibleId="session">
   <div class="flex flex-col gap-1" data-testid="current-session">
     <div class="flex items-center gap-2">
       {#if editingId !== null && editingId === currentId}
