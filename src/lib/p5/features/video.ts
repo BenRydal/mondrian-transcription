@@ -4,7 +4,7 @@ import { get } from 'svelte/store'
 import { drawingConfig } from '../../stores/drawingConfig'
 
 export function setupVideo(p5: p5) {
-  const setVideo = (video: HTMLVideoElement) => {
+  const setVideo = (video: HTMLVideoElement, restoreTime?: number) => {
     const p5Vid = p5.createVideo([video.src])
     const videoElt = p5Vid.elt as HTMLVideoElement
 
@@ -12,26 +12,26 @@ export function setupVideo(p5: p5) {
     videoElt.loop = false
     videoElt.currentTime = 0
 
-    // Make sure metadata is loaded to get duration correctly
-    videoElt.addEventListener('loadedmetadata', () => {
-      // Reset the video time in drawingState to ensure timeline updates
-      drawingState.update((state) => ({
-        ...state,
-        videoTime: 0,
-      }))
-    })
+    // Seek once metadata is ready, so a restore doesn't race a blind timed seek.
+    videoElt.addEventListener(
+      'loadedmetadata',
+      () => {
+        const target = restoreTime ?? 0.1
+        try {
+          videoElt.currentTime = Math.min(target, videoElt.duration || target)
+        } catch (e) {
+          console.warn('Could not set initial currentTime', e)
+        }
+        drawingState.update((state) => ({
+          ...state,
+          videoTime: restoreTime ?? 0,
+        }))
+      },
+      { once: true }
+    )
 
     // Force load to trigger proper timeline setup
     videoElt.load()
-
-    // Set a small initial time to show the first frame
-    setTimeout(() => {
-      try {
-        videoElt.currentTime = 0.1
-      } catch (e) {
-        console.warn('Could not set initial currentTime', e)
-      }
-    }, 50)
 
     p5Vid.elt.addEventListener('loadeddata', () => {
       if (p5.draw) {

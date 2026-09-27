@@ -15,14 +15,15 @@
   import { drawingState, deletePathById } from '$lib/stores/drawingState'
   import { drawingConfig } from '$lib/stores/drawingConfig'
   import { invalidateSpeculateClock } from '$lib/timing/sessionClocks'
-  import {
-    getRecoverableSession,
-    clearSavedSession,
-    saveSession,
-    hasRecordedData,
-    debounce,
-    type SavedSession,
-  } from '$lib/stores/sessionRecovery'
+  import { hasRecordedData, formatBytes } from '$lib/stores/sessionRecovery'
+  import { createAutosave, type AutosaveState } from '$lib/storage/autosave'
+  import type {
+    AssetInput,
+    RestoredSession,
+    SnapshotInput,
+    SnapshotMeta,
+    VideoMeta,
+  } from '$lib/storage/sessionDb'
   import IconWarning from '~icons/material-symbols/warning-outline'
   import IconData from '~icons/material-symbols/folder-open-outline'
   import IconPaths from '~icons/material-symbols/route'
@@ -72,8 +73,57 @@
 
   let p5Component: P5Wrapper
   let showRecoveryModal = $state(false)
-  let recoveredSession = $state<SavedSession | null>(null)
+  let recoveredSession = $state.raw<RestoredSession | null>(null)
   let showEmptyPathWarning = $state(false)
+  let notice = $state<string | null>(null)
+  let floorPlanAsset: AssetInput | null = null
+  let videoAsset: (AssetInput & { meta: VideoMeta }) | null = null
+  let reattachVideo = $state<VideoMeta | null>(null)
+  let savedVersions = $state<SnapshotMeta[]>([])
+  let pendingRestoreId = $state<number | null>(null)
+
+  const newAssetKey = () =>
+    window.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`
+
+  function getSnapshot(): SnapshotInput | null {
+    const state = get(drawingState)
+    if (!hasRecordedData(state.paths)) return null
+    const config = get(drawingConfig)
+    return {
+      paths: state.paths,
+      videoTime: state.videoTime,
+      imageWidth: state.imageWidth,
+      imageHeight: state.imageHeight,
+      config: {
+        isTranscriptionMode: config.isTranscriptionMode,
+        exportSampleRate: config.exportSampleRate,
+        strokeWeight: config.strokeWeight,
+        speculateScale: config.speculateScale,
+        isContinuousMode: config.isContinuousMode,
+        floorPlanRotation: config.floorPlanRotation,
+      },
+      floorPlan: state.imageElement ? floorPlanAsset : null,
+      video: config.isTranscriptionMode ? videoAsset : null,
+    }
+  }
+
+  const autosave = createAutosave({ getSnapshot })
+  const autosaveStatus = autosave.status
+
+  async function refreshSavedVersions() {
+    savedVersions = await autosave.listSnapshots()
+  }
+
+  const NOTICES: Partial<Record<AutosaveState, string>> = {
+    'other-tab': 'Mondrian is open in another tab, so autosave is paused here.',
+    unavailable: 'Autosave is unavailable in this window. Use Export to keep your work.',
+  }
+  let noticeTimer: ReturnType<typeof setTimeout> | undefined
+  function showNotice(message: string) {
+    notice = message
+    clearTimeout(noticeTimer)
+    noticeTimer = setTimeout(() => (notice = null), 6000)
+  }
 
   $effect(() => {
     if ($drawingState.isDrawing) {
@@ -81,71 +131,55 @@
     }
   })
 
-  // Save function (used by all save triggers)
-  function saveNow() {
-    if (p5Component) {
-      const floorPlanDataUrl = p5Component.getFloorPlanDataUrl()
-      saveSession(floorPlanDataUrl)
-    }
-  }
-
-  // Debounced save for general state changes (renames, config, etc.)
-  const debouncedSave = debounce(saveNow, 2000)
-
   onMount(() => {
-    // Check for recoverable session
-    const session = getRecoverableSession()
-    if (session) {
-      recoveredSession = session
-      showRecoveryModal = true
-    } else {
-      openWelcomeModal()
-    }
-
-    // Track previous recording state to detect when recording stops
-    let wasRecording = false
-    let periodicSaveInterval: ReturnType<typeof setInterval> | null = null
-
-    // Set up auto-save subscription
-    const unsubscribe = drawingState.subscribe((state) => {
-      const hasData = hasRecordedData(state.paths)
-      const isRecording = state.isDrawing
-
-      // Save immediately when recording stops
-      if (wasRecording && !isRecording && hasData) {
-        saveNow()
+    autosave.init().then((session) => {
+      // An empty latest snapshot (e.g. after a clear) is not offered here;
+      // older non-empty ones remain reachable from Saved Versions.
+      if (session && hasRecordedData(session.paths)) {
+        recoveredSession = session
+        showRecoveryModal = true
+      } else {
+        openWelcomeModal()
       }
-
-      // Start/stop periodic save during recording
-      if (isRecording && !periodicSaveInterval) {
-        // Save every 60 seconds while recording
-        periodicSaveInterval = setInterval(() => {
-          if (hasRecordedData(get(drawingState).paths)) {
-            saveNow()
-          }
-        }, 60000)
-      } else if (!isRecording && periodicSaveInterval) {
-        clearInterval(periodicSaveInterval)
-        periodicSaveInterval = null
-      }
-
-      wasRecording = isRecording
-
-      // Debounced save for other state changes (when not recording)
-      if (!showRecoveryModal && hasData && !isRecording) {
-        debouncedSave()
-      }
+      refreshSavedVersions()
     })
 
-    // Save when page loses visibility (user switches tabs)
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'hidden') {
-        if (hasRecordedData(get(drawingState).paths)) {
-          saveNow()
-        }
+    const shownNotices: AutosaveState[] = []
+    const unsubscribeStatus = autosave.status.subscribe(({ state }) => {
+      const message = NOTICES[state]
+      if (message && !shownNotices.includes(state)) {
+        shownNotices.push(state)
+        showNotice(message)
       }
+      if (state === 'saved') refreshSavedVersions()
+    })
+
+    let wasRecording = false
+    let lastPaths = get(drawingState).paths
+    const unsubscribe = drawingState.subscribe((state) => {
+      const isRecording = state.isDrawing
+      const pathsChanged = state.paths !== lastPaths
+      lastPaths = state.paths
+      if (showRecoveryModal || !hasRecordedData(state.paths)) {
+        wasRecording = isRecording
+        return
+      }
+      if (wasRecording && !isRecording) autosave.flush()
+      else if (pathsChanged) autosave.schedule()
+      wasRecording = isRecording
+    })
+    const unsubscribeConfig = drawingConfig.subscribe(() => {
+      if (!showRecoveryModal) autosave.schedule()
+    })
+
+    const flushNow = () => {
+      if (!showRecoveryModal) autosave.flush()
+    }
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') flushNow()
     }
     document.addEventListener('visibilitychange', handleVisibilityChange)
+    window.addEventListener('pagehide', flushNow)
 
     // Warn before leaving with unsaved data
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
@@ -158,69 +192,138 @@
 
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload)
+      window.removeEventListener('pagehide', flushNow)
       document.removeEventListener('visibilitychange', handleVisibilityChange)
-      if (periodicSaveInterval) clearInterval(periodicSaveInterval)
       unsubscribe()
+      unsubscribeConfig()
+      unsubscribeStatus()
+      clearTimeout(noticeTimer)
+      autosave.destroy()
     }
   })
 
-  function handleRestoreSession() {
-    if (!recoveredSession || !p5Component) return
+  function applyRestoredSession(session: RestoredSession) {
+    const { meta, paths, floorPlan, video } = session
 
-    // Restore config first
+    if (!meta.config.isTranscriptionMode || !meta.video) {
+      p5Component.clearVideo()
+      videoName = null
+      videoAsset = null
+      reattachVideo = null
+    }
+
     drawingConfig.update((config) => ({
       ...config,
-      isTranscriptionMode: recoveredSession!.config.isTranscriptionMode,
-      exportSampleRate: recoveredSession!.config.exportSampleRate ?? config.exportSampleRate,
-      strokeWeight: recoveredSession!.config.strokeWeight,
-      speculateScale: recoveredSession!.config.speculateScale,
-      isContinuousMode: recoveredSession!.config.isContinuousMode,
-      floorPlanRotation: recoveredSession!.config.floorPlanRotation ?? 0,
+      isTranscriptionMode: meta.config.isTranscriptionMode,
+      exportSampleRate: meta.config.exportSampleRate ?? config.exportSampleRate,
+      strokeWeight: meta.config.strokeWeight,
+      speculateScale: meta.config.speculateScale,
+      isContinuousMode: meta.config.isContinuousMode,
+      floorPlanRotation: meta.config.floorPlanRotation ?? 0,
     }))
 
-    // Restore paths and state
     invalidateSpeculateClock()
     drawingState.update((state) => ({
       ...state,
-      paths: recoveredSession!.paths,
-      currentPathId: Math.max(...recoveredSession!.paths.map((p) => p.pathId), 0),
-      videoTime: recoveredSession!.videoTime,
-      imageWidth: recoveredSession!.imageWidth,
-      imageHeight: recoveredSession!.imageHeight,
+      paths,
+      currentPathId: Math.max(...paths.map((p) => p.pathId), 0),
+      videoTime: meta.videoTime,
+      imageWidth: meta.imageWidth,
+      imageHeight: meta.imageHeight,
     }))
 
-    // Restore floor plan image if saved
-    if (recoveredSession.floorPlanDataUrl) {
+    if (floorPlan && meta.floorPlanKey) {
+      const name = meta.floorPlanName ?? 'Restored floor plan'
+      floorPlanAsset = { key: meta.floorPlanKey, blob: floorPlan, name }
       const image = new window.Image()
       image.onload = () => {
         p5Component.setImage(image, true)
-        floorPlanName = 'Restored floor plan'
+        floorPlanName = name
       }
-      image.onerror = () => {
-        console.warn('Failed to restore floor plan image from saved session')
-      }
-      image.src = recoveredSession.floorPlanDataUrl
+      image.onerror = () => console.warn('Failed to restore floor plan image from saved session')
+      image.src = window.URL.createObjectURL(floorPlan)
     }
 
+    if (meta.config.isTranscriptionMode && meta.video) {
+      if (video && meta.videoKey) {
+        videoAsset = { key: meta.videoKey, blob: video, name: meta.video.name, meta: meta.video }
+        attachVideo(video, meta.video.name, meta.videoTime)
+      } else {
+        reattachVideo = meta.video
+        activePanel = lastPanel = 'data'
+      }
+    }
+  }
+
+  function handleRestoreSession() {
+    if (!recoveredSession || !p5Component) return
+    applyRestoredSession(recoveredSession)
     showRecoveryModal = false
     recoveredSession = null
   }
 
   function handleDiscardSession() {
-    clearSavedSession()
     showRecoveryModal = false
     recoveredSession = null
+  }
+
+  /** Saves the live session first, so restoring an older version is itself undoable. */
+  async function confirmRestoreVersion() {
+    const id = pendingRestoreId
+    pendingRestoreId = null
+    if (id === null || !p5Component) return
+    // Read the target before flushing, so a full ring can't evict it out from under us.
+    const session = await autosave.loadSnapshot(id)
+    await autosave.flush()
+    if (session) applyRestoredSession(session)
+    refreshSavedVersions()
+  }
+
+  function attachVideo(source: Blob, name: string, restoreTime?: number) {
+    const video = window.document.createElement('video')
+    video.src = window.URL.createObjectURL(source)
+    video.autoplay = false
+    video.loop = false
+    p5Component.setVideo(video, restoreTime)
+    videoName = name
+    return video
+  }
+
+  function checkReattachMatch(file: File, video: HTMLVideoElement) {
+    const expected = reattachVideo
+    if (!expected) return
+    reattachVideo = null
+    const warn = () =>
+      showNotice(
+        `This video differs from the original (${expected.name}, ${formatBytes(expected.size)}). Recorded times may not line up.`
+      )
+    if (file.name !== expected.name || file.size !== expected.size) return warn()
+    video.addEventListener(
+      'loadedmetadata',
+      () => {
+        if (expected.duration && Math.abs(video.duration - expected.duration) > 0.5) warn()
+      },
+      { once: true }
+    )
   }
 
   function handleVideoUpload(event: Event) {
     const file = (event.target as HTMLInputElement).files?.[0]
     if (file) {
-      const video = window.document.createElement('video')
-      video.src = window.URL.createObjectURL(file)
-      video.autoplay = false
-      video.loop = false
-      p5Component.setVideo(video)
-      videoName = file.name
+      // Re-attaching a missing video after a restore resumes at its saved time.
+      const restoreTime = reattachVideo ? get(drawingState).videoTime : undefined
+      const meta: VideoMeta = { name: file.name, size: file.size, type: file.type }
+      videoAsset = { key: newAssetKey(), blob: file, name: file.name, meta }
+      const video = attachVideo(file, file.name, restoreTime)
+      video.addEventListener(
+        'loadedmetadata',
+        () => {
+          if (Number.isFinite(video.duration)) meta.duration = video.duration
+          autosave.schedule()
+        },
+        { once: true }
+      )
+      checkReattachMatch(file, video)
     }
   }
 
@@ -230,6 +333,7 @@
       const image = new window.Image()
       image.src = window.URL.createObjectURL(file)
       image.onload = () => {
+        floorPlanAsset = { key: newAssetKey(), blob: file, name: file.name }
         p5Component.setImage(image)
         floorPlanName = file.name
       }
@@ -238,8 +342,6 @@
 
   function handleSavePath(onComplete?: () => void) {
     p5Component.exportAll(() => {
-      // Clear saved session after successful export
-      clearSavedSession()
       onComplete?.()
     })
   }
@@ -247,15 +349,15 @@
   function handleClear() {
     p5Component.clearDrawing()
     p5Component.startNewPath()
-    clearSavedSession()
   }
 
   function handleModeSwitch() {
     p5Component.clearDrawing()
     p5Component.clearVideo()
     videoName = null
+    videoAsset = null
+    reattachVideo = null
     p5Component.startNewPath()
-    clearSavedSession()
   }
 
   function handleNewPath() {
@@ -289,6 +391,15 @@
     image.onload = () => {
       p5Component.setImage(image)
       floorPlanName = `${imageID}.png`
+      const key = newAssetKey()
+      floorPlanAsset = null
+      fetch(filePath)
+        .then((r) => r.blob())
+        .then((blob) => {
+          floorPlanAsset = { key, blob, name: `${imageID}.png` }
+          autosave.schedule()
+        })
+        .catch((e) => console.warn('Could not keep example floor plan for autosave:', e))
     }
     image.onerror = (error) => {
       window.console.error(`Error loading example image from ${filePath}:`, error)
@@ -344,6 +455,10 @@
                 onSelectExample={loadExampleData}
                 onExport={() => exportDialog.start()}
                 onClearAll={() => (showClearAllModal = true)}
+                autosave={$autosaveStatus}
+                {reattachVideo}
+                {savedVersions}
+                onRestoreVersion={(id) => (pendingRestoreId = id)}
               />
             {:else if lastPanel === 'paths'}
               <PathsPanel onDelete={(id) => (pendingDeletePathId = id)} />
@@ -376,7 +491,7 @@
 <ConfirmDialog
   open={showClearAllModal}
   title="Clear All Paths?"
-  message="This will delete all recorded paths. This action cannot be undone."
+  message="This will delete all recorded paths. You can restore an earlier version from Saved Versions afterward."
   confirmLabel="Clear All"
   onConfirm={() => {
     handleClear()
@@ -385,9 +500,27 @@
   onCancel={() => (showClearAllModal = false)}
 />
 
+<ConfirmDialog
+  open={pendingRestoreId !== null}
+  title="Restore This Version?"
+  message="Your current work will be saved first, then replaced with this saved version."
+  confirmLabel="Restore"
+  onConfirm={confirmRestoreVersion}
+  onCancel={() => (pendingRestoreId = null)}
+/>
+
 <ExportDialog bind:this={exportDialog} onSavePath={handleSavePath} />
 
 <WelcomeModal onClose={closeWelcomeModal} onTryExample={handleTryExample} />
+
+{#if notice}
+  <div class="fixed top-20 left-4 right-4 flex justify-center pointer-events-none z-50">
+    <div class="alert alert-info shadow-lg max-w-md pointer-events-auto" role="status">
+      <IconWarning class="h-5 w-5" />
+      <span class="text-sm">{notice}</span>
+    </div>
+  </div>
+{/if}
 
 {#if showEmptyPathWarning}
   <div class="fixed top-20 left-4 right-4 flex justify-center pointer-events-none z-50">

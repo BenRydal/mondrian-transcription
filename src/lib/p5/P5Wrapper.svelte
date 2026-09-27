@@ -182,16 +182,14 @@
     p5.loop()
   }
 
-  export function setVideo(video: HTMLVideoElement) {
-    // Check if this is a recovery scenario (paths exist but no video yet)
-    const isRecovery = hasRecordedPaths && !videoElement
-    const savedVideoTime = $drawingState.videoTime
+  export function setVideo(video: HTMLVideoElement, restoreTime?: number) {
+    const isRecovery = restoreTime !== undefined
 
     lastVideoTime = 0
 
     drawingState.update((state) => ({
       ...state,
-      videoTime: isRecovery ? state.videoTime : 0,
+      videoTime: isRecovery ? restoreTime : 0,
     }))
 
     if (videoElement) {
@@ -210,7 +208,7 @@
     video.loop = false
 
     const { setVideo: setupP5Video } = setupVideo(p5Instance!)
-    videoElement = setupP5Video(video)
+    videoElement = setupP5Video(video, restoreTime)
 
     if (videoElement) {
       ;(videoElement as { elt: HTMLVideoElement }).elt.loop = false
@@ -221,19 +219,6 @@
         if (!isRecovery) {
           clearDrawing()
         }
-      }
-
-      // If recovering, seek to saved timestamp once video is ready
-      if (isRecovery && savedVideoTime > 0) {
-        const videoElt = (videoElement as { elt: HTMLVideoElement }).elt
-        videoElt.addEventListener(
-          'loadedmetadata',
-          () => {
-            videoElt.currentTime = Math.min(savedVideoTime, videoElt.duration)
-            lastVideoTime = videoElt.currentTime
-          },
-          { once: true }
-        )
       }
     }
 
@@ -270,28 +255,6 @@
         p5Instance.loop()
       }
     })
-  }
-
-  /**
-   * Get floor plan image as data URL for saving to localStorage
-   */
-  export function getFloorPlanDataUrl(): string | null {
-    const imageElement = $drawingState?.imageElement
-    if (!imageElement || !p5Instance) return null
-
-    try {
-      const canvas = p5Instance.createGraphics($drawingState.imageWidth, $drawingState.imageHeight)
-      canvas.pixelDensity(1)
-      canvas.image(imageElement, 0, 0)
-      const dataUrl = (canvas as unknown as { canvas: HTMLCanvasElement }).canvas.toDataURL(
-        'image/png'
-      )
-      canvas.remove()
-      return dataUrl
-    } catch (e) {
-      console.warn('Failed to capture floor plan:', e)
-      return null
-    }
   }
 
   export function startNewPath(): boolean {
