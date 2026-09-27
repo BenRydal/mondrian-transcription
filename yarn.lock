@@ -532,6 +532,23 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@neodrag/core@npm:3.0.0-next.8":
+  version: 3.0.0-next.8
+  resolution: "@neodrag/core@npm:3.0.0-next.8"
+  checksum: 10c0/edf3ba77c7757a3b041b4f421b9c84cd844e0465cdad2cbe09572102845069596004dfb419dbeeca43b199157278f7322159dc1795fff60da4583b4068d31e57
+  languageName: node
+  linkType: hard
+
+"@neodrag/svelte@npm:3.0.0-next.8":
+  version: 3.0.0-next.8
+  resolution: "@neodrag/svelte@npm:3.0.0-next.8"
+  peerDependencies:
+    "@neodrag/core": 3.0.0-next.8
+    svelte: ^3 || ^4 || ^5
+  checksum: 10c0/c64f85079f03cf2fa16a1bed6eb8b1115aae0b0308b7ca83d89152e41bac5766ffe8552eb8151c15bebaaad7d8bd6c214b4e567851491a51a43d7a9fd279a0b3
+  languageName: node
+  linkType: hard
+
 "@nodelib/fs.scandir@npm:2.1.5":
   version: 2.1.5
   resolution: "@nodelib/fs.scandir@npm:2.1.5"
@@ -2928,6 +2945,7 @@ __metadata:
     svelte-check: "npm:^4.3.3"
     svelte-icons: "npm:^2.1.0"
     svelte-p5: "npm:^1.0.0"
+    svelte-p5-components: "npm:^1.1.0"
     svelte-preprocess: "npm:^6.0.3"
     tailwindcss: "npm:^4.1.14"
     toolcool-range-slider: "npm:^4.0.28"
@@ -3770,6 +3788,20 @@ __metadata:
   version: 2.1.0
   resolution: "svelte-icons@npm:2.1.0"
   checksum: 10c0/1150b9f67302e3b3b2b7d403d5695a5e11d3f77a10393516b719ce3b306e9a300a0fc02be9ff328a2488723feccdad7709329a97c7d43d55605ab00566a482f2
+  languageName: node
+  linkType: hard
+
+"svelte-p5-components@npm:^1.1.0":
+  version: 1.1.0
+  resolution: "svelte-p5-components@npm:1.1.0"
+  dependencies:
+    "@neodrag/core": "npm:3.0.0-next.8"
+    "@neodrag/svelte": "npm:3.0.0-next.8"
+  peerDependencies:
+    p5: ">=1.11.0 <3"
+    svelte: ^5.0.0
+    svelte-p5: ^1.0.0
+  checksum: 10c0/25f4a06cdd96d53e62cf3cc819d0e0b37abe7c761b3b9825cd0729daa688d3ca38fb4b643607ea1138380db20eedc67b27eec1afc9538380782709971c5b5ddd
   languageName: node
   linkType: hard
 

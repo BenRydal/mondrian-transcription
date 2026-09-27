@@ -91,20 +91,22 @@
     }
 
     const updateDimensions = () => {
-      height = window.innerHeight - 64
+      height = containerDiv.clientHeight
       width = containerDiv.clientWidth
       if (p5Instance) {
         p5Instance.resizeCanvas(width, height)
       }
     }
 
+    // The side panel resizes the canvas area without a window resize.
+    const resizeObserver = new ResizeObserver(updateDimensions)
     window.addEventListener('keydown', handleKeydown)
-    window.addEventListener('resize', updateDimensions)
+    resizeObserver.observe(containerDiv)
     updateDimensions()
 
     return () => {
       window.removeEventListener('keydown', handleKeydown)
-      window.removeEventListener('resize', updateDimensions)
+      resizeObserver.disconnect()
     }
   })
 
@@ -487,7 +489,7 @@
 
 <div
   bind:this={containerDiv}
-  class="relative w-full h-[calc(100vh-64px)] touch-none"
+  class="relative w-full h-full touch-none"
   onmousemove={handleSplitterDrag}
   onmouseup={handleSplitterEnd}
   onmouseleave={handleSplitterEnd}
@@ -516,7 +518,7 @@
           <p>Upload a floor plan and video to get started</p>
         {:else}
           <p>Upload a floor plan to get started</p>
-          <p>or try an example from the <span class="font-medium">Example Data</span> menu</p>
+          <p>or try an example from the <span class="font-medium">Data</span> panel</p>
         {/if}
       </div>
     </div>
