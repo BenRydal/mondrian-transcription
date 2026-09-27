@@ -5,8 +5,8 @@
 
   let { onOpenWelcome }: { onOpenWelcome: () => void } = $props()
 
-  const shortcuts = $derived(
-    $drawingConfig.isTranscriptionMode
+  const shortcuts = $derived([
+    ...($drawingConfig.isTranscriptionMode
       ? [
           { key: 'F', action: `Forward ${$drawingConfig.jumpSeconds}s` },
           { key: 'R', action: `Rewind ${$drawingConfig.jumpSeconds}s` },
@@ -14,8 +14,9 @@
       : [
           { key: 'F', action: `Forward ${$drawingConfig.speculateJumpSeconds}s` },
           { key: 'R', action: `Rewind ${$drawingConfig.speculateJumpSeconds}s` },
-        ]
-  )
+        ]),
+    { key: 'Ctrl/⌘ S', action: 'Save checkpoint' },
+  ])
 </script>
 
 <div class="flex flex-col gap-6 px-3 py-4">

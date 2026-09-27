@@ -7,6 +7,11 @@ import { SessionDb, StorageUnavailableError, type SnapshotInput } from './sessio
 let dbCount = 0
 const freshName = () => `autosave-db-${++dbCount}`
 
+async function latestPointCount(db: SessionDb, sessionId?: string | null) {
+  const id = sessionId ?? (await db.lastOpenedSessionId())
+  return id ? (await db.loadLatest(id))?.meta.pointCount : undefined
+}
+
 function snapshot(points: number): SnapshotInput {
   return {
     paths: [
@@ -42,9 +47,11 @@ class FakeLocks {
 
   request(
     name: string,
-    options: { ifAvailable?: boolean; signal?: AbortSignal },
-    cb: (lock: { name: string } | null) => unknown
+    optionsOrCb: { ifAvailable?: boolean; signal?: AbortSignal } | ((lock: unknown) => unknown),
+    maybeCb?: (lock: { name: string } | null) => unknown
   ): Promise<unknown> {
+    const options = typeof optionsOrCb === 'function' ? {} : optionsOrCb
+    const cb = (maybeCb ?? optionsOrCb) as (lock: { name: string } | null) => unknown
     if (this.held.has(name)) {
       if (options.ifAvailable) return Promise.resolve(cb(null))
       return new Promise((resolve, reject) => {
@@ -148,7 +155,7 @@ describe('createAutosave', () => {
     autosave.destroy()
 
     const db = await SessionDb.open({ dbName: name })
-    expect((await db.loadLatest())!.meta.pointCount).toBeGreaterThan(1)
+    expect(await latestPointCount(db)).toBeGreaterThan(1)
     db.close()
   })
 
@@ -171,7 +178,7 @@ describe('createAutosave', () => {
     expect(get(autosave.status).state).toBe('saved')
     autosave.destroy()
     const db = await SessionDb.open({ dbName: name })
-    expect((await db.loadLatest())!.meta.pointCount).toBe(5)
+    expect(await latestPointCount(db)).toBe(5)
     db.close()
   })
 
@@ -191,8 +198,11 @@ describe('createAutosave', () => {
     autosave.destroy()
   })
 
-  it('lets only one tab write; the second takes over when the first closes', async () => {
+  it('lets only one tab write a session; the second takes over when the first closes', async () => {
     const name = freshName()
+    const seed = await SessionDb.open({ dbName: name })
+    await seed.createSession('Shared')
+    seed.close()
     const locks = new FakeLocks() as unknown as LockManager
     const make = (points: number) =>
       createAutosave({
@@ -214,11 +224,11 @@ describe('createAutosave', () => {
     await first.flush()
     await second.flush()
     const db = await SessionDb.open({ dbName: name })
-    expect((await db.loadLatest())!.meta.pointCount).toBe(3)
+    expect(await latestPointCount(db, first.sessionId)).toBe(3)
 
     first.destroy()
     await vi.waitFor(() => expect(get(second.status).state).toBe('saved'))
-    expect((await db.loadLatest())!.meta.pointCount).toBe(9)
+    expect(await latestPointCount(db, first.sessionId)).toBe(9)
     db.close()
     second.destroy()
   })
@@ -300,6 +310,136 @@ describe('createAutosave', () => {
     expect(restored!.meta.pointCount).toBe(4)
     expect(restored!.meta.savedAt).toBe(42)
     expect(values.has('mondrian-session')).toBe(false)
+    autosave.destroy()
+  })
+
+  it('pins a checkpoint of the state at call time, even if it changes before the write', async () => {
+    const name = freshName()
+    let points = 4
+    const autosave = createAutosave({
+      getSnapshot: () => snapshot(points),
+      openDb: () => SessionDb.open({ dbName: name }),
+      locks: null,
+      storage: null,
+      persist: async () => true,
+    })
+    await autosave.init()
+    const pending = autosave.checkpoint('  Before Clear All ')
+    points = 1
+    const result = await pending
+    expect(result!.skipped).toBe(false)
+    await autosave.flush()
+    const [latest, pinned] = await autosave.listSnapshots()
+    expect(latest).toMatchObject({ kind: 'auto', pointCount: 1 })
+    expect(pinned).toMatchObject({ kind: 'pinned', label: 'Before Clear All', pointCount: 4 })
+    autosave.destroy()
+  })
+
+  it('locks per session: a second tab can start its own session while the first keeps writing', async () => {
+    const name = freshName()
+    const seed = await SessionDb.open({ dbName: name })
+    const shared = await seed.createSession('Shared')
+    seed.close()
+    const locks = new FakeLocks() as unknown as LockManager
+    let secondPoints = 7
+    const make = (getPoints: () => number) =>
+      createAutosave({
+        getSnapshot: () => snapshot(getPoints()),
+        openDb: () => SessionDb.open({ dbName: name }),
+        locks,
+        storage: null,
+        persist: async () => true,
+      })
+    const first = make(() => 3)
+    const second = make(() => secondPoints)
+    await first.init()
+    await second.init()
+    expect(get(second.status).state).toBe('other-tab')
+    expect(await second.checkpoint('nope')).toBeNull()
+
+    await second.newSession()
+    expect(get(second.status).state).toBe('idle')
+    await second.flush()
+    await first.flush()
+    const other = second.sessionId!
+    expect(other).not.toBe(shared.id)
+
+    await expect(second.deleteSession(shared.id)).rejects.toThrow(/another tab/)
+    await expect(first.deleteSession(other)).rejects.toThrow(/another tab/)
+
+    const db = await SessionDb.open({ dbName: name })
+    expect(await latestPointCount(db, shared.id)).toBe(3)
+    expect(await latestPointCount(db, other)).toBe(7)
+    expect((await db.listSessions()).length).toBe(2)
+    db.close()
+
+    secondPoints = 8
+    first.destroy()
+    second.destroy()
+  })
+
+  it('switches sessions without saving the old live state into the new one', async () => {
+    const name = freshName()
+    let clock = Date.now() - 10_000
+    const seed = await SessionDb.open({ dbName: name, now: () => (clock += 1000) })
+    const a = await seed.createSession('A')
+    await seed.save(a.id, snapshot(5))
+    const b = await seed.createSession('B')
+    await seed.save(b.id, snapshot(11))
+    seed.close()
+    let live = 0
+    const cache = new Map<number, SnapshotInput>()
+    const memo = (n: number) => cache.get(n) ?? cache.set(n, snapshot(n)).get(n)!
+    const autosave = createAutosave({
+      getSnapshot: () => (live ? memo(live) : null),
+      openDb: () => SessionDb.open({ dbName: name, now: () => (clock += 1000) }),
+      locks: new FakeLocks() as unknown as LockManager,
+      storage: null,
+      persist: async () => true,
+      delay: 1,
+      maxWait: 1,
+    })
+    const restored = await autosave.init()
+    expect(autosave.sessionId).toBe(b.id)
+    live = restored!.meta.pointCount + 1
+    const switching = autosave.switchSession(a.id)
+    autosave.schedule()
+    const other = await switching
+    expect(other!.meta.pointCount).toBe(5)
+    live = 6
+    await autosave.flush()
+
+    const db = await SessionDb.open({ dbName: name })
+    expect((await db.listSnapshots(a.id)).map((m) => m.pointCount)).toEqual([6, 5])
+    expect((await db.listSnapshots(b.id)).map((m) => m.pointCount)).toEqual([12, 11])
+    expect(await db.lastOpenedSessionId()).toBe(a.id)
+    db.close()
+    autosave.destroy()
+  })
+
+  it('deleting the current session starts a fresh one on the next save', async () => {
+    const name = freshName()
+    let points = 3
+    const autosave = createAutosave({
+      getSnapshot: () => (points ? snapshot(points) : null),
+      openDb: () => SessionDb.open({ dbName: name }),
+      locks: null,
+      storage: null,
+      persist: async () => true,
+    })
+    await autosave.init()
+    await autosave.flush()
+    const first = autosave.sessionId!
+    await autosave.deleteSession(first)
+    expect(autosave.sessionId).toBeNull()
+    points = 0
+    await autosave.flush()
+    expect(await autosave.listSessions()).toEqual([])
+    points = 2
+    await autosave.flush()
+    const sessions = await autosave.listSessions()
+    expect(sessions).toHaveLength(1)
+    expect(sessions[0].id).not.toBe(first)
     autosave.destroy()
   })
 })

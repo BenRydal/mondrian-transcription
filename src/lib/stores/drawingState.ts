@@ -231,7 +231,8 @@ export function createNewPath(color: string) {
   console.log('Creating new path with color', color)
   invalidateSpeculateClock()
   drawingState.update((state) => {
-    const newPathId = state.currentPathId + 1
+    // Restored paths can hold ids above currentPathId, so never reuse one.
+    const newPathId = Math.max(state.currentPathId, ...state.paths.map((p) => p.pathId)) + 1
     return {
       ...state,
       currentPathId: newPathId,

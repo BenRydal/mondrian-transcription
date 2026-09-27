@@ -5,10 +5,10 @@
   import IconImage from '~icons/material-symbols/image'
   import IconVideo from '~icons/material-symbols/videocam'
   import IconInfo from '~icons/material-symbols/info-outline'
-  import IconRestore from '~icons/material-symbols/history'
   import { drawingConfig } from '$lib/stores/drawingConfig'
   import type { AutosaveStatus } from '$lib/storage/autosave'
-  import type { SnapshotMeta, VideoMeta } from '$lib/storage/sessionDb'
+  import type { Snippet } from 'svelte'
+  import type { VideoMeta } from '$lib/storage/sessionDb'
   import { formatBytes, formatClockTime, formatDuration } from '$lib/stores/sessionRecovery'
   import PanelSection from './PanelSection.svelte'
 
@@ -20,8 +20,9 @@
     onClearAll,
     autosave,
     reattachVideo = null,
-    savedVersions = [],
-    onRestoreVersion,
+    storageLabel = null,
+    sessionSection,
+    historySection,
   }: {
     onImageUpload: (event: Event) => void
     onVideoUpload: (event: Event) => void
@@ -30,8 +31,9 @@
     onClearAll: () => void
     autosave: AutosaveStatus
     reattachVideo?: VideoMeta | null
-    savedVersions?: SnapshotMeta[]
-    onRestoreVersion: (id: number) => void
+    storageLabel?: string | null
+    sessionSection?: Snippet
+    historySection?: Snippet
   } = $props()
 
   const autosaveLabel = $derived.by(() => {
@@ -131,8 +133,13 @@
     </div>
   </PanelSection>
 
+  {@render sessionSection?.()}
+
   <PanelSection title="Autosave">
     <p class="text-sm text-base-content/70" data-testid="autosave-status">{autosaveLabel}</p>
+    {#if storageLabel}
+      <p class="text-xs text-base-content/50" data-testid="storage-used">{storageLabel}</p>
+    {/if}
     {#if autosave.videoStatus === 'needs-reattach' && !reattachVideo}
       <p class="text-xs text-base-content/50">
         The video is too large to keep in the browser; you'll re-attach it after a reload.
@@ -152,34 +159,7 @@
     {/if}
   </PanelSection>
 
-  {#if savedVersions.length > 0}
-    <PanelSection title="Saved Versions">
-      <ul class="flex flex-col gap-2" data-testid="saved-versions">
-        {#each savedVersions as version (version.id)}
-          <li class="bg-base-200 rounded-lg p-2 flex items-center justify-between gap-2 text-sm">
-            <div class="flex flex-col min-w-0">
-              <span class="font-medium">{formatClockTime(version.savedAt)}</span>
-              <span class="text-xs text-base-content/60 truncate">
-                {version.config.isTranscriptionMode ? 'Transcription' : 'Speculate'} ·
-                {version.pathCount}
-                {version.pathCount === 1 ? 'path' : 'paths'} ·
-                {version.pointCount.toLocaleString()} pts
-                {#if version.floorPlanKey}· floor plan{/if}
-                {#if version.video?.status === 'saved'}· video{/if}
-              </span>
-            </div>
-            <button
-              class="btn btn-xs btn-outline shrink-0"
-              onclick={() => onRestoreVersion(version.id!)}
-            >
-              <IconRestore class="w-3.5 h-3.5" />
-              Restore
-            </button>
-          </li>
-        {/each}
-      </ul>
-    </PanelSection>
-  {/if}
+  {@render historySection?.()}
 
   {#if !$drawingConfig.isTranscriptionMode}
     <PanelSection title="Example Data">

@@ -2,10 +2,14 @@ import { writable, type Readable } from 'svelte/store'
 import {
   SessionDb,
   type RestoredSession,
+  type SaveResult,
+  type SessionBundle,
+  type SessionRecord,
   type SnapshotInput,
   type SnapshotMeta,
   type VideoStatus,
 } from './sessionDb'
+import type { PathData } from '$lib/stores/drawingState'
 
 export type AutosaveState =
   | 'starting'
@@ -20,9 +24,17 @@ export interface AutosaveStatus {
   state: AutosaveState
   lastSavedAt: number | null
   videoStatus: VideoStatus | null
+  sessionId: string | null
 }
 
-const LOCK_NAME = 'mondrian-autosave'
+const LOCK_PREFIX = 'mondrian-autosave:'
+const MIGRATE_LOCK = 'mondrian-autosave-migrate'
+
+export class SessionBusyError extends Error {
+  constructor() {
+    super('This session is open in another tab.')
+  }
+}
 
 /** Trailing debounce that still fires within maxWait while changes keep arriving. */
 export function createSaveScheduler(run: () => void, { delay = 500, maxWait = 1000 } = {}) {
@@ -60,6 +72,7 @@ export interface AutosaveOptions {
   locks?: LockManager | null
   storage?: Storage | null
   persist?: () => Promise<unknown>
+  onNotice?: (message: string) => void
   delay?: number
   maxWait?: number
 }
@@ -78,11 +91,17 @@ function safeLocalStorage(): Storage | null {
   }
 }
 
+/** A held lock that can be released, or a pending request that can be cancelled. */
+interface LockHandle {
+  release: () => void
+}
+
 export function createAutosave(opts: AutosaveOptions) {
   const status = writable<AutosaveStatus>({
     state: 'starting',
     lastSavedAt: null,
     videoStatus: null,
+    sessionId: null,
   })
   const openDb = opts.openDb ?? (() => SessionDb.open())
   const locks =
@@ -92,16 +111,20 @@ export function createAutosave(opts: AutosaveOptions) {
         ? (navigator.locks ?? null)
         : null
   let db: SessionDb | null = null
+  let sessionId: string | null = null
   let isOwner = false
   let unavailable = false
   let persistRequested = false
   let running: Promise<void> | null = null
   let dirty = false
-  let releaseLock: (() => void) | null = null
-  const abort = new AbortController()
+  let lock: LockHandle | null = null
+  let destroyed = false
+  // Blocks saves while the live state still belongs to the session being left.
+  let switching = false
   const scheduler = createSaveScheduler(() => void runSave(), opts)
 
   const setState = (state: AutosaveState) => status.update((s) => ({ ...s, state }))
+  const notice = (message: string) => opts.onNotice?.(message)
 
   async function getDb(): Promise<SessionDb | null> {
     if (unavailable) return null
@@ -117,28 +140,73 @@ export function createAutosave(opts: AutosaveOptions) {
     }
   }
 
-  function acquireLock(): Promise<boolean> {
+  /** Try the session's lock now; if another tab has it, queue for when it is released. */
+  function lockSession(id: string): Promise<boolean> {
+    lock?.release()
+    lock = null
     if (!locks) return Promise.resolve(true)
+    const name = LOCK_PREFIX + id
     return new Promise((resolve) => {
-      const hold = () => new Promise<void>((release) => (releaseLock = release))
+      let release = () => {}
+      const held = new Promise<void>((r) => (release = r))
+      const handle: LockHandle = { release: () => release() }
+      lock = handle
       locks
-        .request(LOCK_NAME, { ifAvailable: true }, (lock) => {
-          resolve(!!lock)
-          return lock ? hold() : undefined
+        .request(name, { ifAvailable: true }, (granted) => {
+          resolve(!!granted)
+          if (granted) return held
+          if (lock === handle) waitForTakeover(id, name)
+          return undefined
         })
         .catch(() => resolve(true))
     })
   }
 
-  function waitForTakeover() {
+  function waitForTakeover(id: string, name: string) {
+    const abort = new AbortController()
+    let release = () => {}
+    const held = new Promise<void>((r) => (release = r))
+    const handle: LockHandle = {
+      release: () => {
+        abort.abort()
+        release()
+      },
+    }
+    lock = handle
     locks
-      ?.request(LOCK_NAME, { signal: abort.signal }, async () => {
+      ?.request(name, { signal: abort.signal }, () => {
+        if (lock !== handle || sessionId !== id || destroyed) return
         isOwner = true
+        db?.invalidate(id)
         setState('idle')
         scheduler.schedule()
-        await new Promise<void>((release) => (releaseLock = release))
+        return held
       })
       .catch(() => {})
+  }
+
+  async function openSession(id: string | null) {
+    sessionId = id
+    status.update((s) => ({ ...s, sessionId: id, lastSavedAt: null, videoStatus: null }))
+    if (id === null) {
+      lock?.release()
+      lock = null
+      isOwner = true
+    } else {
+      isOwner = await lockSession(id)
+      if (isOwner) {
+        db?.invalidate(id)
+        await db?.touchSession(id)
+      }
+    }
+    if (!unavailable) setState(isOwner ? 'idle' : 'other-tab')
+  }
+
+  async function ensureSession(store: SessionDb): Promise<string> {
+    if (sessionId) return sessionId
+    const created = await store.createSession()
+    await openSession(created.id)
+    return created.id
   }
 
   async function saveOnce() {
@@ -152,8 +220,9 @@ export function createAutosave(opts: AutosaveOptions) {
     }
     setState('saving')
     try {
-      const result = await store.save(snapshot)
-      status.set({ state: 'saved', lastSavedAt: result.savedAt, videoStatus: result.videoStatus })
+      const id = await ensureSession(store)
+      const result = await store.save(id, snapshot)
+      report(result)
     } catch (e) {
       console.warn('Autosave failed:', e)
       db?.close()
@@ -162,8 +231,28 @@ export function createAutosave(opts: AutosaveOptions) {
     }
   }
 
+  /** A loaded snapshot is already saved; show its time until the next write. */
+  function seen(session: RestoredSession | null) {
+    if (session) status.update((s) => ({ ...s, lastSavedAt: session.meta.savedAt }))
+    return session
+  }
+
+  function report(result: SaveResult) {
+    status.update((s) => ({
+      ...s,
+      state: 'saved',
+      lastSavedAt: result.savedAt,
+      videoStatus: result.videoStatus,
+    }))
+    if (result.evicted > 0) {
+      notice(
+        `Storage is full, so ${result.evicted} older autosaves were removed. Checkpoints were kept.`
+      )
+    }
+  }
+
   function runSave(): Promise<void> {
-    if (!isOwner || unavailable) return Promise.resolve()
+    if (!isOwner || unavailable || switching) return Promise.resolve()
     if (running) {
       dirty = true
       return running
@@ -178,26 +267,54 @@ export function createAutosave(opts: AutosaveOptions) {
     return running
   }
 
+  async function settle() {
+    scheduler.cancel()
+    await runSave()
+  }
+
+  async function ownedStore(): Promise<SessionDb | null> {
+    return isOwner && !switching ? getDb() : null
+  }
+
+  /** Save the live state, run `fn`, and keep saves off until the caller applies new state. */
+  async function transition<T>(fn: () => Promise<T>): Promise<T> {
+    await settle()
+    switching = true
+    try {
+      return await fn()
+    } finally {
+      switching = false
+    }
+  }
+
   return {
     status: status as Readable<AutosaveStatus>,
 
-    /** Opens storage, takes the single-writer lock, migrates legacy data, returns the latest session. */
+    /** Opens storage, migrates old data, locks the last-opened session and returns its latest state. */
     async init(): Promise<RestoredSession | null> {
-      isOwner = await acquireLock()
-      if (!isOwner) waitForTakeover()
       const store = await getDb()
       if (!store) return null
-      setState(isOwner ? 'idle' : 'other-tab')
       const legacy = opts.storage !== undefined ? opts.storage : safeLocalStorage()
-      if (isOwner && legacy) {
-        await store.importLegacy(legacy).catch((e) => console.warn('Legacy import failed:', e))
+      if (legacy) {
+        const migrate = () =>
+          store.importLegacy(legacy).catch((e) => console.warn('Legacy import failed:', e))
+        await (locks ? locks.request(MIGRATE_LOCK, migrate) : migrate())
       }
+      await openSession(await store.lastOpenedSessionId())
+      if (!sessionId) return null
       try {
-        return await store.loadLatest()
+        return seen(await store.loadLatest(sessionId))
       } catch (e) {
         console.warn('Failed to read autosave:', e)
         return null
       }
+    },
+
+    get sessionId() {
+      return sessionId
+    },
+    get canWrite() {
+      return isOwner && !unavailable
     },
 
     schedule: () => scheduler.schedule(),
@@ -206,18 +323,32 @@ export function createAutosave(opts: AutosaveOptions) {
       return runSave()
     },
 
-    async clear() {
-      scheduler.cancel()
-      await running
-      if (!isOwner) return
-      const store = await getDb()
-      await store?.clear().catch((e) => console.warn('Failed to clear autosave:', e))
-      status.update((s) => ({ ...s, lastSavedAt: null, videoStatus: null }))
+    /** Pin the live state; the snapshot is captured before this returns its promise. */
+    async checkpoint(label: string | null): Promise<SaveResult | null> {
+      const snapshot = opts.getSnapshot()
+      if (!snapshot) return null
+      const store = await ownedStore()
+      if (!store) {
+        notice('Checkpoints are paused while this session is open in another tab.')
+        return null
+      }
+      try {
+        const result = await store.save(await ensureSession(store), snapshot, {
+          kind: 'pinned',
+          label: label?.trim() || null,
+        })
+        report(result)
+        return result
+      } catch (e) {
+        console.warn('Checkpoint failed:', e)
+        notice('Could not save a checkpoint. Use Export to keep your work.')
+        return null
+      }
     },
 
     async listSnapshots(): Promise<SnapshotMeta[]> {
       const store = await getDb()
-      return store ? store.listSnapshots() : []
+      return store && sessionId ? store.listSnapshots(sessionId) : []
     },
 
     async loadSnapshot(id: number): Promise<RestoredSession | null> {
@@ -225,10 +356,92 @@ export function createAutosave(opts: AutosaveOptions) {
       return store ? store.loadSnapshot(id) : null
     },
 
+    async loadPath(id: number, pathId: number): Promise<PathData | null> {
+      const store = await getDb()
+      return store ? store.loadPath(id, pathId) : null
+    },
+
+    async renameSnapshot(id: number, label: string | null) {
+      await (await ownedStore())?.renameSnapshot(id, label)
+    },
+
+    async deleteSnapshot(id: number) {
+      await (await ownedStore())?.deleteSnapshot(id)
+    },
+
+    async listSessions(): Promise<SessionRecord[]> {
+      const store = await getDb()
+      return store ? store.listSessions() : []
+    },
+
+    /** Save the current session, then open another and return its latest state. */
+    switchSession(id: string): Promise<RestoredSession | null> {
+      return transition(async () => {
+        await openSession(id)
+        const store = await getDb()
+        return store ? seen(await store.loadLatest(id)) : null
+      })
+    },
+
+    /** Save the current session and start an empty one, created on its first save. */
+    newSession(): Promise<void> {
+      return transition(() => openSession(null))
+    },
+
+    async renameSession(id: string, name: string) {
+      await (await getDb())?.renameSession(id, name)
+    },
+
+    /** Delete a session; refuses when another tab has it open. */
+    async deleteSession(id: string) {
+      const store = await getDb()
+      if (!store) return
+      if (id === sessionId) {
+        if (!isOwner) throw new SessionBusyError()
+        await transition(async () => {
+          await store.deleteSession(id)
+          await openSession(null)
+        })
+        return
+      }
+      const remove = async (granted: unknown) => {
+        if (!granted) throw new SessionBusyError()
+        await store.deleteSession(id)
+      }
+      await (locks ? locks.request(LOCK_PREFIX + id, { ifAvailable: true }, remove) : remove(true))
+    },
+
+    async exportSession(id: string): Promise<SessionBundle | null> {
+      if (id === sessionId) await settle()
+      const store = await getDb()
+      return store ? store.exportSession(id) : null
+    },
+
+    /** Store an imported session and switch to it. */
+    async importSession(bundle: SessionBundle): Promise<RestoredSession | null> {
+      const store = await getDb()
+      if (!store) return null
+      const created = await store.importSession(bundle)
+      return transition(async () => {
+        await openSession(created.id)
+        return seen(await store.loadLatest(created.id))
+      })
+    },
+
+    async storageEstimate(): Promise<{ usage: number; quota: number } | null> {
+      try {
+        const estimate = await navigator.storage?.estimate?.()
+        if (!estimate?.quota) return null
+        return { usage: estimate.usage ?? 0, quota: estimate.quota }
+      } catch {
+        return null
+      }
+    },
+
     destroy() {
+      destroyed = true
       scheduler.cancel()
-      abort.abort()
-      releaseLock?.()
+      lock?.release()
       db?.close()
     },
   }

@@ -12,18 +12,29 @@
   import { CanvasFrame, ActivityBar, SidePanel, type ActivityBarItem } from 'svelte-p5-components'
   import { onMount } from 'svelte'
   import { get } from 'svelte/store'
-  import { drawingState, deletePathById } from '$lib/stores/drawingState'
+  import HistorySection from '$lib/components/panels/HistorySection.svelte'
+  import SessionSection from '$lib/components/panels/SessionSection.svelte'
+  import { drawingState, deletePathById, type PathData } from '$lib/stores/drawingState'
   import { drawingConfig } from '$lib/stores/drawingConfig'
   import { invalidateSpeculateClock } from '$lib/timing/sessionClocks'
   import { hasRecordedData, formatBytes } from '$lib/stores/sessionRecovery'
-  import { createAutosave, type AutosaveState } from '$lib/storage/autosave'
+  import { createAutosave, SessionBusyError, type AutosaveState } from '$lib/storage/autosave'
   import type {
     AssetInput,
     RestoredSession,
+    SessionRecord,
     SnapshotInput,
     SnapshotMeta,
     VideoMeta,
   } from '$lib/storage/sessionDb'
+  import { pathLabel, sessionName } from '$lib/storage/history'
+  import {
+    ArchiveError,
+    MAX_ARCHIVE_VIDEO_BYTES,
+    archiveFileName,
+    packSession,
+    unpackSession,
+  } from '$lib/storage/sessionArchive'
   import IconWarning from '~icons/material-symbols/warning-outline'
   import IconData from '~icons/material-symbols/folder-open-outline'
   import IconPaths from '~icons/material-symbols/route'
@@ -67,8 +78,13 @@
   }
 
   function confirmDeletePath() {
-    if (pendingDeletePathId !== null) deletePathById(pendingDeletePathId)
+    const id = pendingDeletePathId
     pendingDeletePathId = null
+    if (id === null) return
+    const paths = get(drawingState).paths
+    const index = paths.findIndex((p) => p.pathId === id)
+    void pin(`Before deleting ${paths[index]?.name || `Path ${index + 1}`}`)
+    deletePathById(id)
   }
 
   let p5Component: P5Wrapper
@@ -79,8 +95,11 @@
   let floorPlanAsset: AssetInput | null = null
   let videoAsset: (AssetInput & { meta: VideoMeta }) | null = null
   let reattachVideo = $state<VideoMeta | null>(null)
-  let savedVersions = $state<SnapshotMeta[]>([])
+  let history = $state.raw<SnapshotMeta[]>([])
+  let sessions = $state.raw<SessionRecord[]>([])
+  let storageLabel = $state<string | null>(null)
   let pendingRestoreId = $state<number | null>(null)
+  let pendingDeleteSession = $state<SessionRecord | null>(null)
 
   const newAssetKey = () =>
     window.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`
@@ -107,11 +126,57 @@
     }
   }
 
-  const autosave = createAutosave({ getSnapshot })
+  const autosave = createAutosave({ getSnapshot, onNotice: showNotice })
   const autosaveStatus = autosave.status
+  const canWrite = $derived(!['other-tab', 'unavailable'].includes($autosaveStatus.state))
+  const currentSession = $derived(sessions.find((s) => s.id === $autosaveStatus.sessionId) ?? null)
+  const currentSessionName = $derived(
+    currentSession ? sessionName(currentSession) : (floorPlanName ?? 'Untitled session')
+  )
+  const livePathIds = $derived(
+    new Set($drawingState.paths.filter((p) => p.points.length > 0).map((p) => p.pathId))
+  )
 
-  async function refreshSavedVersions() {
-    savedVersions = await autosave.listSnapshots()
+  // History is only read while the Data panel is open; saves while drawing just mark it stale.
+  let historyStale = true
+  let historyLoading: Promise<void> | null = null
+  let historyAgain = false
+  function refreshHistory() {
+    if (activePanel !== 'data') {
+      historyStale = true
+      return
+    }
+    historyStale = false
+    if (historyLoading) {
+      historyAgain = true
+      return
+    }
+    historyLoading = (async () => {
+      do {
+        historyAgain = false
+        const [h, s, estimate] = await Promise.all([
+          autosave.listSnapshots(),
+          autosave.listSessions(),
+          autosave.storageEstimate(),
+        ])
+        history = h
+        sessions = s
+        storageLabel = estimate
+          ? `Storage: ${formatBytes(estimate.usage)} used of ${formatBytes(estimate.quota)}`
+          : null
+      } while (historyAgain)
+      historyLoading = null
+    })()
+  }
+  $effect(() => {
+    if (activePanel === 'data' && historyStale) refreshHistory()
+  })
+
+  /** Pin the live state; the snapshot is captured synchronously, before any await. */
+  async function pin(label: string | null) {
+    const result = await autosave.checkpoint(label)
+    if (result) refreshHistory()
+    return result
   }
 
   const NOTICES: Partial<Record<AutosaveState, string>> = {
@@ -141,7 +206,7 @@
       } else {
         openWelcomeModal()
       }
-      refreshSavedVersions()
+      refreshHistory()
     })
 
     const shownNotices: AutosaveState[] = []
@@ -151,7 +216,7 @@
         shownNotices.push(state)
         showNotice(message)
       }
-      if (state === 'saved') refreshSavedVersions()
+      if (state === 'saved') refreshHistory()
     })
 
     let wasRecording = false
@@ -189,8 +254,10 @@
       }
     }
     window.addEventListener('beforeunload', handleBeforeUnload)
+    window.addEventListener('keydown', handleCheckpointShortcut)
 
     return () => {
+      window.removeEventListener('keydown', handleCheckpointShortcut)
       window.removeEventListener('beforeunload', handleBeforeUnload)
       window.removeEventListener('pagehide', flushNow)
       document.removeEventListener('visibilitychange', handleVisibilityChange)
@@ -201,6 +268,33 @@
       autosave.destroy()
     }
   })
+
+  function handleCheckpointShortcut(e: KeyboardEvent) {
+    if (!(e.ctrlKey || e.metaKey) || e.shiftKey || e.altKey || e.key.toLowerCase() !== 's') return
+    const target = e.target as HTMLElement | null
+    if (target?.closest?.('input, textarea, select, [contenteditable]')) return
+    e.preventDefault()
+    if (!hasRecordedData(get(drawingState).paths)) return showNotice('Nothing to save yet.')
+    void pin(null).then((result) => result && showNotice('Checkpoint saved.'))
+  }
+
+  /** Empty canvas, no floor plan or video: the state of a brand-new session. */
+  function resetWorkspace() {
+    p5Component.clearDrawing()
+    p5Component.clearVideo()
+    videoName = null
+    videoAsset = null
+    reattachVideo = null
+    floorPlanAsset = null
+    floorPlanName = null
+    drawingState.update((state) => ({
+      ...state,
+      imageElement: null,
+      imageWidth: 0,
+      imageHeight: 0,
+      videoTime: 0,
+    }))
+  }
 
   function applyRestoredSession(session: RestoredSession) {
     const { meta, paths, floorPlan, video } = session
@@ -242,6 +336,10 @@
       }
       image.onerror = () => console.warn('Failed to restore floor plan image from saved session')
       image.src = window.URL.createObjectURL(floorPlan)
+    } else {
+      floorPlanAsset = null
+      floorPlanName = null
+      drawingState.update((state) => ({ ...state, imageElement: null }))
     }
 
     if (meta.config.isTranscriptionMode && meta.video) {
@@ -262,21 +360,115 @@
     recoveredSession = null
   }
 
-  function handleDiscardSession() {
+  /** Start Fresh keeps the recovered session intact and begins a new one. */
+  async function handleDiscardSession() {
     showRecoveryModal = false
     recoveredSession = null
+    await autosave.newSession()
+    refreshHistory()
   }
 
-  /** Saves the live session first, so restoring an older version is itself undoable. */
+  /** Pins the live session first, so restoring an older version is itself undoable. */
   async function confirmRestoreVersion() {
     const id = pendingRestoreId
     pendingRestoreId = null
     if (id === null || !p5Component) return
-    // Read the target before flushing, so a full ring can't evict it out from under us.
     const session = await autosave.loadSnapshot(id)
-    await autosave.flush()
+    if (!session) return showNotice('That saved version is damaged and cannot be restored.')
+    await pin('Before restore')
+    applyRestoredSession(session)
+    refreshHistory()
+  }
+
+  /** Replace one path (or add it back / as a copy) without touching the others. */
+  async function restorePath(snapshotId: number, pathId: number, mode: 'replace' | 'copy') {
+    const path = await autosave.loadPath(snapshotId, pathId)
+    if (!path) return showNotice('That saved version is damaged and cannot be restored.')
+    const entry = history.find((m) => m.id === snapshotId)
+    const label = entry ? pathLabel(entry.paths, pathId) : 'path'
+    await pin(`Before restoring ${label}`)
+    invalidateSpeculateClock()
+    drawingState.update((state) => {
+      const paths = [...state.paths]
+      const index = paths.findIndex((p) => p.pathId === pathId)
+      if (mode === 'copy') {
+        const id = Math.max(state.currentPathId, ...paths.map((p) => p.pathId)) + 1
+        const points = path.points.map((p) => ({ ...p, pathId: id }))
+        paths.push({ ...path, pathId: id, points, name: `${label} (restored)` } as PathData)
+      } else if (index >= 0) {
+        paths[index] = path
+      } else {
+        const after = paths.findIndex((p) => p.pathId > pathId)
+        paths.splice(after < 0 ? paths.length : after, 0, path)
+      }
+      return { ...state, paths, shouldTrackMouse: false, isDrawing: false, isVideoPlaying: false }
+    })
+    refreshHistory()
+  }
+
+  async function handleSwitchSession(id: string) {
+    const session = await autosave.switchSession(id)
+    resetWorkspace()
     if (session) applyRestoredSession(session)
-    refreshSavedVersions()
+    refreshHistory()
+  }
+
+  async function handleNewSession() {
+    await autosave.newSession()
+    resetWorkspace()
+    refreshHistory()
+    showNotice('Started a new session. Your other sessions are in the Data panel.')
+  }
+
+  async function confirmDeleteSession() {
+    const session = pendingDeleteSession
+    pendingDeleteSession = null
+    if (!session) return
+    const isCurrent = session.id === autosave.sessionId
+    try {
+      await autosave.deleteSession(session.id)
+      if (isCurrent) resetWorkspace()
+    } catch (e) {
+      showNotice(e instanceof SessionBusyError ? e.message : 'Could not delete the session.')
+    }
+    refreshHistory()
+  }
+
+  function download(blob: Blob, name: string) {
+    const url = window.URL.createObjectURL(blob)
+    const a = window.document.createElement('a')
+    a.href = url
+    a.download = name
+    a.click()
+    setTimeout(() => window.URL.revokeObjectURL(url), 1000)
+  }
+
+  async function handleExportHistory() {
+    const id = autosave.sessionId
+    const bundle = id ? await autosave.exportSession(id) : null
+    if (!bundle) return showNotice('Nothing has been saved in this session yet.')
+    const videoBytes = [...bundle.videos.values()].reduce((sum, b) => sum + b.size, 0)
+    download(
+      await packSession(bundle),
+      archiveFileName(bundle.session, sessionName(bundle.session))
+    )
+    if (videoBytes > MAX_ARCHIVE_VIDEO_BYTES) {
+      showNotice('The video is too large to include; re-attach it after importing.')
+    }
+  }
+
+  async function handleImportHistory(file: File) {
+    try {
+      const bundle = await unpackSession(file)
+      await pin('Before import')
+      const session = await autosave.importSession(bundle)
+      resetWorkspace()
+      if (session) applyRestoredSession(session)
+      refreshHistory()
+      showNotice(`Imported "${sessionName(bundle.session)}" as a new session.`)
+    } catch (e) {
+      showNotice(e instanceof ArchiveError ? e.message : 'Could not import that file.')
+    }
   }
 
   function attachVideo(source: Blob, name: string, restoreTime?: number) {
@@ -312,6 +504,7 @@
     if (file) {
       // Re-attaching a missing video after a restore resumes at its saved time.
       const restoreTime = reattachVideo ? get(drawingState).videoTime : undefined
+      if (!reattachVideo) void pin('Before new video')
       const meta: VideoMeta = { name: file.name, size: file.size, type: file.type }
       videoAsset = { key: newAssetKey(), blob: file, name: file.name, meta }
       const video = attachVideo(file, file.name, restoreTime)
@@ -333,6 +526,7 @@
       const image = new window.Image()
       image.src = window.URL.createObjectURL(file)
       image.onload = () => {
+        void pin('Before new floor plan')
         floorPlanAsset = { key: newAssetKey(), blob: file, name: file.name }
         p5Component.setImage(image)
         floorPlanName = file.name
@@ -352,6 +546,7 @@
   }
 
   function handleModeSwitch() {
+    void pin('Before mode switch')
     p5Component.clearDrawing()
     p5Component.clearVideo()
     videoName = null
@@ -389,6 +584,7 @@
     const image = new window.Image()
     image.src = filePath
     image.onload = () => {
+      void pin('Before loading example')
       p5Component.setImage(image)
       floorPlanName = `${imageID}.png`
       const key = newAssetKey()
@@ -457,9 +653,37 @@
                 onClearAll={() => (showClearAllModal = true)}
                 autosave={$autosaveStatus}
                 {reattachVideo}
-                {savedVersions}
-                onRestoreVersion={(id) => (pendingRestoreId = id)}
-              />
+                {storageLabel}
+              >
+                {#snippet sessionSection()}
+                  <SessionSection
+                    {sessions}
+                    currentId={$autosaveStatus.sessionId}
+                    currentName={currentSessionName}
+                    {canWrite}
+                    onSwitch={handleSwitchSession}
+                    onNew={handleNewSession}
+                    onRename={(id, name) => autosave.renameSession(id, name).then(refreshHistory)}
+                    onDelete={(s) => (pendingDeleteSession = s)}
+                    onExport={handleExportHistory}
+                    onImport={handleImportHistory}
+                  />
+                {/snippet}
+                {#snippet historySection()}
+                  <HistorySection
+                    entries={history}
+                    {livePathIds}
+                    {canWrite}
+                    onCheckpoint={(name) =>
+                      pin(name).then((r) => !r && showNotice('Nothing to save yet.'))}
+                    onRestore={(id) => (pendingRestoreId = id)}
+                    onRestorePath={restorePath}
+                    onRename={(id, label) =>
+                      autosave.renameSnapshot(id, label).then(refreshHistory)}
+                    onDelete={(id) => autosave.deleteSnapshot(id).then(refreshHistory)}
+                  />
+                {/snippet}
+              </DataPanel>
             {:else if lastPanel === 'paths'}
               <PathsPanel onDelete={(id) => (pendingDeletePathId = id)} />
             {:else if lastPanel === 'settings'}
@@ -491,9 +715,10 @@
 <ConfirmDialog
   open={showClearAllModal}
   title="Clear All Paths?"
-  message="This will delete all recorded paths. You can restore an earlier version from Saved Versions afterward."
+  message="This will delete all recorded paths. A checkpoint is saved first, so you can restore them from History."
   confirmLabel="Clear All"
   onConfirm={() => {
+    void pin('Before Clear All')
     handleClear()
     showClearAllModal = false
   }}
@@ -503,10 +728,21 @@
 <ConfirmDialog
   open={pendingRestoreId !== null}
   title="Restore This Version?"
-  message="Your current work will be saved first, then replaced with this saved version."
+  message="Your current work is saved as a checkpoint first, then replaced with this saved version."
   confirmLabel="Restore"
   onConfirm={confirmRestoreVersion}
   onCancel={() => (pendingRestoreId = null)}
+/>
+
+<ConfirmDialog
+  open={pendingDeleteSession !== null}
+  title="Delete Session?"
+  message={pendingDeleteSession
+    ? `"${sessionName(pendingDeleteSession)}" and all ${pendingDeleteSession.snapshotCount} of its saved versions and checkpoints will be permanently deleted. No checkpoint is kept. Use Export history first if you might need it.`
+    : ''}
+  confirmLabel="Delete Session"
+  onConfirm={confirmDeleteSession}
+  onCancel={() => (pendingDeleteSession = null)}
 />
 
 <ExportDialog bind:this={exportDialog} onSavePath={handleSavePath} />
