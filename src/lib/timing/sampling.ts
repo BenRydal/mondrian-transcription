@@ -6,6 +6,7 @@ export interface TimedPoint {
 
 export const MIN_POINT_INTERVAL = 0.01
 export const HOLD_GAP = 0.1
+export const HOLD_INTERVAL = 0.1
 
 export function shouldKeepPoint(
   prevTime: number | undefined,
@@ -13,6 +14,14 @@ export function shouldKeepPoint(
   minInterval = MIN_POINT_INTERVAL
 ): boolean {
   return prevTime === undefined || time - prevTime >= minInterval
+}
+
+/** Clock times owed to a still pointer: every interval after its last point, up to now. */
+export function holdTimes(lastTime: number, now: number, interval = HOLD_INTERVAL): number[] {
+  const times: number[] = []
+  if (!(interval > 0) || !Number.isFinite(now)) return times
+  for (let k = 1; lastTime + k * interval <= now + 1e-9; k++) times.push(lastTime + k * interval)
+  return times
 }
 
 export function thinByTime<T extends TimedPoint>(

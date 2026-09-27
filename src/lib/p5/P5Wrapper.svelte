@@ -21,6 +21,7 @@
     drawPaths,
     endCurrentTake,
     observeVideo,
+    sampleHold,
     speculateNow,
   } from './features/drawing'
   import { formatClock } from '$lib/utils/time'
@@ -291,6 +292,7 @@
         checkVideoEnd(videoElement)
         drawVideo(p5, videoElement)
       }
+      sampleHold(videoHtmlElement)
 
       drawRotatedImage()
       drawPaths(p5)

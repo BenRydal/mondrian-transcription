@@ -2,11 +2,17 @@ import { describe, expect, it } from 'vitest'
 import type { RotationAngle } from '$lib/stores/drawingConfig'
 import {
   chunkRanges,
+  coast,
+  easeSpan,
+  fadeTicks,
   fitScene,
   formatTick,
   indexAtTime,
+  liveHead,
+  markerPoint,
   MIN_TIME_SPAN,
   orbitEye,
+  releaseVelocity,
   timeAxis,
   timeExtent,
   timeToHeight,
@@ -192,5 +198,140 @@ describe('orbitEye', () => {
   it('keeps the eye at the orbit distance', () => {
     const eye = orbitEye([1, 2, 3], 2.1, 0.7, 50)
     expect(Math.hypot(eye[0] - 1, eye[1] - 2, eye[2] - 3)).toBeCloseTo(50)
+  })
+})
+
+describe('liveHead', () => {
+  const points = [
+    { x: 1, y: 2, time: 3 },
+    { x: 4, y: 5, time: 6 },
+  ]
+
+  it('extends the last position up to the clock while recording', () => {
+    expect(liveHead(points, 7.5, true)).toEqual({ x: 4, y: 5, time: 7.5 })
+  })
+
+  it('is absent when not recording, empty, or the clock is not past the end', () => {
+    expect(liveHead(points, 7.5, false)).toBeNull()
+    expect(liveHead([], 7.5, true)).toBeNull()
+    expect(liveHead(points, 6, true)).toBeNull()
+  })
+})
+
+describe('drag inertia', () => {
+  const drag = (endMs: number, step = 0.02) =>
+    Array.from({ length: 10 }, (_, i) => ({ ms: endMs - 90 + i * 10, yaw: step }))
+
+  it('takes the release velocity from the last moves', () => {
+    expect(releaseVelocity(drag(1000), 1000)).toBeCloseTo(2)
+    expect(releaseVelocity(drag(1000, -0.01), 1005)).toBeCloseTo(-1)
+  })
+
+  it('has no velocity if the pointer rested before release or barely moved', () => {
+    expect(releaseVelocity(drag(1000), 1300)).toBe(0)
+    expect(releaseVelocity([{ ms: 1000, yaw: 0.5 }], 1000)).toBe(0)
+    expect(releaseVelocity(drag(1000, 1), 1000)).toBe(6)
+  })
+
+  it('decays exponentially and comes to rest, at any frame rate', () => {
+    const run = (fps: number) => {
+      let v = 2
+      let yaw = 0
+      let t = 0
+      while (v !== 0) {
+        yaw += v / fps
+        v = coast(v, 1 / fps)
+        t += 1 / fps
+      }
+      return { yaw, t }
+    }
+    const at60 = run(60)
+    const at144 = run(144)
+    expect(at60.t).toBeLessThan(2.5)
+    expect(at60.yaw).toBeCloseTo(2 * 0.35, 1)
+    expect(Math.abs(at60.yaw - at144.yaw)).toBeLessThan(0.02)
+    expect(coast(-1, 0.35)).toBeCloseTo(-Math.exp(-1))
+  })
+})
+
+describe('axis easing', () => {
+  const settle = (shown: number, target: number, content: number, fps: number) => {
+    const trace = [shown]
+    for (let i = 0; i < fps; i++) trace.push(easeSpan(trace.at(-1)!, target, content, 1 / fps))
+    return trace
+  }
+
+  it('reaches the target within about 300 ms and then holds it exactly', () => {
+    const up = settle(10, 15, 10.2, 60)
+    expect(Math.abs(up[18] - 15)).toBeLessThan(0.05 * 5)
+    expect(up.at(-1)).toBe(15)
+    const down = settle(30, 15, 12, 120)
+    expect(down.at(-1)).toBe(15)
+  })
+
+  it('moves monotonically, never below the content or past the target', () => {
+    for (const fps of [30, 60, 144]) {
+      const up = settle(10, 15, 12, fps)
+      up.slice(1).forEach((v, i) => {
+        expect(v).toBeGreaterThanOrEqual(up[i])
+        expect(v).toBeGreaterThanOrEqual(12)
+        expect(v).toBeLessThanOrEqual(15)
+      })
+      const down = settle(30, 15, 14, fps)
+      down.slice(1).forEach((v, i) => {
+        expect(v).toBeLessThanOrEqual(down[i])
+        expect(v).toBeGreaterThanOrEqual(15)
+      })
+    }
+  })
+
+  it('snaps on the first frame and when easing is disabled', () => {
+    expect(easeSpan(0, 20, 12, 1 / 60)).toBe(20)
+    expect(easeSpan(10, 20, 12, Infinity)).toBe(20)
+    expect(easeSpan(10, 20, 12, 0)).toBe(12)
+  })
+})
+
+describe('tick fading', () => {
+  it('shows the first ticks at full opacity', () => {
+    expect([...fadeTicks(new Map(), [0, 5, 10], 0)]).toEqual([
+      [0, 1],
+      [5, 1],
+      [10, 1],
+    ])
+  })
+
+  it('fades new ticks in and dropped ticks out, then forgets them', () => {
+    let alphas = fadeTicks(new Map(), [0, 5, 10], 0)
+    alphas = fadeTicks(alphas, [0, 10], 0.1)
+    expect(alphas.get(0)).toBe(1)
+    expect(alphas.get(5)).toBeCloseTo(0.6)
+    alphas = fadeTicks(alphas, [0, 10, 20], 0.1)
+    expect(alphas.get(20)).toBeCloseTo(0.4)
+    expect(alphas.get(5)).toBeCloseTo(0.2)
+    alphas = fadeTicks(alphas, [0, 10, 20], 0.2)
+    expect(alphas.has(5)).toBe(false)
+    expect(alphas.get(20)).toBe(1)
+  })
+})
+
+describe('markerPoint', () => {
+  const points = [
+    { x: 1, y: 1, time: 2 },
+    { x: 2, y: 2, time: 4 },
+    { x: 3, y: 3, time: 6 },
+  ]
+
+  it('puts other paths at their last point at or before now, and hides unstarted ones', () => {
+    expect(markerPoint(points, 5, false, true)).toBe(points[1])
+    expect(markerPoint(points, 9, false, false)).toBe(points[2])
+    expect(markerPoint(points, 1, false, false)).toBeNull()
+    expect(markerPoint([], 1, false, false)).toBeNull()
+  })
+
+  it('puts the current path at its end, or its live head while recording', () => {
+    expect(markerPoint(points, 1, true, false)).toBe(points[2])
+    expect(markerPoint(points, 7, true, true)).toEqual({ x: 3, y: 3, time: 7 })
+    expect(markerPoint([], 7, true, true)).toBeNull()
   })
 })

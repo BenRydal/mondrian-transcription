@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { SessionClock } from './clock'
 import {
+  holdTimes,
   resamplePath,
   sessionScale,
   shouldKeepPoint,
@@ -207,5 +208,44 @@ describe('session-wide speculate scaling', () => {
     const late = [2, 3, 4].map((time) => ({ x: time, y: 0, time }))
     const scale = sessionScale([late, [{ x: 0, y: 0, time: 8 }]], 16)
     expect(resamplePath(late, { rate: 1, scale }).map((p) => p.time)).toEqual([4, 5, 6, 7, 8])
+  })
+})
+
+describe('hold points', () => {
+  it('fills the hold grid after the last point up to now, never past it', () => {
+    expect(holdTimes(2, 2.09)).toEqual([])
+    expect(holdTimes(2, 2.35).map((t) => +t.toFixed(9))).toEqual([2.1, 2.2, 2.3])
+    expect(holdTimes(5, 4)).toEqual([])
+  })
+
+  /** Moves 0-1 s, sits still until 2.05 s (off the hold grid), then moves; 60 Hz events. */
+  function stopAndGo(withHolds: boolean) {
+    const at = (t: number) => (t <= 1 ? t * 100 : t <= 2.05 ? 100 : 100 + (t - 2.05) * 100)
+    const raw: TimedPoint[] = []
+    for (let i = 0; i <= 180; i++) {
+      const time = i / 60
+      const still = time > 1 && time < 2.05
+      if (withHolds && raw.length > 0) {
+        for (const t of holdTimes(raw.at(-1)!.time, time)) {
+          raw.push({ x: raw.at(-1)!.x, y: 0, time: t })
+        }
+      }
+      if (!still && shouldKeepPoint(raw.at(-1)?.time, time)) raw.push({ x: at(time), y: 0, time })
+    }
+    return thinByTime(raw)
+  }
+
+  it('exports a stop-and-go path as before, within one event of motion at the restart', () => {
+    const held = stopAndGo(true)
+    const legacy = stopAndGo(false)
+    expect(held.length).toBeGreaterThan(legacy.length + 5)
+    for (const rate of [4, 10, 30]) {
+      const a = resamplePath(held, { rate })
+      const b = resamplePath(legacy, { rate })
+      expect(a.map((p) => p.time)).toEqual(b.map((p) => p.time))
+      a.forEach((p, i) => expect(Math.abs(p.x - b[i].x)).toBeLessThanOrEqual(100 / 60 + 1e-9))
+      const still = a.filter((p) => p.time > 1 && p.time <= 2)
+      expect(still.every((p) => Math.abs(p.x - 100) < 1e-9)).toBe(true)
+    }
   })
 })

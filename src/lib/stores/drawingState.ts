@@ -2,7 +2,7 @@ import { writable, get } from 'svelte/store'
 import type p5 from 'p5'
 import type { Point } from '../p5/types/sketch'
 import { drawingConfig } from '../stores/drawingConfig'
-import { shouldKeepPoint } from '../timing/sampling'
+import { holdTimes, shouldKeepPoint } from '../timing/sampling'
 import {
   speculateClock,
   syncSpeculateClock,
@@ -284,6 +284,15 @@ export function appendFinalPoint(time: number) {
   const lastPoint = state.paths.find((p) => p.pathId === state.currentPathId)?.points.at(-1)
   if (!lastPoint) return
   addPointsToCurrentPath([{ x: lastPoint.x, y: lastPoint.y, time, pathId: state.currentPathId }])
+}
+
+/** Repeat the last position on the hold grid up to clock time `now` while the pointer is still. */
+export function appendHoldPoints(now: number) {
+  const state = get(drawingState)
+  const lastPoint = state.paths.find((p) => p.pathId === state.currentPathId)?.points.at(-1)
+  if (!state.shouldTrackMouse || !lastPoint) return
+  const { x, y, pathId } = lastPoint
+  addPointsToCurrentPath(holdTimes(lastPoint.time, now).map((time) => ({ x, y, time, pathId })))
 }
 
 export function renamePathById(pathId: number, name: string) {

@@ -10,18 +10,26 @@
   import {
     chunkRanges,
     clamp,
+    coast,
     DEFAULT_PITCH,
+    type DragSample,
+    easeSpan,
+    fadeTicks,
+    INERTIA_WINDOW_MS,
     fitScene,
     formatTick,
-    indexAtTime,
+    liveHead,
+    markerPoint,
     MAX_PITCH,
     MAX_ZOOM,
     MIN_PITCH,
     MIN_ZOOM,
     orbitEye,
+    releaseVelocity,
     timeAxis,
     timeExtent,
     toScenePoint,
+    type TimedPoint,
     type Vec3,
   } from '$lib/spacetime/geometry'
   import IconPause from '~icons/material-symbols/pause'
@@ -37,15 +45,27 @@
   const DRAG_RADIANS_PER_PIXEL = 0.008
   const CHUNK_SIZE = 256
   const NOW_COLOR = '#6d28d9'
+  const MAX_FRAME_DT = 0.05
+  // Lets the top tick fade in as the ease nears it, not only once it snaps.
+  const TICK_REACH = 1.02
+  // p5 skips rAF callbacks that come sooner than its target rate; this draws on every refresh.
+  const UNCAPPED_FPS = 1000
 
   let container: HTMLDivElement
   let instance = $state.raw<P5 | null>(null)
   let spinning = $state(true)
   let dragging = false
+  let reducedMotion = false
+  let inertia = 0
+  let dragSamples: DragSample[] = []
+  let lastFrameMs: number | null = null
   let yaw = 0
   let pitch = DEFAULT_PITCH
   let zoom = 1
-  let labels = $state.raw<{ text: string; x: number; y: number }[]>([])
+  let labels = $state.raw<{ text: string; x: number; y: number; opacity: number }[]>([])
+  let shownSpan = 0
+  let tickAlphas = new Map<number, number>()
+  let axisEasing = false
   const hasFloorPlan = $derived(!!$drawingState.imageElement)
 
   // p5 2.x APIs missing from @types/p5 (1.x), which is what the project type-checks against.
@@ -65,8 +85,6 @@
   }
 
   const sketch: SketchFn<P5> = (p) => {
-    let lastFrameMs = performance.now()
-
     const vertices = (
       points: Point[],
       start: number,
@@ -116,16 +134,21 @@
         Math.max(1, container.clientHeight),
         p.WEBGL
       )
-      p.frameRate(30)
+      p.frameRate(UNCAPPED_FPS)
       ready = true
       syncLoop(p)
     }
 
     p.draw = () => {
       const nowMs = performance.now()
-      const dt = Math.min(0.1, (nowMs - lastFrameMs) / 1000)
-      lastFrameMs = nowMs
+      const dt = lastFrameMs === null ? 0 : Math.min(MAX_FRAME_DT, (nowMs - lastFrameMs) / 1000)
+      lastFrameMs = p.isLooping() ? nowMs : null
       if (spinning && !dragging) yaw += dt * SPIN_RADIANS_PER_SECOND
+      if (inertia && !dragging) {
+        yaw += inertia * dt
+        inertia = coast(inertia, dt)
+        if (!inertia) syncLoop(p)
+      }
 
       p.background(255)
       const state = get(drawingState)
@@ -151,8 +174,18 @@
 
       const fit = fitScene(p.width, p.height, imgW, imgH, rotation)
       const now = getNow()
-      const { span, ticks } = timeAxis(timeExtent(state.paths, now, getDuration()))
-      const zScale = fit.height / span
+      const extent = timeExtent(state.paths, now, getDuration())
+      const axis = timeAxis(extent)
+      const ease = reducedMotion ? Infinity : dt
+      shownSpan = easeSpan(shownSpan, axis.span, extent, ease)
+      const shownTicks = axis.ticks.filter((t) => t <= shownSpan * TICK_REACH)
+      tickAlphas = fadeTicks(tickAlphas, shownTicks, ease)
+      const easing = shownSpan !== axis.span || [...tickAlphas.values()].some((a) => a < 1)
+      if (easing !== axisEasing) {
+        axisEasing = easing
+        syncLoop(p)
+      }
+      const zScale = fit.height / shownSpan
       const distance = fit.distance / zoom
       const target: Vec3 = [0, 0, fit.height * 0.4]
       const eye = orbitEye(target, yaw, pitch, distance)
@@ -177,15 +210,21 @@
       p.line(left, top, 0, left, top, fit.height)
       const tickLen = Math.max(fit.floorW, fit.floorH) * 0.03
       const nextLabels: typeof labels = []
-      for (const t of ticks) {
+      for (const [t, opacity] of tickAlphas) {
+        if (t > shownSpan * TICK_REACH) continue
         const z = t * zScale
+        p.stroke(120, 255 * opacity)
         p.line(left, top, z, left - tickLen, top, z)
         const s = p.worldToScreen(left - tickLen * 1.5, top, z)
-        nextLabels.push({ text: formatTick(t), x: s.x, y: s.y })
+        nextLabels.push({ text: formatTick(t), x: s.x, y: s.y, opacity })
       }
       labels = nextLabels
 
-      const toScene = (pt: Point) => toScenePoint(pt, imgW, imgH, rotation)
+      const toScene = (pt: TimedPoint) => toScenePoint(pt, imgW, imgH, rotation)
+      const headOf = (path: PathData) =>
+        path.pathId === state.currentPathId
+          ? liveHead(path.points, now, state.shouldTrackMouse)
+          : null
       p.push()
       p.scale(fit.scale, fit.scale, zScale)
       p.noFill()
@@ -195,18 +234,22 @@
         p.stroke(path.color)
         p.strokeWeight(isCurrent ? 3.5 : 1.5)
         drawPath(path, toScene)
+        const head = headOf(path)
+        if (head) p.line(...toScene(path.points.at(-1)!), ...toScene(head))
       }
       p.pop()
 
       const zNow = now * zScale
+      const floorMark = Math.max(fit.floorW, fit.floorH) * 0.03
       for (const path of state.paths) {
-        if (path.visible === false || path.points.length === 0) continue
+        if (path.visible === false) continue
         const isCurrent = path.pathId === state.currentPathId
-        const i = isCurrent ? path.points.length - 1 : Math.max(0, indexAtTime(path.points, now))
-        const [x, y, t] = toScene(path.points[i])
+        const at = markerPoint(path.points, now, isCurrent, state.shouldTrackMouse)
+        if (!at) continue
+        const [x, y, t] = toScene(at)
         const [sx, sy, sz] = [x * fit.scale, y * fit.scale, t * zScale]
         const faint = p.color(path.color)
-        faint.setAlpha(90)
+        faint.setAlpha(isCurrent ? 160 : 110)
         p.stroke(faint)
         p.strokeWeight(1)
         p.line(sx, sy, 0, sx, sy, sz)
@@ -215,6 +258,14 @@
         p.noStroke()
         p.fill(path.color)
         p.sphere(isCurrent ? 5 : 3.5, 12, 8)
+        p.pop()
+        p.push()
+        // Lifted off the floor plane so the disc doesn't z-fight its texture.
+        p.translate(sx, sy, 0.5)
+        p.fill(path.color)
+        p.stroke(isCurrent ? 20 : 255)
+        p.strokeWeight(isCurrent ? 2 : 1)
+        p.circle(0, 0, isCurrent ? floorMark * 1.4 : floorMark)
         p.pop()
       }
 
@@ -240,6 +291,7 @@
 
   function resetCamera() {
     yaw = 0
+    inertia = 0
     pitch = DEFAULT_PITCH
     zoom = 1
     requestRedraw()
@@ -260,9 +312,17 @@
   function syncLoop(p: P5 | null = instance) {
     if (!p) return
     const { isDrawing, isVideoPlaying } = get(drawingState)
-    const animate = (spinning && hasFloorPlan) || dragging || isDrawing || isVideoPlaying
-    if (animate && !p.isLooping()) p.loop()
-    else if (!animate && p.isLooping()) p.noLoop()
+    const animate =
+      (spinning && hasFloorPlan) ||
+      dragging ||
+      inertia !== 0 ||
+      axisEasing ||
+      isDrawing ||
+      isVideoPlaying
+    if (animate && !p.isLooping()) {
+      lastFrameMs = null
+      p.loop()
+    } else if (!animate && p.isLooping()) p.noLoop()
     requestRedraw()
   }
 
@@ -270,19 +330,25 @@
     if ((e.target as HTMLElement).closest('button') || !e.isPrimary) return
     dragging = true
     spinning = false
+    inertia = 0
+    dragSamples = []
     container.setPointerCapture(e.pointerId)
     syncLoop()
   }
 
   function onPointerMove(e: PointerEvent) {
     if (!dragging || !e.isPrimary) return
-    yaw -= e.movementX * DRAG_RADIANS_PER_PIXEL
+    const dYaw = -e.movementX * DRAG_RADIANS_PER_PIXEL
+    yaw += dYaw
+    dragSamples = dragSamples.filter((d) => e.timeStamp - d.ms <= INERTIA_WINDOW_MS)
+    dragSamples.push({ ms: e.timeStamp, yaw: dYaw })
     pitch = clamp(pitch + e.movementY * DRAG_RADIANS_PER_PIXEL, MIN_PITCH, MAX_PITCH)
   }
 
   function onPointerUp(e: PointerEvent) {
     if (!dragging) return
     dragging = false
+    inertia = reducedMotion ? 0 : releaseVelocity(dragSamples, e.timeStamp)
     if (container.hasPointerCapture(e.pointerId)) container.releasePointerCapture(e.pointerId)
     syncLoop()
   }
@@ -295,7 +361,8 @@
   }
 
   onMount(() => {
-    spinning = !window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    spinning = !reducedMotion
 
     const onKeydown = (e: KeyboardEvent) => {
       if (e.key.toLowerCase() !== 's' || !isShortcutEvent(e)) return
@@ -345,8 +412,11 @@
   <P5Canvas {sketch} bind:instance />
 
   {#each labels as label (label.text)}
-    <span class="space-time__tick" style:left="{label.x}px" style:top="{label.y}px"
-      >{label.text}</span
+    <span
+      class="space-time__tick"
+      style:left="{label.x}px"
+      style:top="{label.y}px"
+      style:opacity={label.opacity}>{label.text}</span
     >
   {/each}
 

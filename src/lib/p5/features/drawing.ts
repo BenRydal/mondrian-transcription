@@ -5,6 +5,7 @@ import {
   drawingState,
   addPointsToCurrentPath,
   appendFinalPoint,
+  appendHoldPoints,
   toggleDrawing,
   toggleDrawingNoVideo,
   type PathData,
@@ -158,6 +159,23 @@ export function endCurrentTake(video?: HTMLVideoElement | null) {
     appendFinalPoint(speculateClock.timeAt(now))
     speculateClock.pause(now)
   }
+}
+
+/** Clock time of the running take, or null when paused or not recording. */
+function recordingClockTime(video: HTMLVideoElement | null | undefined, perfMs: number) {
+  if (!get(drawingState).shouldTrackMouse) return null
+  if (get(drawingConfig).isTranscriptionMode) {
+    if (!video || video.paused) return null
+    observeVideo(video, perfMs)
+    return mediaClock.timeAt(perfMs)
+  }
+  return speculateClock.running ? speculateClock.timeAt(perfMs) : null
+}
+
+/** Called every frame: keeps a still pointer recording, timed by the clock rather than frames. */
+export function sampleHold(video?: HTMLVideoElement | null, perfMs = performance.now()) {
+  const now = recordingClockTime(video, perfMs)
+  if (now !== null) appendHoldPoints(now)
 }
 
 export function drawPaths(p5: p5) {
