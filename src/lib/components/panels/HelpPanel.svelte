@@ -4,7 +4,10 @@
   import PanelSection from './PanelSection.svelte'
   import { viewPrefs } from '$lib/stores/viewPrefs'
 
-  let { onOpenWelcome }: { onOpenWelcome: () => void } = $props()
+  let {
+    onOpenWelcome,
+    videoKind = null,
+  }: { onOpenWelcome: () => void; videoKind?: 'local' | 'youtube' | null } = $props()
 
   const shortcuts = $derived([
     ...($drawingConfig.isTranscriptionMode
@@ -12,7 +15,9 @@
           { key: 'F', action: `Forward ${$drawingConfig.jumpSeconds}s` },
           { key: 'R', action: `Rewind ${$drawingConfig.jumpSeconds}s` },
           { key: 'S', action: 'Pause or resume 3D spin' },
-          { key: '← / →', action: 'Step one frame (paused)' },
+          videoKind === 'youtube'
+            ? { key: '← / →', action: 'Step 1/30 s (paused; YouTube has no frame access)' }
+            : { key: '← / →', action: 'Step one frame (paused)' },
           { key: 'Shift ← / →', action: 'Step one second (paused)' },
           { key: '[', action: 'Slower playback' },
           { key: ']', action: 'Faster playback' },

@@ -75,6 +75,22 @@ describe('session archive', () => {
     db.close()
   })
 
+  it('carries a YouTube source through export and import', async () => {
+    const db = await SessionDb.open({ dbName: freshName() })
+    const source = await db.createSession("Michael Jordan's Last Shot")
+    const videoSource = { kind: 'youtube' as const, videoId: 'iiMjfVOj8po', title: 'Jordan' }
+    await db.save(source.id, { ...input([path(40, 1)]), videoTime: 9.5, videoSource })
+
+    const blob = await packSession((await db.exportSession(source.id))!)
+    const imported = await db.importSession(await unpackSession(blob))
+    const restored = (await db.loadLatest(imported.id))!
+    expect(restored.meta.videoSource).toEqual(videoSource)
+    expect(restored.meta.videoTime).toBe(9.5)
+    expect(restored.video).toBeNull()
+    expect(imported.name).toBe("Michael Jordan's Last Shot")
+    db.close()
+  })
+
   it('rejects files that are not archives, newer versions and missing chunks', async () => {
     const reject = (data: Uint8Array) =>
       expect(unpackSession(new Blob([data as Uint8Array<ArrayBuffer>]))).rejects.toBeInstanceOf(

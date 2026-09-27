@@ -31,6 +31,21 @@ export interface VideoMeta {
   duration?: number
 }
 
+/** A streamed video: nothing is stored but the id, so it never needs re-attaching. */
+export interface YouTubeVideoRef {
+  kind: 'youtube'
+  videoId: string
+  title?: string
+  aspect?: number
+}
+
+export function isYouTubeRef(value: unknown): value is YouTubeVideoRef {
+  const v = value as YouTubeVideoRef | null
+  return (
+    !!v && v.kind === 'youtube' && typeof v.videoId === 'string' && /^[\w-]{11}$/.test(v.videoId)
+  )
+}
+
 export type VideoStatus = 'saved' | 'needs-reattach'
 export type SnapshotKind = 'auto' | 'pinned'
 
@@ -50,6 +65,8 @@ export interface SnapshotMeta {
   floorPlanName: string | null
   videoKey: string | null
   video: (VideoMeta & { status: VideoStatus }) | null
+  /** Absent in snapshots saved before YouTube sources existed. */
+  videoSource?: YouTubeVideoRef
   paths: PathSummary[]
 }
 

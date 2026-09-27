@@ -1,3 +1,4 @@
+import type { VideoSource } from '../../video/source'
 import type p5 from 'p5'
 import type { Point } from '../types/sketch'
 import { get } from 'svelte/store'
@@ -23,7 +24,7 @@ import { viewPrefs } from '../../stores/viewPrefs'
 
 type CanvasPos = { x: number; y: number }
 
-export function observeVideo(video: HTMLVideoElement, perfMs: number) {
+export function observeVideo(video: VideoSource, perfMs: number) {
   mediaClock.observe(video.currentTime, perfMs, !video.paused, video.playbackRate)
 }
 
@@ -46,7 +47,7 @@ export function setupDrawing(p5: p5, getCanvas: () => HTMLCanvasElement | null) 
   }
 
   /** Record pointer samples, each stamped with the session clock at its own timeStamp. */
-  const recordPointerEvent = (event: PointerEvent, video?: HTMLVideoElement | null) => {
+  const recordPointerEvent = (event: PointerEvent, video?: VideoSource | null) => {
     const state = get(drawingState)
     if (!state.shouldTrackMouse) return
     const { isTranscriptionMode } = get(drawingConfig)
@@ -75,13 +76,13 @@ export function setupDrawing(p5: p5, getCanvas: () => HTMLCanvasElement | null) 
     addPointsToCurrentPath(points)
   }
 
-  const startVideoTake = (event: PointerEvent, video: HTMLVideoElement) => {
+  const startVideoTake = (event: PointerEvent, video: VideoSource) => {
     mediaClock.reset()
     toggleDrawing(video)
     recordPointerEvent(event, video)
   }
 
-  const stopVideoTake = (event: PointerEvent, video: HTMLVideoElement) => {
+  const stopVideoTake = (event: PointerEvent, video: VideoSource) => {
     observeVideo(video, performance.now())
     appendFinalPoint(mediaClock.timeAt(event.timeStamp))
     toggleDrawing(video)
@@ -99,9 +100,9 @@ export function setupDrawing(p5: p5, getCanvas: () => HTMLCanvasElement | null) 
     toggleDrawingNoVideo()
   }
 
-  const isAtVideoEnd = (video: HTMLVideoElement) => video.currentTime >= video.duration - 0.1
+  const isAtVideoEnd = (video: VideoSource) => video.currentTime >= video.duration - 0.1
 
-  const handlePressVideo = (event: PointerEvent, video: HTMLVideoElement) => {
+  const handlePressVideo = (event: PointerEvent, video: VideoSource) => {
     if (!isDrawableEvent(event) || isAtVideoEnd(video)) return
     if (get(drawingState).shouldTrackMouse) stopVideoTake(event, video)
     else startVideoTake(event, video)
@@ -115,7 +116,7 @@ export function setupDrawing(p5: p5, getCanvas: () => HTMLCanvasElement | null) 
   }
 
   /** Hold mode: start a take on press; returns whether one started. */
-  const handleHoldStart = (event: PointerEvent, video: HTMLVideoElement | null): boolean => {
+  const handleHoldStart = (event: PointerEvent, video: VideoSource | null): boolean => {
     if (get(drawingState).shouldTrackMouse || !isDrawableEvent(event)) return false
     if (get(drawingConfig).isTranscriptionMode) {
       if (!video || isAtVideoEnd(video)) return false
@@ -128,7 +129,7 @@ export function setupDrawing(p5: p5, getCanvas: () => HTMLCanvasElement | null) 
   }
 
   /** Hold mode: record the release sample, then stop with a final held point. */
-  const handleHoldEnd = (event: PointerEvent, video: HTMLVideoElement | null) => {
+  const handleHoldEnd = (event: PointerEvent, video: VideoSource | null) => {
     if (!get(drawingState).shouldTrackMouse) return
     recordPointerEvent(event, video)
     if (get(drawingConfig).isTranscriptionMode) {
@@ -138,7 +139,7 @@ export function setupDrawing(p5: p5, getCanvas: () => HTMLCanvasElement | null) 
     }
   }
 
-  const handleMove = (event: PointerEvent, video?: HTMLVideoElement | null) => {
+  const handleMove = (event: PointerEvent, video?: VideoSource | null) => {
     if ((event.target as HTMLElement | null)?.closest?.('[data-ui-element]')) return
     recordPointerEvent(event, video)
   }
@@ -147,7 +148,7 @@ export function setupDrawing(p5: p5, getCanvas: () => HTMLCanvasElement | null) 
 }
 
 /** Stop the current take (e.g. before switching paths), keeping a final held point. */
-export function endCurrentTake(video?: HTMLVideoElement | null) {
+export function endCurrentTake(video?: VideoSource | null) {
   if (!get(drawingState).shouldTrackMouse) return
   const now = performance.now()
   if (get(drawingConfig).isTranscriptionMode) {
@@ -162,7 +163,7 @@ export function endCurrentTake(video?: HTMLVideoElement | null) {
 }
 
 /** Clock time of the running take, or null when paused or not recording. */
-function recordingClockTime(video: HTMLVideoElement | null | undefined, perfMs: number) {
+function recordingClockTime(video: VideoSource | null | undefined, perfMs: number) {
   if (!get(drawingState).shouldTrackMouse) return null
   if (get(drawingConfig).isTranscriptionMode) {
     if (!video || video.paused) return null
@@ -173,7 +174,7 @@ function recordingClockTime(video: HTMLVideoElement | null | undefined, perfMs: 
 }
 
 /** Called every frame: keeps a still pointer recording, timed by the clock rather than frames. */
-export function sampleHold(video?: HTMLVideoElement | null, perfMs = performance.now()) {
+export function sampleHold(video?: VideoSource | null, perfMs = performance.now()) {
   const now = recordingClockTime(video, perfMs)
   if (now !== null) appendHoldPoints(now)
 }

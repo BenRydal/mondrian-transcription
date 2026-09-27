@@ -11,11 +11,13 @@
   import type { VideoMeta } from '$lib/storage/sessionDb'
   import { formatBytes, formatClockTime, formatDuration } from '$lib/stores/sessionRecovery'
   import PanelSection from './PanelSection.svelte'
+  import { groupVideoExamples, type VideoExample } from '$lib/examples/videoExamples'
 
   let {
     onImageUpload,
     onVideoUpload,
     onSelectExample,
+    onSelectVideoExample,
     onExport,
     onClearAll,
     autosave,
@@ -27,6 +29,7 @@
     onImageUpload: (event: Event) => void
     onVideoUpload: (event: Event) => void
     onSelectExample: (id: string) => void
+    onSelectVideoExample: (example: VideoExample) => void
     onExport: () => void
     onClearAll: () => void
     autosave: AutosaveStatus
@@ -58,6 +61,8 @@
     { id: 'museum', label: 'Museum Gallery' },
     { id: 'basketball', label: 'Basketball Court' },
   ]
+
+  const videoExampleGroups = groupVideoExamples()
 
   let isDraggingFile = $state(false)
 
@@ -168,6 +173,30 @@
           <li>
             <button onclick={() => onSelectExample(example.id)}>{example.label}</button>
           </li>
+        {/each}
+      </ul>
+    </PanelSection>
+  {:else}
+    <PanelSection title="Example Videos">
+      <p class="text-xs text-base-content/50">
+        A floor plan and YouTube video to trace from scratch. Opens as a new session.
+      </p>
+      <ul class="menu w-full p-0" data-testid="video-examples">
+        {#each videoExampleGroups as { group, items } (group)}
+          <li class="menu-title px-2 pt-2 pb-1 text-xs">{group}</li>
+          {#each items as example (example.id)}
+            <li>
+              <button
+                class="flex justify-between gap-2"
+                onclick={() => onSelectVideoExample(example)}
+              >
+                <span>{example.title}</span>
+                <span class="text-xs text-base-content/50 tabular-nums shrink-0"
+                  >{example.duration}</span
+                >
+              </button>
+            </li>
+          {/each}
         {/each}
       </ul>
     </PanelSection>

@@ -47,6 +47,8 @@ export class MediaClock {
   private rate = 1
   private last = -Infinity
 
+  constructor(private maxExtrapolation = MAX_EXTRAPOLATION) {}
+
   observe(mediaTime: number, perfMs: number, playing: boolean, rate: number) {
     if (mediaTime !== this.anchorMedia || playing !== this.playing || rate !== this.rate) {
       this.anchorMedia = mediaTime
@@ -60,7 +62,7 @@ export class MediaClock {
     let t = this.anchorMedia
     if (this.playing) {
       const elapsed = (Math.max(0, perfMs - this.anchorPerf) / 1000) * this.rate
-      t += Math.min(elapsed, MAX_EXTRAPOLATION * this.rate)
+      t += Math.min(elapsed, this.maxExtrapolation * this.rate)
     }
     this.last = Math.max(t, this.last)
     return this.last

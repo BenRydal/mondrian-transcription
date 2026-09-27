@@ -26,10 +26,14 @@
   } from './features/drawing'
   import { formatClock } from '$lib/utils/time'
   import { resamplePath, sessionScale } from '$lib/timing/sampling'
-  import { setupVideo } from './features/video'
+  import { bindPlaybackState, setupVideo } from './features/video'
+  import { LocalVideoSource, type VideoSource } from '$lib/video/source'
+  import { YouTubeVideoSource } from '$lib/video/youtube'
   import VideoControls from '../components/video/VideoControls.svelte'
   import { getFittedImageDisplayRect } from '$lib/utils/drawingUtils'
   import IconInfo from '~icons/material-symbols/info-outline'
+  import IconVideoOff from '~icons/material-symbols/videocam-off-outline'
+  import IconUpload from '~icons/material-symbols/upload'
   import { isShortcutEvent } from '$lib/utils/keyboard'
   import { clamp } from '$lib/spacetime/geometry'
   import { speculateClock } from '$lib/timing/sessionClocks'
@@ -42,11 +46,18 @@
     watchVideoFrames,
   } from '$lib/timing/frameStep'
 
+  let { onVideoUpload }: { onVideoUpload?: (event: Event) => void } = $props()
+
   let containerDiv: HTMLDivElement
+  let youtubeHost: HTMLDivElement
   let width = 800
   let height = 400
   let dragAxis: 'x' | 'y' | null = null
   let videoElement = $state.raw<p5.Element | null>(null)
+  let source = $state.raw<VideoSource | null>(null)
+  let videoError = $state<string | null>(null)
+  let youtubeAspect = $state(16 / 9)
+  let unbindSource = () => {}
   let p5Instance = $state.raw<p5 | null>(null)
   let lastVideoTime = 0
   const colors = ['#FF0000', '#00FF00', '#0000FF', '#FFFF00', '#FF00FF', '#00FFFF']
@@ -106,11 +117,12 @@
   })
 
   /** Paused only: one frame, or one second with Shift. */
-  function stepVideo(video: HTMLVideoElement, direction: 1 | -1, bySecond: boolean) {
+  function stepVideo(video: VideoSource, direction: 1 | -1, bySecond: boolean) {
     if (!video.paused || !(video.duration > 0)) return
     const fd = frameEstimator.frameDuration
-    video.currentTime = bySecond
-      ? Math.min(Math.max(video.currentTime + direction, 0), video.duration)
+    const fixed = bySecond ? 1 : video.fixedFrameStep
+    video.currentTime = fixed
+      ? Math.min(Math.max(video.currentTime + direction * fixed, 0), video.duration)
       : frameStepTarget(
           currentFrameStart(video.currentTime, fd, frameEstimator.displayedTime),
           fd,
@@ -150,15 +162,15 @@
       if (!isShortcutEvent(e)) return
       if (e.key.toLowerCase() === 'f') {
         e.preventDefault()
-        if ($drawingConfig.isTranscriptionMode && videoHtmlElement) {
-          handleForwardTranscription(videoHtmlElement)
+        if ($drawingConfig.isTranscriptionMode && source) {
+          handleForwardTranscription(source)
         } else {
           handleForwardSpeculateMode()
         }
       } else if (e.key.toLowerCase() === 'r') {
         e.preventDefault()
-        if ($drawingConfig.isTranscriptionMode && videoHtmlElement) {
-          handleRewindTranscription(videoHtmlElement)
+        if ($drawingConfig.isTranscriptionMode && source) {
+          handleRewindTranscription(source)
         } else {
           handleRewindSpeculateMode()
         }
@@ -166,16 +178,20 @@
         (e.key === 'ArrowLeft' || e.key === 'ArrowRight') &&
         !e.defaultPrevented &&
         $drawingConfig.isTranscriptionMode &&
-        videoHtmlElement
+        source
       ) {
         e.preventDefault()
-        stepVideo(videoHtmlElement, e.key === 'ArrowRight' ? 1 : -1, e.shiftKey)
+        stepVideo(source, e.key === 'ArrowRight' ? 1 : -1, e.shiftKey)
       } else if ((e.key === '[' || e.key === ']') && $drawingConfig.isTranscriptionMode) {
         e.preventDefault()
         const direction = e.key === ']' ? 1 : -1
         viewPrefs.update((p) => ({
           ...p,
-          playbackRate: stepPlaybackRate(p.playbackRate, direction),
+          playbackRate: stepPlaybackRate(
+            p.playbackRate,
+            direction,
+            (r) => source?.supportsRate(r) ?? true
+          ),
         }))
       }
     }
@@ -208,33 +224,33 @@
 
     const canRecord = () =>
       $drawingConfig.isTranscriptionMode
-        ? !dragAxis && videoHtmlElement !== null
+        ? !dragAxis && source !== null
         : $drawingState.imageElement !== null
 
     const handlePointerDown = (event: PointerEvent) => {
       if (!event.isPrimary || !canRecord()) return
       if ($viewPrefs.recordingMode === 'hold') {
         if (event.pointerType === 'mouse' && event.button !== 0) return
-        if (handleHoldStart(event, videoHtmlElement)) {
+        if (handleHoldStart(event, source)) {
           holdPointerId = event.pointerId
           // Capture keeps pointerup coming to the canvas if the pointer leaves it mid-stroke.
           canvasElt?.setPointerCapture(event.pointerId)
         }
       } else if (!$drawingConfig.isTranscriptionMode) {
         handlePressSpeculate(event)
-      } else if (videoHtmlElement) {
-        handlePressVideo(event, videoHtmlElement)
+      } else if (source) {
+        handlePressVideo(event, source)
       }
     }
 
     const handlePointerMove = (event: PointerEvent) => {
-      if (event.isPrimary) handleMove(event, videoHtmlElement)
+      if (event.isPrimary) handleMove(event, source)
     }
 
     const handlePointerUp = (event: PointerEvent) => {
       if (event.pointerId === holdPointerId) {
         holdPointerId = null
-        handleHoldEnd(event, videoHtmlElement)
+        handleHoldEnd(event, source)
       } else {
         handlePointerMove(event)
       }
@@ -285,14 +301,14 @@
       p5.background(255)
 
       // Draw video in transcription mode
-      if ($drawingConfig.isTranscriptionMode && videoElement) {
+      if ($drawingConfig.isTranscriptionMode && source) {
         const { updateVideoTime, drawVideo, checkVideoEnd } = setupVideo(p5)
-        lastVideoTime = updateVideoTime(videoElement, lastVideoTime)
-        if (videoHtmlElement) observeVideo(videoHtmlElement, performance.now())
-        checkVideoEnd(videoElement)
-        drawVideo(p5, videoElement)
+        lastVideoTime = updateVideoTime(source, lastVideoTime)
+        observeVideo(source, performance.now())
+        checkVideoEnd(source)
+        if (videoElement) drawVideo(p5, videoElement)
       }
-      sampleHold(videoHtmlElement)
+      sampleHold(source)
 
       drawRotatedImage()
       drawPaths(p5)
@@ -301,48 +317,51 @@
     p5.loop()
   }
 
-  export function setVideo(video: HTMLVideoElement, restoreTime?: number) {
+  /** Swap in a new video source; a restore keeps the paths and resumes at `restoreTime`. */
+  function attachSource(next: VideoSource, p5Video: p5.Element | null, restoreTime?: number) {
     const isRecovery = restoreTime !== undefined
-
     lastVideoTime = 0
-
     drawingState.update((state) => ({
       ...state,
       videoTime: isRecovery ? restoreTime : 0,
     }))
-
-    if (videoElement) {
-      try {
-        const videoElt = (videoElement as { elt: HTMLVideoElement }).elt
-        if (videoElt) {
-          videoElt.pause()
-          videoElt.currentTime = 0
-        }
-        ;(videoElement as { remove: () => void }).remove()
-      } catch (e) {
-        window.console.warn('Error cleaning up previous video:', e)
-      }
+    clearVideo()
+    videoElement = p5Video
+    source = next
+    videoError = null
+    const unbind = bindPlaybackState(next)
+    const onError = () => (videoError = next instanceof YouTubeVideoSource ? next.error : null)
+    next.addEventListener('error', onError)
+    unbindSource = () => {
+      unbind()
+      next.removeEventListener('error', onError)
     }
 
-    video.loop = false
-
-    const { setVideo: setupP5Video } = setupVideo(p5Instance!)
-    videoElement = setupP5Video(video, restoreTime)
-
-    if (videoElement) {
-      ;(videoElement as { elt: HTMLVideoElement }).elt.loop = false
-
-      if (p5Instance) {
-        p5Instance.redraw()
-        // Only clear drawing if not recovering
-        if (!isRecovery) {
-          clearDrawing()
-        }
-      }
+    if (p5Instance) {
+      p5Instance.redraw()
+      if (!isRecovery) clearDrawing()
     }
-
-    // Only start new path if not recovering
     if (!isRecovery && $drawingState.imageElement) startNewPath()
+  }
+
+  export function setVideo(video: HTMLVideoElement, restoreTime?: number) {
+    video.loop = false
+    const { setVideo: setupP5Video } = setupVideo(p5Instance!)
+    const p5Video = setupP5Video(video, restoreTime)
+    const elt = (p5Video as { elt: HTMLVideoElement }).elt
+    elt.loop = false
+    attachSource(new LocalVideoSource(elt), p5Video, restoreTime)
+  }
+
+  export function getVideoError() {
+    return videoError
+  }
+
+  export function setYouTube(videoId: string, aspect = 16 / 9, restoreTime?: number) {
+    youtubeAspect = aspect
+    const next = new YouTubeVideoSource({ videoId, host: youtubeHost, startTime: restoreTime })
+    attachSource(next, null, restoreTime)
+    p5Instance?.loop()
   }
 
   export function setImage(image: HTMLImageElement, isRecovery = false) {
@@ -361,7 +380,7 @@
           }
           startNewPath()
         } else {
-          if (videoElement) startNewPath()
+          if (source) startNewPath()
         }
       }
       drawingState.update((state) => ({
@@ -385,20 +404,13 @@
 
     const currentPathCount = $drawingState.paths.length
     const newColor = colors[currentPathCount % colors.length]
-    endCurrentTake(videoHtmlElement)
+    endCurrentTake(source)
 
-    if (!$drawingConfig.isTranscriptionMode) {
-      createNewPath(newColor)
-    } else {
-      if (videoElement) {
-        const htmlVideo = (videoElement as { elt: HTMLVideoElement }).elt
-        if (htmlVideo) {
-          htmlVideo.currentTime = 0
-          htmlVideo.pause()
-        }
-      }
-      createNewPath(newColor)
+    if ($drawingConfig.isTranscriptionMode && source) {
+      source.currentTime = 0
+      source.pause()
     }
+    createNewPath(newColor)
 
     drawingState.update((state) => ({
       ...state,
@@ -478,12 +490,9 @@
   }
 
   export function clearDrawing() {
-    if (videoElement) {
-      const htmlVideo = (videoElement as { elt: HTMLVideoElement }).elt
-      if (htmlVideo) {
-        htmlVideo.currentTime = 0
-        htmlVideo.pause()
-      }
+    if (source) {
+      source.currentTime = 0
+      source.pause()
     }
 
     drawingState.update((state) => ({
@@ -497,19 +506,18 @@
   }
 
   export function clearVideo() {
-    if (videoElement) {
-      try {
-        const videoElt = (videoElement as { elt: HTMLVideoElement }).elt
-        if (videoElt) {
-          videoElt.pause()
-          videoElt.currentTime = 0
-        }
-        ;(videoElement as { remove: () => void }).remove()
-      } catch (e) {
-        window.console.warn('Error cleaning up video:', e)
-      }
-      videoElement = null
+    unbindSource()
+    unbindSource = () => {}
+    try {
+      source?.destroy()
+      ;(videoElement as { remove: () => void } | null)?.remove()
+    } catch (e) {
+      window.console.warn('Error cleaning up video:', e)
     }
+    youtubeHost?.replaceChildren()
+    source = null
+    videoElement = null
+    videoError = null
   }
 
   $effect(() => {
@@ -540,6 +548,42 @@
   <!-- The sketch reparents its canvas into containerDiv, so the host div must not take up height. -->
   <P5Canvas {sketch} bind:instance={p5Instance} style="display: block;" />
 
+  <!-- An iframe can't be drawn into the canvas, so YouTube sits over the video slot instead. -->
+  <div
+    class="absolute left-0 top-0 pointer-events-none"
+    class:hidden={source?.kind !== 'youtube' || !$drawingConfig.isTranscriptionMode}
+    style:width="{$drawingConfig.splitPosition}%"
+    style:height="{videoHeight}%"
+    style:container-type="size"
+  >
+    <div
+      bind:this={youtubeHost}
+      class="youtube-frame"
+      style:--aspect={youtubeAspect}
+      data-testid="youtube-slot"
+    ></div>
+    {#if videoError}
+      <div
+        class="absolute inset-0 flex items-center justify-center p-4 bg-base-200 pointer-events-auto"
+        data-ui-element
+        role="alert"
+      >
+        <div class="flex flex-col items-center gap-3 max-w-sm text-center">
+          <IconVideoOff class="h-8 w-8 text-base-content/40" />
+          <p class="text-sm font-medium">{videoError}</p>
+          <p class="text-sm text-base-content/70">
+            Upload the video file instead to keep tracing on the same timeline.
+          </p>
+          <label class="btn btn-sm btn-primary">
+            <IconUpload class="h-4 w-4" />
+            Upload video file
+            <input type="file" class="hidden" accept="video/*" onchange={onVideoUpload} />
+          </label>
+        </div>
+      </div>
+    {/if}
+  </div>
+
   <!-- Empty State -->
   {#if !$drawingState.imageElement}
     <div
@@ -552,8 +596,8 @@
           <p>Upload a floor plan and video to get started</p>
         {:else}
           <p>Upload a floor plan to get started</p>
-          <p>or try an example from the <span class="font-medium">Data</span> panel</p>
         {/if}
+        <p>or try an example from the <span class="font-medium">Data</span> panel</p>
       </div>
     </div>
   {/if}
@@ -568,7 +612,7 @@
     >
       <SpaceTimeView
         getNow={spaceTimeNow}
-        getDuration={() => videoHtmlElement?.duration ?? 0}
+        getDuration={() => source?.duration ?? 0}
         class="inset-0"
       />
     </div>
@@ -627,8 +671,8 @@
     {/if}
   {/if}
 
-  {#if videoHtmlElement}
-    <VideoControls videoElement={videoHtmlElement} />
+  {#if source}
+    <VideoControls videoElement={source} />
   {:else if showSpeculateControls}
     <!-- Speculate mode controls (forward/rewind buttons) -->
     <div
@@ -672,7 +716,7 @@
     {@const alertMessage =
       $drawingConfig.isTranscriptionMode && !$drawingState.imageElement
         ? 'Upload your floor plan and video to continue recording'
-        : $drawingConfig.isTranscriptionMode && !videoHtmlElement
+        : $drawingConfig.isTranscriptionMode && !source
           ? 'Upload your video to continue recording'
           : !$drawingConfig.isTranscriptionMode && !$drawingState.imageElement
             ? 'Upload your floor plan to continue recording'
@@ -690,3 +734,20 @@
     {/if}
   {/if}
 </div>
+
+<style>
+  .youtube-frame {
+    position: absolute;
+    inset: 0;
+    margin: auto;
+    width: min(100cqw, 100cqh * var(--aspect));
+    height: min(100cqh, 100cqw / var(--aspect));
+  }
+
+  .youtube-frame :global(iframe) {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border: 0;
+  }
+</style>

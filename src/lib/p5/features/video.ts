@@ -2,6 +2,31 @@ import type p5 from 'p5'
 import { drawingState, appendFinalPoint } from '../../stores/drawingState'
 import { get } from 'svelte/store'
 import { drawingConfig, getVideoHeightPercent } from '../../stores/drawingConfig'
+import type { VideoSource } from '../../video/source'
+
+function stopRecording(time: number) {
+  appendFinalPoint(time)
+  drawingState.update((state) => ({
+    ...state,
+    isVideoPlaying: false,
+    shouldTrackMouse: false,
+    isDrawing: false,
+  }))
+}
+
+/** Mirror a source's play, pause and end into the drawing state; returns an unbind function. */
+export function bindPlaybackState(source: VideoSource) {
+  const onPlay = () => drawingState.update((state) => ({ ...state, isVideoPlaying: true }))
+  const onStop = () => stopRecording(source.currentTime)
+  source.addEventListener('play', onPlay)
+  source.addEventListener('pause', onStop)
+  source.addEventListener('ended', onStop)
+  return () => {
+    source.removeEventListener('play', onPlay)
+    source.removeEventListener('pause', onStop)
+    source.removeEventListener('ended', onStop)
+  }
+}
 
 export function setupVideo(p5: p5) {
   const setVideo = (video: HTMLVideoElement, restoreTime?: number) => {
@@ -50,39 +75,14 @@ export function setupVideo(p5: p5) {
     })
 
     p5Vid.hide()
-
-    p5Vid.elt.onplay = () => drawingState.update((state) => ({ ...state, isVideoPlaying: true }))
-
-    p5Vid.elt.onpause = () => {
-      appendFinalPoint(videoElt.currentTime)
-      drawingState.update((state) => ({
-        ...state,
-        isVideoPlaying: false,
-        shouldTrackMouse: false,
-        isDrawing: false,
-      }))
-    }
-
-    p5Vid.elt.onended = () => {
-      appendFinalPoint(videoElt.currentTime)
-      drawingState.update((state) => ({
-        ...state,
-        isVideoPlaying: false,
-        shouldTrackMouse: false,
-        isDrawing: false,
-      }))
-    }
-
     return p5Vid
   }
 
-  const updateVideoTime = (videoElement: p5.Element, lastVideoTime: number) => {
-    if (videoElement) {
-      const currentTime = (videoElement as any).elt.currentTime
-      if (currentTime !== lastVideoTime) {
-        drawingState.update((state) => ({ ...state, videoTime: currentTime }))
-        return currentTime
-      }
+  const updateVideoTime = (source: VideoSource, lastVideoTime: number) => {
+    const currentTime = source.currentTime
+    if (currentTime !== lastVideoTime) {
+      drawingState.update((state) => ({ ...state, videoTime: currentTime }))
+      return currentTime
     }
     return lastVideoTime
   }
@@ -101,21 +101,17 @@ export function setupVideo(p5: p5) {
     p5.image(videoElement, xOffset, yOffset, displayWidth, displayHeight)
   }
 
-  const checkVideoEnd = (videoElement: p5.Element) => {
-    if (videoElement && (videoElement as any).elt) {
-      const video = (videoElement as any).elt
-      if (video.currentTime >= video.duration - 0.1) {
-        appendFinalPoint(video.currentTime)
-        video.pause()
-        video.currentTime = video.duration
-
-        drawingState.update((state) => ({
-          ...state,
-          isVideoPlaying: false,
-          shouldTrackMouse: false,
-          isDrawing: false,
-        }))
-      }
+  const checkVideoEnd = (source: VideoSource) => {
+    if (!source.paused && source.currentTime >= source.duration - 0.1) {
+      appendFinalPoint(source.currentTime)
+      source.pause()
+      source.currentTime = source.duration
+      drawingState.update((state) => ({
+        ...state,
+        isVideoPlaying: false,
+        shouldTrackMouse: false,
+        isDrawing: false,
+      }))
     }
   }
 

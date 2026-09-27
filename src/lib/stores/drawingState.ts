@@ -1,3 +1,4 @@
+import type { VideoSource } from '../video/source'
 import { writable, get } from 'svelte/store'
 import type p5 from 'p5'
 import type { Point } from '../p5/types/sketch'
@@ -48,7 +49,7 @@ const initialState: DrawingState = {
   isJumping: false,
 }
 
-function clearJumpingOnSeek(videoElement: HTMLVideoElement) {
+function clearJumpingOnSeek(videoElement: VideoSource) {
   const onSeeked = () => {
     videoElement.removeEventListener('seeked', onSeeked)
     drawingState.update((state) => ({ ...state, isJumping: false }))
@@ -114,7 +115,7 @@ export function handleForwardSpeculateMode() {
   })
 }
 
-export function handleForwardTranscription(videoElement: HTMLVideoElement) {
+export function handleForwardTranscription(videoElement: VideoSource) {
   drawingState.update((state) => {
     if (state.isJumping) return state
     if (!videoElement.duration || isNaN(videoElement.duration)) return state
@@ -146,7 +147,7 @@ export function handleForwardTranscription(videoElement: HTMLVideoElement) {
   clearJumpingOnSeek(videoElement)
 }
 
-export function handleRewindTranscription(videoElement: HTMLVideoElement) {
+export function handleRewindTranscription(videoElement: VideoSource) {
   drawingState.update((state) => {
     if (state.isJumping) return state
     if (!videoElement.duration || isNaN(videoElement.duration)) return state
@@ -181,7 +182,7 @@ export function handleRewindTranscription(videoElement: HTMLVideoElement) {
 
 export const drawingState = writable<DrawingState>(initialState)
 
-export function toggleDrawing(videoElement?: HTMLVideoElement) {
+export function toggleDrawing(videoElement?: VideoSource) {
   drawingState.update((state) => {
     const newShouldTrack = !state.shouldTrackMouse
 

@@ -395,6 +395,61 @@ describe('SessionDb chunked storage', () => {
   })
 })
 
+describe('SessionDb YouTube sources', () => {
+  const youtube = {
+    kind: 'youtube' as const,
+    videoId: 'iiMjfVOj8po',
+    title: 'Jordan',
+    aspect: 4 / 3,
+  }
+
+  it('stores a YouTube source as its id, with no video blob, and restores it', async () => {
+    const name = freshName()
+    const db = await SessionDb.open({ dbName: name })
+    const result = await db.save(SID, makeInput({ videoTime: 12.4, videoSource: youtube }))
+    expect(result.videoStatus).toBeNull()
+    const restored = (await db.loadLatest(SID))!
+    expect(restored.meta.videoSource).toEqual(youtube)
+    expect(restored.meta.videoTime).toBe(12.4)
+    expect(restored.meta.video).toBeNull()
+    expect(restored.video).toBeNull()
+    db.close()
+    const raw = await openDB(name)
+    expect(await raw.count('videos')).toBe(0)
+    raw.close()
+  })
+
+  it('saves again when only the video source changes', async () => {
+    const db = await SessionDb.open({ dbName: freshName() })
+    const paths = makePaths(3)
+    await db.save(SID, makeInput({ paths }))
+    const second = await db.save(SID, makeInput({ paths, videoSource: youtube }))
+    expect(second.skipped).toBe(false)
+    const third = await db.save(SID, makeInput({ paths, videoSource: youtube }))
+    expect(third.skipped).toBe(true)
+    db.close()
+  })
+
+  it('still loads snapshots saved before the field existed, local video included', async () => {
+    const db = await SessionDb.open({ dbName: freshName() })
+    await db.save(SID, makeInput({ video: makeVideo() }))
+    const restored = (await db.loadLatest(SID))!
+    expect('videoSource' in restored.meta).toBe(false)
+    expect(await restored.video!.text()).toBe('video-bytes')
+    db.close()
+  })
+
+  it('drops a malformed video source instead of failing the restore', async () => {
+    const db = await SessionDb.open({ dbName: freshName() })
+    const bad = { kind: 'youtube', videoId: '<script>' } as unknown as typeof youtube
+    await db.save(SID, makeInput({ videoSource: bad }))
+    const restored = (await db.loadLatest(SID))!
+    expect(restored.meta.videoSource).toBeUndefined()
+    expect(restored.paths).toEqual(makePaths(3))
+    db.close()
+  })
+})
+
 describe('SessionDb checkpoints and sessions', () => {
   it('renames and deletes pinned checkpoints, collecting their chunks', async () => {
     const name = freshName()

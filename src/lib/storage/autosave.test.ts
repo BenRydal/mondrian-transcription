@@ -417,6 +417,32 @@ describe('createAutosave', () => {
     autosave.destroy()
   })
 
+  it('names a new session on its first save, e.g. after an example', async () => {
+    const name = freshName()
+    let points = 3
+    const autosave = createAutosave({
+      getSnapshot: () => (points ? snapshot(points) : null),
+      openDb: () => SessionDb.open({ dbName: name }),
+      locks: null,
+      storage: null,
+      persist: async () => true,
+    })
+    await autosave.init()
+    await autosave.flush()
+    points = 0
+    await autosave.newSession("Michael Jordan's Last Shot")
+    await autosave.flush()
+    expect(await autosave.listSessions()).toHaveLength(1)
+    points = 4
+    await autosave.flush()
+    await autosave.newSession()
+    points = 5
+    await autosave.flush()
+    const names = (await autosave.listSessions()).map((s) => s.name)
+    expect(names.sort()).toEqual([null, null, "Michael Jordan's Last Shot"].sort())
+    autosave.destroy()
+  })
+
   it('deleting the current session starts a fresh one on the next save', async () => {
     const name = freshName()
     let points = 3

@@ -20,6 +20,7 @@ import {
   isValidManifest,
   isValidMeta,
   isValidPaths,
+  isYouTubeRef,
   openSessionDb,
   quiet,
   type Db,
@@ -31,6 +32,7 @@ import {
   type SnapshotMeta,
   type VideoMeta,
   type VideoStatus,
+  type YouTubeVideoRef,
 } from './schema'
 
 export {
@@ -42,6 +44,7 @@ export {
   type SnapshotMeta,
   type VideoMeta,
   type VideoStatus,
+  type YouTubeVideoRef,
 }
 export const LEGACY_STORAGE_KEY = 'mondrian-session'
 
@@ -60,6 +63,7 @@ export interface SnapshotInput {
   savedAt?: number
   floorPlan: AssetInput | null
   video: (AssetInput & { meta: VideoMeta }) | null
+  videoSource?: YouTubeVideoRef | null
 }
 
 export interface SaveOptions {
@@ -157,6 +161,7 @@ function snapshotSig(manifests: PathManifest[], meta: SnapshotMeta): string {
     meta.floorPlanKey,
     meta.videoKey,
     meta.video,
+    meta.videoSource ?? null,
   ])
 }
 
@@ -341,6 +346,7 @@ export class SessionDb {
       video: videoMeta,
       paths: plan.manifests.map(summarize),
     }
+    if (input.videoSource) meta.videoSource = input.videoSource
     const sig = snapshotSig(plan.manifests, meta)
     const last = index.entries.at(-1)
     if (kind === 'auto' && last && sig === index.lastSig) {
@@ -567,6 +573,7 @@ export class SessionDb {
       ? ((await tx.objectStore('videos').get(meta.videoKey)) ?? null)
       : null
     if (meta.video && !video) meta.video = { ...meta.video, status: 'needs-reattach' }
+    if (meta.videoSource !== undefined && !isYouTubeRef(meta.videoSource)) delete meta.videoSource
     return { meta, paths, floorPlan, video }
   }
 

@@ -121,6 +121,8 @@ export function createAutosave(opts: AutosaveOptions) {
   let destroyed = false
   // Blocks saves while the live state still belongs to the session being left.
   let switching = false
+  // Name for the session a new-session call will create on its first save.
+  let pendingName: string | null = null
   const scheduler = createSaveScheduler(() => void runSave(), opts)
 
   const setState = (state: AutosaveState) => status.update((s) => ({ ...s, state }))
@@ -187,6 +189,7 @@ export function createAutosave(opts: AutosaveOptions) {
 
   async function openSession(id: string | null) {
     sessionId = id
+    pendingName = null
     status.update((s) => ({ ...s, sessionId: id, lastSavedAt: null, videoStatus: null }))
     if (id === null) {
       lock?.release()
@@ -204,7 +207,7 @@ export function createAutosave(opts: AutosaveOptions) {
 
   async function ensureSession(store: SessionDb): Promise<string> {
     if (sessionId) return sessionId
-    const created = await store.createSession()
+    const created = await store.createSession(pendingName)
     await openSession(created.id)
     return created.id
   }
@@ -384,8 +387,11 @@ export function createAutosave(opts: AutosaveOptions) {
     },
 
     /** Save the current session and start an empty one, created on its first save. */
-    newSession(): Promise<void> {
-      return transition(() => openSession(null))
+    newSession(name: string | null = null): Promise<void> {
+      return transition(async () => {
+        await openSession(null)
+        pendingName = name
+      })
     },
 
     async renameSession(id: string, name: string) {

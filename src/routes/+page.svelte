@@ -33,6 +33,8 @@
     SnapshotMeta,
     VideoMeta,
   } from '$lib/storage/sessionDb'
+  import type { YouTubeVideoRef } from '$lib/storage/schema'
+  import { floorPlanUrl, type VideoExample } from '$lib/examples/videoExamples'
   import { pathLabel, sessionName } from '$lib/storage/history'
   import {
     ArchiveError,
@@ -101,6 +103,9 @@
   let floorPlanAsset: AssetInput | null = null
   let videoAsset: (AssetInput & { meta: VideoMeta }) | null = null
   let reattachVideo = $state<VideoMeta | null>(null)
+  let youtubeSource = $state.raw<YouTubeVideoRef | null>(null)
+  let pendingSessionName = $state<string | null>(null)
+  const videoKind = $derived(youtubeSource ? 'youtube' : videoName ? 'local' : null)
   let history = $state.raw<SnapshotMeta[]>([])
   let sessions = $state.raw<SessionRecord[]>([])
   let storageLabel = $state<string | null>(null)
@@ -129,6 +134,7 @@
       },
       floorPlan: state.imageElement ? floorPlanAsset : null,
       video: config.isTranscriptionMode ? videoAsset : null,
+      videoSource: config.isTranscriptionMode ? youtubeSource : null,
     }
   }
 
@@ -137,7 +143,9 @@
   const canWrite = $derived(!['other-tab', 'unavailable'].includes($autosaveStatus.state))
   const currentSession = $derived(sessions.find((s) => s.id === $autosaveStatus.sessionId) ?? null)
   const currentSessionName = $derived(
-    currentSession ? sessionName(currentSession) : (floorPlanName ?? 'Untitled session')
+    currentSession
+      ? sessionName(currentSession)
+      : (pendingSessionName ?? floorPlanName ?? 'Untitled session')
   )
   const livePathIds = $derived(
     new Set($drawingState.paths.filter((p) => p.points.length > 0).map((p) => p.pathId))
@@ -292,6 +300,8 @@
     videoName = null
     videoAsset = null
     reattachVideo = null
+    youtubeSource = null
+    pendingSessionName = null
     floorPlanAsset = null
     floorPlanName = null
     drawingState.update((state) => ({
@@ -306,11 +316,12 @@
   function applyRestoredSession(session: RestoredSession) {
     const { meta, paths, floorPlan, video } = session
 
-    if (!meta.config.isTranscriptionMode || !meta.video) {
+    if (!meta.config.isTranscriptionMode || (!meta.video && !meta.videoSource)) {
       p5Component.clearVideo()
       videoName = null
       videoAsset = null
       reattachVideo = null
+      youtubeSource = null
     }
 
     drawingConfig.update((config) => ({
@@ -349,7 +360,10 @@
       drawingState.update((state) => ({ ...state, imageElement: null }))
     }
 
-    if (meta.config.isTranscriptionMode && meta.video) {
+    if (meta.config.isTranscriptionMode && meta.videoSource) {
+      attachYouTube(meta.videoSource, meta.videoTime)
+    } else if (meta.config.isTranscriptionMode && meta.video) {
+      youtubeSource = null
       if (video && meta.videoKey) {
         videoAsset = { key: meta.videoKey, blob: video, name: meta.video.name, meta: meta.video }
         attachVideo(video, meta.video.name, meta.videoTime)
@@ -478,6 +492,14 @@
     }
   }
 
+  function attachYouTube(ref: YouTubeVideoRef, restoreTime?: number) {
+    videoAsset = null
+    reattachVideo = null
+    youtubeSource = ref
+    videoName = ref.title ?? 'YouTube video'
+    p5Component.setYouTube(ref.videoId, ref.aspect, restoreTime)
+  }
+
   function attachVideo(source: Blob, name: string, restoreTime?: number) {
     const video = window.document.createElement('video')
     video.src = window.URL.createObjectURL(source)
@@ -509,9 +531,12 @@
   function handleVideoUpload(event: Event) {
     const file = (event.target as HTMLInputElement).files?.[0]
     if (file) {
-      // Re-attaching a missing video after a restore resumes at its saved time.
-      const restoreTime = reattachVideo ? get(drawingState).videoTime : undefined
-      if (!reattachVideo) void pin('Before new video')
+      // Re-attaching a missing video, or a local copy of a blocked YouTube one, keeps the paths.
+      const replacesFailed = youtubeSource !== null && p5Component.getVideoError() !== null
+      const keepPaths = reattachVideo !== null || replacesFailed
+      const restoreTime = keepPaths ? get(drawingState).videoTime : undefined
+      if (!keepPaths) void pin('Before new video')
+      youtubeSource = null
       const meta: VideoMeta = { name: file.name, size: file.size, type: file.type }
       videoAsset = { key: newAssetKey(), blob: file, name: file.name, meta }
       const video = attachVideo(file, file.name, restoreTime)
@@ -559,6 +584,7 @@
     videoName = null
     videoAsset = null
     reattachVideo = null
+    youtubeSource = null
     p5Component.startNewPath()
   }
 
@@ -584,6 +610,37 @@
     }
     loadExampleData('classroom')
     closeWelcomeModal()
+  }
+
+  /** A blank tracing exercise in its own session: the example's floor plan and YouTube video. */
+  async function loadVideoExample(example: VideoExample) {
+    await pin('Before loading example')
+    await autosave.newSession(example.title)
+    resetWorkspace()
+    pendingSessionName = example.title
+    refreshHistory()
+    attachYouTube({
+      kind: 'youtube',
+      videoId: example.videoId,
+      title: example.title,
+      aspect: example.aspect,
+    })
+    const url = floorPlanUrl(example)
+    const name = `${example.id}.png`
+    const image = new window.Image()
+    image.onload = () => {
+      p5Component.setImage(image)
+      floorPlanName = name
+    }
+    image.onerror = () => showNotice('Could not load the example floor plan.')
+    image.src = url
+    fetch(url)
+      .then((r) => r.blob())
+      .then((blob) => {
+        floorPlanAsset = { key: `example-floorplan-${example.id}`, blob, name }
+        autosave.schedule()
+      })
+      .catch((e) => console.warn('Could not keep example floor plan for autosave:', e))
   }
 
   function loadExampleData(imageID: string) {
@@ -656,6 +713,7 @@
                 onImageUpload={handleImageUpload}
                 onVideoUpload={handleVideoUpload}
                 onSelectExample={loadExampleData}
+                onSelectVideoExample={loadVideoExample}
                 onExport={() => exportDialog.start()}
                 onClearAll={() => (showClearAllModal = true)}
                 autosave={$autosaveStatus}
@@ -696,7 +754,7 @@
             {:else if lastPanel === 'settings'}
               <SettingsPanel />
             {:else if lastPanel === 'help'}
-              <HelpPanel onOpenWelcome={openWelcomeModal} />
+              <HelpPanel onOpenWelcome={openWelcomeModal} {videoKind} />
             {/if}
           </SidePanel>
         </div>
@@ -704,7 +762,7 @@
     {/snippet}
 
     {#snippet canvas()}
-      <P5Wrapper bind:this={p5Component} />
+      <P5Wrapper bind:this={p5Component} onVideoUpload={handleVideoUpload} />
     {/snippet}
   </CanvasFrame>
 </div>

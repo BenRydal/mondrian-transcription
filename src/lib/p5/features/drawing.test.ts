@@ -1,3 +1,4 @@
+import type { VideoSource } from '../../video/source'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { get } from 'svelte/store'
 import { sampleHold } from './drawing'
@@ -28,7 +29,7 @@ function runFrames(fps: number, wallSeconds: number, perfStart: number, video?: 
   for (let i = 1; i <= frames; i++) {
     perf = perfStart + (i * 1000) / fps
     if (video && !video.paused) video.currentTime += video.playbackRate / fps
-    sampleHold(video as unknown as HTMLVideoElement, perf)
+    sampleHold(video as unknown as VideoSource, perf)
   }
   return perf
 }

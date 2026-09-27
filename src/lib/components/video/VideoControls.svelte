@@ -2,14 +2,16 @@
   import { handleForwardTranscription, handleRewindTranscription } from '../../stores/drawingState'
   import { PLAYBACK_RATES, formatRate, viewPrefs } from '../../stores/viewPrefs'
   import { formatClock } from '$lib/utils/time'
+  import type { VideoSource } from '$lib/video/source'
   import IconRewind from '~icons/material-symbols/fast-rewind'
   import IconForward from '~icons/material-symbols/fast-forward'
 
-  let { videoElement }: { videoElement: HTMLVideoElement } = $props()
+  let { videoElement }: { videoElement: VideoSource } = $props()
 
   let progress = $state(0)
   let duration = $state(0)
   let currentTime = $state(0)
+  let supportedRates = $state<readonly number[]>(PLAYBACK_RATES)
   let isDraggingProgress = false
   let progressBarElement: HTMLDivElement
 
@@ -74,20 +76,24 @@
     const onPlay = () => {
       if (!raf) raf = requestAnimationFrame(tick)
     }
+    const onRates = () => {
+      supportedRates = PLAYBACK_RATES.filter((r) => video.supportsRate(r))
+    }
     for (const name of events) video.addEventListener(name, onChange)
     video.addEventListener('play', onPlay)
+    video.addEventListener('ratechange', onRates)
     onChange()
+    onRates()
     if (!video.paused) onPlay()
     return () => {
       for (const name of events) video.removeEventListener(name, onChange)
       video.removeEventListener('play', onPlay)
+      video.removeEventListener('ratechange', onRates)
       cancelAnimationFrame(raf)
     }
   })
 
   $effect(() => {
-    // load() resets playbackRate to defaultPlaybackRate, so set both.
-    videoElement.defaultPlaybackRate = $viewPrefs.playbackRate
     videoElement.playbackRate = $viewPrefs.playbackRate
   })
 </script>
@@ -154,7 +160,12 @@
       onchange={setRate}
     >
       {#each PLAYBACK_RATES as rate (rate)}
-        <option value={rate}>{formatRate(rate)}</option>
+        <option
+          value={rate}
+          disabled={!supportedRates.includes(rate)}
+          title={supportedRates.includes(rate) ? undefined : 'Not available for this video'}
+          >{formatRate(rate)}</option
+        >
       {/each}
     </select>
     <span class="tabular-nums">{formatClock(duration)}</span>

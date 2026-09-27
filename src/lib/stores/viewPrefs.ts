@@ -61,12 +61,18 @@ viewPrefs.subscribe((prefs) => {
   }
 })
 
-/** Next rate in the list, clamped at both ends. */
-export function stepPlaybackRate(rate: number, direction: 1 | -1): number {
-  const i = PLAYBACK_RATES.findIndex((r) => r >= rate)
-  const current = i === -1 ? PLAYBACK_RATES.length - 1 : i
-  const next = Math.min(PLAYBACK_RATES.length - 1, Math.max(0, current + direction))
-  return PLAYBACK_RATES[next]
+/** Next allowed rate in the list, clamped at both ends. */
+export function stepPlaybackRate(
+  rate: number,
+  direction: 1 | -1,
+  allowed: (rate: number) => boolean = () => true
+): number {
+  const rates = PLAYBACK_RATES.filter(allowed)
+  if (rates.length === 0) return rate
+  const i = rates.findIndex((r) => r >= rate)
+  const current = i === -1 ? rates.length - 1 : rates[i] > rate && direction === 1 ? i - 1 : i
+  const next = Math.min(rates.length - 1, Math.max(0, current + direction))
+  return rates[next]
 }
 
 export function formatRate(rate: number): string {

@@ -11,6 +11,14 @@ describe('stepPlaybackRate', () => {
     expect(stepPlaybackRate(PLAYBACK_RATES[0], -1)).toBe(PLAYBACK_RATES[0])
     expect(stepPlaybackRate(PLAYBACK_RATES.at(-1)!, 1)).toBe(PLAYBACK_RATES.at(-1))
   })
+
+  it('skips rates the video source does not support', () => {
+    const allowed = (r: number) => [0.5, 1, 2].includes(r)
+    expect(stepPlaybackRate(1, -1, allowed)).toBe(0.5)
+    expect(stepPlaybackRate(1, 1, allowed)).toBe(2)
+    expect(stepPlaybackRate(0.75, 1, allowed)).toBe(1)
+    expect(stepPlaybackRate(0.75, -1, allowed)).toBe(0.5)
+  })
 })
 
 describe('sanitizeViewPrefs', () => {
