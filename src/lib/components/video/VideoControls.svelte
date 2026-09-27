@@ -1,9 +1,6 @@
 <script lang="ts">
   import { onMount, afterUpdate } from 'svelte'
-  import {
-    handleForwardTranscription,
-    handleRewindTranscription,
-  } from '../../stores/drawingState'
+  import { handleForwardTranscription, handleRewindTranscription } from '../../stores/drawingState'
   import IconRewind from '~icons/material-symbols/fast-rewind'
   import IconForward from '~icons/material-symbols/fast-forward'
 
@@ -161,7 +158,7 @@
 <style>
   .video-controls {
     position: absolute;
-    bottom: 0;
+    bottom: var(--video-controls-bottom, 0);
     left: 0;
     z-index: 10;
     width: var(--split-width);

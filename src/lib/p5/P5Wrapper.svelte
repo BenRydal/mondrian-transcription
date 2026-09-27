@@ -22,11 +22,15 @@
   import VideoControls from '../components/video/VideoControls.svelte'
   import { getFittedImageDisplayRect } from '$lib/utils/drawingUtils'
   import IconInfo from '~icons/material-symbols/info-outline'
+  import { isShortcutEvent } from '$lib/utils/keyboard'
+  import { clamp } from '$lib/spacetime/geometry'
+  import { speculateClock } from '$lib/timing/sessionClocks'
+  import SpaceTimeView from '../components/spacetime/SpaceTimeView.svelte'
 
   let containerDiv: HTMLDivElement
   let width = 800
   let height = 400
-  let isDraggingSplitter = false
+  let dragAxis: 'x' | 'y' | null = null
   let videoElement = $state.raw<p5.Element | null>(null)
   let p5Instance = $state.raw<p5 | null>(null)
   let lastVideoTime = 0
@@ -35,32 +39,42 @@
   const videoHtmlElement = $derived(
     videoElement ? (videoElement as { elt: HTMLVideoElement }).elt : null
   )
+  const showSplit = $derived($drawingConfig.isTranscriptionMode || $drawingConfig.showSpaceTime)
+  const videoHeight = $derived(
+    $drawingConfig.isTranscriptionMode && $drawingConfig.showSpaceTime
+      ? $drawingConfig.spaceTimeSplit
+      : 100
+  )
+  const showSpaceTime = $derived($drawingConfig.showSpaceTime)
   const hasRecordedPaths = $derived($drawingState.paths.some((p) => p.points.length > 0))
 
+  function spaceTimeNow() {
+    return $drawingConfig.isTranscriptionMode
+      ? $drawingState.videoTime
+      : speculateClock.timeAt(performance.now())
+  }
+
   function handleSplitterDrag(e: MouseEvent | TouchEvent) {
-    if (isDraggingSplitter) {
-      e.preventDefault()
-      e.stopPropagation()
+    if (!dragAxis) return
+    e.preventDefault()
+    e.stopPropagation()
 
-      // Guard against empty touches array (e.g., touchend)
-      if ('touches' in e && !e.touches.length) return
+    // Guard against empty touches array (e.g., touchend)
+    if ('touches' in e && !e.touches.length) return
 
-      const rect = containerDiv.getBoundingClientRect()
-      const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX
-      const position = ((clientX - rect.left) / rect.width) * 100
-      const minVideoWidth = 30
-      const minImageWidth = 30
-      const constrainedPosition = Math.min(Math.max(position, minVideoWidth), 100 - minImageWidth)
-
-      drawingConfig.update((config) => ({
-        ...config,
-        splitPosition: constrainedPosition,
-      }))
+    const rect = containerDiv.getBoundingClientRect()
+    const point = 'touches' in e ? e.touches[0] : e
+    if (dragAxis === 'x') {
+      const position = ((point.clientX - rect.left) / rect.width) * 100
+      drawingConfig.update((config) => ({ ...config, splitPosition: clamp(position, 30, 70) }))
+    } else {
+      const position = ((point.clientY - rect.top) / rect.height) * 100
+      drawingConfig.update((config) => ({ ...config, spaceTimeSplit: clamp(position, 20, 80) }))
     }
   }
 
   function handleSplitterEnd() {
-    isDraggingSplitter = false
+    dragAxis = null
     if (p5Instance) {
       p5Instance.loop()
     }
@@ -68,6 +82,7 @@
 
   onMount(() => {
     const handleKeydown = (e: KeyboardEvent) => {
+      if (!isShortcutEvent(e)) return
       if (e.key.toLowerCase() === 'f') {
         e.preventDefault()
         if ($drawingConfig.isTranscriptionMode && videoHtmlElement) {
@@ -114,7 +129,7 @@
       if (!$drawingConfig.isTranscriptionMode) {
         if (!$drawingState.imageElement) return
         handlePressSpeculate(event)
-      } else if (!isDraggingSplitter && videoHtmlElement) {
+      } else if (!dragAxis && videoHtmlElement) {
         handlePressVideo(event, videoHtmlElement)
       }
     }
@@ -396,6 +411,7 @@
   $effect(() => {
     if (containerDiv && $drawingConfig) {
       containerDiv.style.setProperty('--split-width', `${$drawingConfig.splitPosition}%`)
+      containerDiv.style.setProperty('--video-controls-bottom', `${100 - videoHeight}%`)
     }
   })
 </script>
@@ -423,10 +439,11 @@
   <!-- Empty State -->
   {#if !$drawingState.imageElement}
     <div
-      class="absolute inset-0 flex items-center justify-center pointer-events-none"
+      class="absolute inset-y-0 right-0 flex items-center justify-center pointer-events-none"
+      style:left={showSpaceTime ? `${$drawingConfig.splitPosition}%` : '0'}
       data-ui-element
     >
-      <div class="text-center text-base-content/40 text-2xl space-y-2">
+      <div class="text-center text-base-content/40 text-2xl space-y-2 px-4">
         {#if $drawingConfig.isTranscriptionMode}
           <p>Upload a floor plan and video to get started</p>
         {:else}
@@ -437,20 +454,36 @@
     </div>
   {/if}
 
-  {#if $drawingConfig.isTranscriptionMode}
-    {@const startSplitterDrag = (e: Event) => {
+  {#if showSpaceTime}
+    <div
+      class="absolute left-0 bottom-0"
+      class:border-t={videoHeight < 100}
+      class:border-base-300={videoHeight < 100}
+      style:top="{videoHeight < 100 ? videoHeight : 0}%"
+      style:width="{$drawingConfig.splitPosition}%"
+    >
+      <SpaceTimeView
+        getNow={spaceTimeNow}
+        getDuration={() => videoHtmlElement?.duration ?? 0}
+        class="inset-0"
+      />
+    </div>
+  {/if}
+
+  {#if showSplit}
+    {@const startSplitterDrag = (axis: 'x' | 'y') => (e: Event) => {
       e.preventDefault()
       e.stopPropagation()
-      isDraggingSplitter = true
+      dragAxis = axis
     }}
     <button
       class="absolute top-0 bottom-0 w-8 bg-transparent cursor-col-resize hover:bg-base-content/5 touch-none"
       style="left: calc({$drawingConfig.splitPosition}% - 16px)"
       data-ui-element
-      onmousedown={startSplitterDrag}
-      {@attach (node) => on(node, 'touchstart', startSplitterDrag, { passive: false })}
+      onmousedown={startSplitterDrag('x')}
+      {@attach (node) => on(node, 'touchstart', startSplitterDrag('x'), { passive: false })}
       onkeydown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') startSplitterDrag(e)
+        if (e.key === 'Enter' || e.key === ' ') startSplitterDrag('x')(e)
       }}
       role="separator"
       aria-label="Resize panels"
@@ -461,6 +494,33 @@
         style="left: 50%"
       ></div>
     </button>
+
+    {#if videoHeight < 100}
+      <button
+        class="absolute left-0 h-8 bg-transparent cursor-row-resize hover:bg-base-content/5 touch-none"
+        style="top: calc({videoHeight}% - 16px); width: {$drawingConfig.splitPosition}%"
+        data-ui-element
+        onmousedown={startSplitterDrag('y')}
+        {@attach (node) => on(node, 'touchstart', startSplitterDrag('y'), { passive: false })}
+        onkeydown={(e) => {
+          if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+            e.preventDefault()
+            const step = e.key === 'ArrowUp' ? -2 : 2
+            drawingConfig.update((c) => ({
+              ...c,
+              spaceTimeSplit: clamp(c.spaceTimeSplit + step, 20, 80),
+            }))
+          }
+        }}
+        aria-label="Resize video and 3D view"
+        transition:fade={{ duration: 200 }}
+      >
+        <div
+          class="absolute left-0 right-0 h-1 bg-base-300 hover:bg-primary transition-colors"
+          style="top: 50%"
+        ></div>
+      </button>
+    {/if}
   {/if}
 
   {#if videoHtmlElement}
@@ -468,7 +528,8 @@
   {:else if !$drawingConfig.isTranscriptionMode && $drawingState.imageElement}
     <!-- Speculate mode controls (forward/rewind buttons) -->
     <div
-      class="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 bg-base-200/80 backdrop-blur-sm rounded-lg p-2 shadow-lg"
+      class="absolute bottom-4 -translate-x-1/2 flex gap-2 bg-base-200/80 backdrop-blur-sm rounded-lg p-2 shadow-lg"
+      style:left="{showSplit ? ($drawingConfig.splitPosition + 100) / 2 : 50}%"
       data-ui-element
     >
       <button

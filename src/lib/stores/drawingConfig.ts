@@ -13,6 +13,8 @@ interface DrawingConfig {
   jumpSeconds: number // transcription mode: fast forward/rewind duration in seconds (5-60)
   speculateJumpSeconds: number // speculate mode: fast forward/rewind duration in seconds
   floorPlanRotation: RotationAngle // rotation angle for floor plan display (0, 90, 180, 270)
+  showSpaceTime: boolean
+  spaceTimeSplit: number // transcription mode: video share of the left column height (%)
 }
 
 const defaultConfig: DrawingConfig = {
@@ -26,6 +28,8 @@ const defaultConfig: DrawingConfig = {
   jumpSeconds: 5,
   speculateJumpSeconds: 1,
   floorPlanRotation: 0,
+  showSpaceTime: false,
+  spaceTimeSplit: 55,
 }
 
 export const drawingConfig = writable<DrawingConfig>(defaultConfig)
@@ -47,8 +51,14 @@ export const updateExportSampleRate = (rate: number) => {
 }
 
 export function getSplitPositionForMode() {
-  const { isTranscriptionMode, splitPosition } = get(drawingConfig)
-  return isTranscriptionMode ? splitPosition : 0
+  const { isTranscriptionMode, showSpaceTime, splitPosition } = get(drawingConfig)
+  return isTranscriptionMode || showSpaceTime ? splitPosition : 0
+}
+
+/** Height (%) of the video slot in the left column; the 3D view takes the rest. */
+export function getVideoHeightPercent() {
+  const { isTranscriptionMode, showSpaceTime, spaceTimeSplit } = get(drawingConfig)
+  return isTranscriptionMode && showSpaceTime ? spaceTimeSplit : 100
 }
 
 const ROTATION_ANGLES: RotationAngle[] = [0, 90, 180, 270]
@@ -56,10 +66,7 @@ const ROTATION_ANGLES: RotationAngle[] = [0, 90, 180, 270]
 export function rotateFloorPlan(direction: 'cw' | 'ccw') {
   drawingConfig.update((config) => {
     const currentIndex = ROTATION_ANGLES.indexOf(config.floorPlanRotation)
-    const newIndex =
-      direction === 'cw'
-        ? (currentIndex + 1) % 4
-        : (currentIndex - 1 + 4) % 4
+    const newIndex = direction === 'cw' ? (currentIndex + 1) % 4 : (currentIndex - 1 + 4) % 4
     return { ...config, floorPlanRotation: ROTATION_ANGLES[newIndex] }
   })
 }

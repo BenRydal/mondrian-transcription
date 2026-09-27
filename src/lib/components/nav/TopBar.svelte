@@ -1,5 +1,6 @@
 <script lang="ts">
   import IconAdd from '~icons/material-symbols/add'
+  import Icon3D from '~icons/material-symbols/view-in-ar-outline'
   import { drawingConfig } from '$lib/stores/drawingConfig'
   import ConfirmDialog from '$lib/components/dialogs/ConfirmDialog.svelte'
 
@@ -60,6 +61,19 @@
         </button>
       {/each}
     </div>
+
+    <button
+      class="btn btn-sm"
+      class:btn-primary={$drawingConfig.showSpaceTime}
+      class:btn-soft={$drawingConfig.showSpaceTime}
+      aria-pressed={$drawingConfig.showSpaceTime}
+      aria-label="3D view"
+      title="{$drawingConfig.showSpaceTime ? 'Hide' : 'Show'} the 3D space-time view"
+      onclick={() => drawingConfig.update((c) => ({ ...c, showSpaceTime: !c.showSpaceTime }))}
+    >
+      <Icon3D class="w-4 h-4" />
+      <span class="hidden sm:inline">3D</span>
+    </button>
 
     <button class="btn btn-sm btn-neutral" onclick={onNewPath} aria-label="New Path">
       <IconAdd class="w-4 h-4" />
