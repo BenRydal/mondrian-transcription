@@ -1,5 +1,5 @@
 import type p5 from 'p5'
-import { drawingState } from '../../stores/drawingState'
+import { drawingState, appendFinalPoint } from '../../stores/drawingState'
 import { get } from 'svelte/store'
 import { drawingConfig } from '../../stores/drawingConfig'
 
@@ -53,21 +53,25 @@ export function setupVideo(p5: p5) {
 
     p5Vid.elt.onplay = () => drawingState.update((state) => ({ ...state, isVideoPlaying: true }))
 
-    p5Vid.elt.onpause = () =>
+    p5Vid.elt.onpause = () => {
+      appendFinalPoint(videoElt.currentTime)
       drawingState.update((state) => ({
         ...state,
         isVideoPlaying: false,
         shouldTrackMouse: false,
         isDrawing: false,
       }))
+    }
 
-    p5Vid.elt.onended = () =>
+    p5Vid.elt.onended = () => {
+      appendFinalPoint(videoElt.currentTime)
       drawingState.update((state) => ({
         ...state,
         isVideoPlaying: false,
         shouldTrackMouse: false,
         isDrawing: false,
       }))
+    }
 
     return p5Vid
   }
@@ -97,6 +101,7 @@ export function setupVideo(p5: p5) {
     if (videoElement && (videoElement as any).elt) {
       const video = (videoElement as any).elt
       if (video.currentTime >= video.duration - 0.1) {
+        appendFinalPoint(video.currentTime)
         video.pause()
         video.currentTime = video.duration
 

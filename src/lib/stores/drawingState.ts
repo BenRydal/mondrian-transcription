@@ -2,7 +2,12 @@ import { writable, get } from 'svelte/store'
 import type p5 from 'p5'
 import type { Point } from '../p5/types/sketch'
 import { drawingConfig } from '../stores/drawingConfig'
-import { indexSampler } from '../p5/features/drawing'
+import { shouldKeepPoint } from '../timing/sampling'
+import {
+  speculateClock,
+  syncSpeculateClock,
+  invalidateSpeculateClock,
+} from '../timing/sessionClocks'
 
 export interface PathData {
   points: Point[]
@@ -46,26 +51,31 @@ function clearJumpingOnSeek(videoElement: HTMLVideoElement) {
   videoElement.addEventListener('seeked', onSeeked)
 }
 
+function syncClockToCurrentPath(state: DrawingState, now: number) {
+  const currentPath = state.paths.find((p) => p.pathId === state.currentPathId)
+  syncSpeculateClock(state.currentPathId, currentPath?.points.at(-1)?.time, now)
+}
+
 export function handleRewindSpeculateMode() {
   drawingState.update((state) => {
     const currentPathIndex = state.paths.findIndex((p) => p.pathId === state.currentPathId)
     if (currentPathIndex === -1) return state
 
-    const { jumpSteps } = get(drawingConfig)
     const updatedPaths = [...state.paths]
     const currentPath = updatedPaths[currentPathIndex]
-
     if (currentPath.points.length === 0) return state
 
-    // Remove last N points directly (works regardless of time units)
-    const updatedPoints = currentPath.points.slice(
+    const now = performance.now()
+    syncClockToCurrentPath(state, now)
+    speculateClock.pause(now)
+    const newTime = Math.max(
       0,
-      Math.max(0, currentPath.points.length - jumpSteps)
+      speculateClock.timeAt(now) - get(drawingConfig).speculateJumpSeconds
     )
-    updatedPaths[currentPathIndex] = { ...currentPath, points: updatedPoints }
+    speculateClock.seek(newTime, now)
 
-    // Reset index sampler with the new point count (not time!)
-    indexSampler.reset(updatedPoints.length)
+    const updatedPoints = currentPath.points.filter((point) => point.time <= newTime)
+    updatedPaths[currentPathIndex] = { ...currentPath, points: updatedPoints }
 
     return { ...state, shouldTrackMouse: false, isDrawing: false, paths: updatedPaths }
   })
@@ -76,32 +86,19 @@ export function handleForwardSpeculateMode() {
     const currentPathIndex = state.paths.findIndex((p) => p.pathId === state.currentPathId)
     if (currentPathIndex === -1) return state
 
-    const { jumpSteps, useAdaptiveSampling, heartbeatInterval } = get(drawingConfig)
     const updatedPaths = [...state.paths]
     const currentPath = updatedPaths[currentPathIndex]
-
-    const lastPoint = currentPath.points[currentPath.points.length - 1]
+    const lastPoint = currentPath.points.at(-1)
     if (!lastPoint) return state
 
-    // Time increment depends on sampling mode:
-    // - Adaptive: heartbeat interval (seconds) for stationary pause simulation
-    // - Index-based: step value (which equals pollingRate)
-    const timeStep = useAdaptiveSampling ? heartbeatInterval / 1000 : indexSampler.getStep()
+    const now = performance.now()
+    syncClockToCurrentPath(state, now)
+    const from = Math.max(speculateClock.timeAt(now), lastPoint.time)
+    const newTime = from + get(drawingConfig).speculateJumpSeconds
+    speculateClock.seek(newTime, now)
 
-    // Add stationary points at the last position (simulating a pause/stop)
-    const updatedPoints = [...currentPath.points]
-    for (let i = 1; i <= jumpSteps; i++) {
-      updatedPoints.push({
-        x: lastPoint.x,
-        y: lastPoint.y,
-        time: lastPoint.time + i * timeStep,
-        pathId: state.currentPathId,
-      })
-    }
-    updatedPaths[currentPathIndex] = { ...currentPath, points: updatedPoints }
-
-    // Reset index sampler with the new point count
-    indexSampler.reset(updatedPoints.length)
+    const holdPoint = { x: lastPoint.x, y: lastPoint.y, time: newTime, pathId: state.currentPathId }
+    updatedPaths[currentPathIndex] = { ...currentPath, points: [...currentPath.points, holdPoint] }
 
     return { ...state, paths: updatedPaths }
   })
@@ -112,7 +109,7 @@ export function handleForwardTranscription(videoElement: HTMLVideoElement) {
     if (state.isJumping) return state
     if (!videoElement.duration || isNaN(videoElement.duration)) return state
 
-    const { jumpSeconds, useAdaptiveSampling, heartbeatInterval, pollingRate } = get(drawingConfig)
+    const { jumpSeconds } = get(drawingConfig)
     const currentTime = state.videoTime
     const currentPathIndex = state.paths.findIndex((p) => p.pathId === state.currentPathId)
     if (currentPathIndex === -1) return state
@@ -125,18 +122,15 @@ export function handleForwardTranscription(videoElement: HTMLVideoElement) {
     const newTime = Math.min(currentTime + jumpSeconds, videoElement.duration)
     videoElement.currentTime = newTime
 
-    // Use heartbeat interval when adaptive sampling is on (fewer points for stationary periods)
-    const samplingRate = useAdaptiveSampling ? heartbeatInterval / 1000 : pollingRate / 1000
     const updatedPoints = [...currentPath.points]
-
-    // Use multiplication to avoid floating point accumulation drift
-    const timeDelta = newTime - currentTime
-    const numPoints = Math.floor(timeDelta / samplingRate)
-    for (let i = 1; i <= numPoints; i++) {
-      const t = currentTime + i * samplingRate
-      updatedPoints.push({ x: lastPoint.x, y: lastPoint.y, time: t, pathId: state.currentPathId })
+    if (newTime > lastPoint.time) {
+      updatedPoints.push({
+        x: lastPoint.x,
+        y: lastPoint.y,
+        time: newTime,
+        pathId: state.currentPathId,
+      })
     }
-
     updatedPaths[currentPathIndex] = { ...currentPath, points: updatedPoints }
 
     return { ...state, isJumping: true, videoTime: newTime, paths: updatedPaths }
@@ -235,6 +229,7 @@ export function toggleDrawingNoVideo() {
 
 export function createNewPath(color: string) {
   console.log('Creating new path with color', color)
+  invalidateSpeculateClock()
   drawingState.update((state) => {
     const newPathId = state.currentPathId + 1
     return {
@@ -252,24 +247,33 @@ export function createNewPath(color: string) {
   })
 }
 
-export function addPointToCurrentPath(point: Point) {
+/** Append points while recording, dropping any closer than the minimum interval in clock time. */
+export function addPointsToCurrentPath(points: Point[]) {
   drawingState.update((state) => {
-    if (!state.shouldTrackMouse) return state
+    if (!state.shouldTrackMouse || points.length === 0) return state
 
     const currentPathIndex = state.paths.findIndex((p) => p.pathId === state.currentPathId)
     if (currentPathIndex === -1) return state
 
-    const updatedPaths = [...state.paths]
-    updatedPaths[currentPathIndex] = {
-      ...updatedPaths[currentPathIndex],
-      points: [...updatedPaths[currentPathIndex].points, point],
+    const currentPath = state.paths[currentPathIndex]
+    const updatedPoints = [...currentPath.points]
+    for (const point of points) {
+      if (shouldKeepPoint(updatedPoints.at(-1)?.time, point.time)) updatedPoints.push(point)
     }
+    if (updatedPoints.length === currentPath.points.length) return state
 
-    return {
-      ...state,
-      paths: updatedPaths,
-    }
+    const updatedPaths = [...state.paths]
+    updatedPaths[currentPathIndex] = { ...currentPath, points: updatedPoints }
+    return { ...state, paths: updatedPaths }
   })
+}
+
+/** Hold the last position until the stop time so stationary endings survive export. */
+export function appendFinalPoint(time: number) {
+  const state = get(drawingState)
+  const lastPoint = state.paths.find((p) => p.pathId === state.currentPathId)?.points.at(-1)
+  if (!lastPoint) return
+  addPointsToCurrentPath([{ x: lastPoint.x, y: lastPoint.y, time, pathId: state.currentPathId }])
 }
 
 export function renamePathById(pathId: number, name: string) {
@@ -291,6 +295,7 @@ export function renamePathById(pathId: number, name: string) {
 }
 
 export function deletePathById(pathId: number) {
+  invalidateSpeculateClock()
   drawingState.update((state) => {
     const updatedPaths = state.paths.filter((p) => p.pathId !== pathId)
 

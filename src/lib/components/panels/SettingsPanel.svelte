@@ -6,22 +6,21 @@
   import PanelSection from './PanelSection.svelte'
 
   const strokeWeights = [1, 2, 3, 4, 5, 8, 10]
-  const pollingRates = [
-    { labelVideo: '4ms', labelSpeculate: '4 steps', value: 4 },
-    { labelVideo: '8ms', labelSpeculate: '8 steps', value: 8 },
-    { labelVideo: '16ms', labelSpeculate: '16 steps', value: 16 },
-    { labelVideo: '32ms', labelSpeculate: '32 steps', value: 32 },
-    { labelVideo: '64ms', labelSpeculate: '64 steps', value: 64 },
-    { labelVideo: '100ms', labelSpeculate: '100 steps', value: 100 },
-  ]
+  const exportSampleRates = [1, 2, 5, 10, 20, 30, 60]
 
   const isTranscriptionMode = $derived($drawingConfig.isTranscriptionMode)
   const hasImage = $derived($drawingState.imageElement !== null)
   const isRecording = $derived($drawingState.shouldTrackMouse)
 
-  function setPollingRate(e: Event) {
-    const pollingRate = parseInt((e.currentTarget as HTMLSelectElement).value)
-    drawingConfig.update((c) => ({ ...c, pollingRate }))
+  const jumpRange = $derived(
+    isTranscriptionMode
+      ? { min: 5, max: 60, step: 5, value: $drawingConfig.jumpSeconds }
+      : { min: 0.5, max: 10, step: 0.5, value: $drawingConfig.speculateJumpSeconds }
+  )
+
+  function setExportSampleRate(e: Event) {
+    const exportSampleRate = parseInt((e.currentTarget as HTMLSelectElement).value)
+    drawingConfig.update((c) => ({ ...c, exportSampleRate }))
   }
 
   function setStrokeWeight(e: Event) {
@@ -29,19 +28,15 @@
     drawingConfig.update((c) => ({ ...c, strokeWeight }))
   }
 
-  function toggleAdaptiveSampling() {
-    drawingConfig.update((c) => ({ ...c, useAdaptiveSampling: !c.useAdaptiveSampling }))
-  }
-
   function toggleContinuousMode() {
     drawingConfig.update((c) => ({ ...c, isContinuousMode: !c.isContinuousMode }))
   }
 
   function setJumpValue(e: Event) {
-    const value = parseInt((e.currentTarget as HTMLInputElement).value)
+    const value = parseFloat((e.currentTarget as HTMLInputElement).value)
     drawingConfig.update((c) => ({
       ...c,
-      ...(c.isTranscriptionMode ? { jumpSeconds: value } : { jumpSteps: value }),
+      ...(c.isTranscriptionMode ? { jumpSeconds: value } : { speculateJumpSeconds: value }),
     }))
   }
 </script>
@@ -49,59 +44,37 @@
 <div class="flex flex-col gap-6 px-3 py-4">
   <PanelSection title="Sampling">
     <div class="flex flex-col gap-1">
-      <label for="polling-rate" class="text-sm">Point Capture Interval</label>
+      <label for="export-sample-rate" class="text-sm">Export Sample Rate</label>
       <select
-        id="polling-rate"
+        id="export-sample-rate"
         class="select select-bordered select-sm w-full"
-        value={$drawingConfig.pollingRate}
-        onchange={setPollingRate}
+        value={$drawingConfig.exportSampleRate}
+        onchange={setExportSampleRate}
       >
-        {#each pollingRates as rate (rate.value)}
-          <option value={rate.value}>
-            {isTranscriptionMode ? rate.labelVideo : rate.labelSpeculate}
-          </option>
+        {#each exportSampleRates as rate (rate)}
+          <option value={rate}>{rate} points/s</option>
         {/each}
       </select>
     </div>
 
     <div class="flex flex-col gap-1">
-      <label class="flex items-center justify-between gap-2 cursor-pointer">
-        <span class="text-sm">Adaptive Sampling</span>
-        <input
-          type="checkbox"
-          class="toggle toggle-sm toggle-primary"
-          checked={$drawingConfig.useAdaptiveSampling}
-          onchange={toggleAdaptiveSampling}
-        />
-      </label>
-      <p class="text-xs text-base-content/60">
-        When ON: samples frequently during movement, less when stationary. When OFF: fixed interval
-        sampling.
-      </p>
-    </div>
-
-    <div class="flex flex-col gap-1">
       <div class="flex items-center justify-between">
         <label for="jump-value" class="text-sm">Fast Forward / Rewind</label>
-        <span class="text-sm text-base-content/60">
-          {isTranscriptionMode
-            ? `${$drawingConfig.jumpSeconds}s`
-            : `${$drawingConfig.jumpSteps} steps`}
-        </span>
+        <span class="text-sm text-base-content/60">{jumpRange.value}s</span>
       </div>
       <input
         id="jump-value"
         type="range"
-        min="5"
-        max={isTranscriptionMode ? 60 : 50}
-        step="5"
-        value={isTranscriptionMode ? $drawingConfig.jumpSeconds : $drawingConfig.jumpSteps}
+        min={jumpRange.min}
+        max={jumpRange.max}
+        step={jumpRange.step}
+        value={jumpRange.value}
         oninput={setJumpValue}
         class="range range-sm w-full"
       />
       <div class="flex justify-between text-xs text-base-content/40">
-        <span>5{isTranscriptionMode ? 's' : ''}</span>
-        <span>{isTranscriptionMode ? '60s' : '50'}</span>
+        <span>{jumpRange.min}s</span>
+        <span>{jumpRange.max}s</span>
       </div>
     </div>
   </PanelSection>

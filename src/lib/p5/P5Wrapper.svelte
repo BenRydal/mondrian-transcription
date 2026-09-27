@@ -16,13 +16,8 @@
   } from '../stores/drawingState'
   import IconRewind from '~icons/material-symbols/fast-rewind'
   import IconForward from '~icons/material-symbols/fast-forward'
-  import {
-    setupDrawing,
-    drawPaths,
-    timeSampler,
-    adaptiveSampler,
-    indexSampler,
-  } from './features/drawing'
+  import { setupDrawing, drawPaths, endCurrentTake, observeVideo } from './features/drawing'
+  import { resamplePath, sessionScale } from '$lib/timing/sampling'
   import { setupVideo } from './features/video'
   import VideoControls from '../components/video/VideoControls.svelte'
   import { getFittedImageDisplayRect } from '$lib/utils/drawingUtils'
@@ -111,12 +106,30 @@
   })
 
   const sketch: SketchFn = (p5) => {
-    const { handleMousePressedVideo, handleMousePressedSpeculateMode, addCurrentPoint } =
-      setupDrawing(p5)
+    let canvasElt: HTMLCanvasElement | null = null
+    const { handlePressVideo, handlePressSpeculate, handleMove } = setupDrawing(p5, () => canvasElt)
+
+    const handlePointerDown = (event: PointerEvent) => {
+      if (!event.isPrimary) return
+      if (!$drawingConfig.isTranscriptionMode) {
+        if (!$drawingState.imageElement) return
+        handlePressSpeculate(event)
+      } else if (!isDraggingSplitter && videoHtmlElement) {
+        handlePressVideo(event, videoHtmlElement)
+      }
+    }
+
+    const handlePointerMove = (event: PointerEvent) => {
+      if (event.isPrimary) handleMove(event, videoHtmlElement)
+    }
 
     p5.setup = () => {
       const canvas = p5.createCanvas(width, height)
       canvas.parent(containerDiv)
+      canvasElt = (canvas as unknown as { elt: HTMLCanvasElement }).elt
+      canvasElt.addEventListener('pointerdown', handlePointerDown)
+      canvasElt.addEventListener('pointermove', handlePointerMove)
+      canvasElt.addEventListener('pointerup', handlePointerMove)
       p5.strokeCap(p5.ROUND)
       p5.strokeJoin(p5.ROUND)
 
@@ -157,67 +170,13 @@
       if ($drawingConfig.isTranscriptionMode && videoElement) {
         const { updateVideoTime, drawVideo, checkVideoEnd } = setupVideo(p5)
         lastVideoTime = updateVideoTime(videoElement, lastVideoTime)
+        if (videoHtmlElement) observeVideo(videoHtmlElement, performance.now())
         checkVideoEnd(videoElement)
         drawVideo(p5, videoElement)
       }
 
       drawRotatedImage()
-      addCurrentPoint()
       drawPaths(p5)
-    }
-
-    // Update p5's mouseX/mouseY from touch coordinates
-    const updateMouseFromTouch = (event: TouchEvent): boolean => {
-      if (!event.touches?.length) return false
-      const canvas = containerDiv.querySelector('canvas')
-      if (!canvas) return false
-      const rect = canvas.getBoundingClientRect()
-      const touch = event.touches[0]
-      const setP5Prop = (p5 as unknown as { _setProperty: (k: string, v: number) => void })
-        ._setProperty
-      setP5Prop.call(p5, 'mouseX', touch.clientX - rect.left)
-      setP5Prop.call(p5, 'mouseY', touch.clientY - rect.top)
-      return true
-    }
-
-    // Shared handler for mouse/touch press on canvas
-    const handleCanvasPress = (event: MouseEvent | TouchEvent): boolean | void => {
-      const target = event?.target as HTMLElement
-      if (target?.closest('[data-ui-element]')) return false
-
-      if (!$drawingConfig.isTranscriptionMode) {
-        if (!$drawingState.imageElement) return false
-        handleMousePressedSpeculateMode()
-      } else {
-        if (!isDraggingSplitter && videoHtmlElement) {
-          handleMousePressedVideo(videoHtmlElement)
-        }
-      }
-    }
-
-    p5.mousePressed = (event: MouseEvent) => {
-      handleCanvasPress(event)
-    }
-
-    p5.touchStarted = (event: TouchEvent) => {
-      // Only prevent default for canvas touches, not UI elements
-      const target = event?.target as HTMLElement
-      if (target?.closest('[data-ui-element]') || !target?.closest('canvas')) {
-        return
-      }
-      if (!updateMouseFromTouch(event)) return
-      handleCanvasPress(event)
-      return false // Prevent default only for canvas touches
-    }
-
-    p5.touchMoved = (event: TouchEvent) => {
-      // Only prevent default for canvas touches, not UI elements
-      const target = event?.target as HTMLElement
-      if (target?.closest('[data-ui-element]') || !target?.closest('canvas')) {
-        return
-      }
-      updateMouseFromTouch(event)
-      return false // Prevent scrolling only for canvas touches
     }
 
     p5.loop()
@@ -344,9 +303,7 @@
 
     const currentPathCount = $drawingState.paths.length
     const newColor = colors[currentPathCount % colors.length]
-    timeSampler.reset()
-    adaptiveSampler.reset()
-    indexSampler.reset()
+    endCurrentTake(videoHtmlElement)
 
     if (!$drawingConfig.isTranscriptionMode) {
       createNewPath(newColor)
@@ -374,7 +331,13 @@
     const paths = $drawingState.paths
     const imageElement = $drawingState?.imageElement
     const isTranscriptionMode = $drawingConfig.isTranscriptionMode
-    const scaleValue = $drawingConfig.speculateScale
+    const sampleRate = $drawingConfig.exportSampleRate
+    const scale = isTranscriptionMode
+      ? 1
+      : sessionScale(
+          paths.map((path) => path.points),
+          $drawingConfig.speculateScale
+        )
 
     const files: Record<string, Uint8Array> = {}
 
@@ -404,21 +367,8 @@
     paths.forEach((path, index) => {
       if (path.points.length === 0) return
 
-      const minTime = path.points[0].time
-      const maxTime = path.points[path.points.length - 1].time
-      const timeRange = maxTime - minTime
-      const csv = path.points
-        .map((p) => {
-          // Transcription mode: use video time as-is
-          // Speculate mode: normalize to [0, scaleValue]
-          const time = isTranscriptionMode
-            ? p.time
-            : timeRange > 0
-              ? ((p.time - minTime) / timeRange) * scaleValue
-              : 0
-          return `${p.x},${p.y},${time}`
-        })
-        .join('\n')
+      const rows = resamplePath(path.points, { rate: sampleRate, scale })
+      const csv = rows.map((p) => `${p.x},${p.y},${p.time}`).join('\n')
 
       const filename = path.name ? `${path.name}.csv` : `path-${index + 1}.csv`
       files[filename] = new TextEncoder().encode(`x,y,time\n${csv}`)

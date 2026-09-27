@@ -48,8 +48,8 @@
   <div class="modal-box w-80">
     <h2 class="text-lg font-semibold mb-4">Set Time Scale</h2>
     <p class="mb-4 text-sm">
-      In <strong>Speculate Mode</strong>, recorded data is stretched over a chosen duration. Enter
-      total time below:
+      In <strong>Speculate Mode</strong>, all paths are scaled by one factor so the session ends at
+      the chosen duration. Paths keep their relative timing. Enter total time below:
     </p>
 
     <div class="flex gap-2 mb-2">

@@ -5,7 +5,6 @@
     togglePathVisibility,
     updatePathColor,
   } from '$lib/stores/drawingState'
-  import { drawingConfig } from '$lib/stores/drawingConfig'
   import IconVisibility from '~icons/material-symbols/visibility'
   import IconVisibilityOff from '~icons/material-symbols/visibility-off'
   import IconClose from '~icons/material-symbols/close'
@@ -18,7 +17,6 @@
   const paths = $derived($drawingState.paths)
   const currentPathId = $derived($drawingState.currentPathId)
   const isRecording = $derived($drawingState.shouldTrackMouse)
-  const isTranscriptionMode = $derived($drawingConfig.isTranscriptionMode)
 
   function formatTime(seconds: number): string {
     const totalSecs = Math.floor(seconds)
@@ -111,11 +109,9 @@
             {formatPoints(path.points.length)}
           </span>
 
-          {#if isTranscriptionMode}
-            <span class="w-12 text-right text-sm tabular-nums text-base-content/50">
-              {getPathDuration(path.points)}
-            </span>
-          {/if}
+          <span class="w-12 text-right text-sm tabular-nums text-base-content/50">
+            {getPathDuration(path.points)}
+          </span>
 
           {#if isActiveRecording}
             <span class="text-sm text-error" aria-label="Recording">●</span>

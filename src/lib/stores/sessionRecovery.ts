@@ -17,9 +17,7 @@ export interface SavedSession {
   videoTime: number
   config: {
     isTranscriptionMode: boolean
-    pollingRate: number
-    heartbeatInterval?: number // optional for backwards compatibility
-    useAdaptiveSampling?: boolean // optional for backwards compatibility
+    exportSampleRate?: number // optional for backwards compatibility
     strokeWeight: number
     speculateScale: number
     isContinuousMode: boolean
@@ -50,9 +48,7 @@ export function saveSession(floorPlanDataUrl: string | null = null): boolean {
     videoTime: state.videoTime,
     config: {
       isTranscriptionMode: config.isTranscriptionMode,
-      pollingRate: config.pollingRate,
-      heartbeatInterval: config.heartbeatInterval,
-      useAdaptiveSampling: config.useAdaptiveSampling,
+      exportSampleRate: config.exportSampleRate,
       strokeWeight: config.strokeWeight,
       speculateScale: config.speculateScale,
       isContinuousMode: config.isContinuousMode,

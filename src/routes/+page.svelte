@@ -14,6 +14,7 @@
   import { get } from 'svelte/store'
   import { drawingState, deletePathById } from '$lib/stores/drawingState'
   import { drawingConfig } from '$lib/stores/drawingConfig'
+  import { invalidateSpeculateClock } from '$lib/timing/sessionClocks'
   import {
     getRecoverableSession,
     clearSavedSession,
@@ -170,9 +171,7 @@
     drawingConfig.update((config) => ({
       ...config,
       isTranscriptionMode: recoveredSession!.config.isTranscriptionMode,
-      pollingRate: recoveredSession!.config.pollingRate,
-      heartbeatInterval: recoveredSession!.config.heartbeatInterval ?? 500,
-      useAdaptiveSampling: recoveredSession!.config.useAdaptiveSampling ?? true,
+      exportSampleRate: recoveredSession!.config.exportSampleRate ?? config.exportSampleRate,
       strokeWeight: recoveredSession!.config.strokeWeight,
       speculateScale: recoveredSession!.config.speculateScale,
       isContinuousMode: recoveredSession!.config.isContinuousMode,
@@ -180,6 +179,7 @@
     }))
 
     // Restore paths and state
+    invalidateSpeculateClock()
     drawingState.update((state) => ({
       ...state,
       paths: recoveredSession!.paths,

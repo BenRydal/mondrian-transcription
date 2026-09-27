@@ -49,7 +49,7 @@ No installation required—runs entirely in your browser.
 - **Video-Synced Transcription** — Draw paths while video plays; points are timestamped to playback time.
 - **Multi-Scale Support** — Works for gesture-level, room-level, or building-level movement.
 - **Multiple Paths** — Track multiple people or objects with color-coded paths.
-- **Smart Sampling** — Adaptive sampling reduces file size while preserving movement detail.
+- **Frame-Rate Independent Timing** — Points are timestamped from pointer events on one session clock and exported on a shared time grid.
 - **Session Recovery** — Auto-saves your work to prevent data loss from browser crashes.
 - **Flexible Export** — Download a ZIP containing CSVs for each path plus your floor plan.
 
@@ -118,6 +118,7 @@ Output is compatible with visualization tools like the [Interaction Geography Sl
 
 ```bash
 yarn build    # Production build
+yarn test     # Unit tests
 yarn check    # Type-check Svelte components
 yarn lint     # Run ESLint + Prettier
 yarn format   # Auto-format code

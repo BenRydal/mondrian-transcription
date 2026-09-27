@@ -12,8 +12,8 @@
           { key: 'R', action: `Rewind ${$drawingConfig.jumpSeconds}s` },
         ]
       : [
-          { key: 'F', action: `Forward ${$drawingConfig.jumpSteps} steps` },
-          { key: 'R', action: `Undo ${$drawingConfig.jumpSteps} steps` },
+          { key: 'F', action: `Forward ${$drawingConfig.speculateJumpSeconds}s` },
+          { key: 'R', action: `Rewind ${$drawingConfig.speculateJumpSeconds}s` },
         ]
   )
 </script>
