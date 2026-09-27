@@ -1,7 +1,8 @@
 <script lang="ts">
-  import P5, { type Sketch } from 'p5-svelte'
+  import { P5Canvas, type SketchFn } from 'svelte-p5'
   import type p5 from 'p5'
   import { onMount } from 'svelte'
+  import { on } from 'svelte/events'
   import { fade } from 'svelte/transition'
   import { zip } from 'fflate'
   import { drawingConfig, getSplitPositionForMode } from '../stores/drawingConfig'
@@ -31,13 +32,15 @@
   let width = 800
   let height = 400
   let isDraggingSplitter = false
-  let videoElement: p5.Element | null = null
-  let p5Instance: p5
+  let videoElement = $state.raw<p5.Element | null>(null)
+  let p5Instance = $state.raw<p5 | null>(null)
   let lastVideoTime = 0
   const colors = ['#FF0000', '#00FF00', '#0000FF', '#FFFF00', '#FF00FF', '#00FFFF']
 
-  $: videoHtmlElement = videoElement ? (videoElement as { elt: HTMLVideoElement }).elt : null
-  $: hasRecordedPaths = $drawingState.paths.some((p) => p.points.length > 0)
+  const videoHtmlElement = $derived(
+    videoElement ? (videoElement as { elt: HTMLVideoElement }).elt : null
+  )
+  const hasRecordedPaths = $derived($drawingState.paths.some((p) => p.points.length > 0))
 
   function handleSplitterDrag(e: MouseEvent | TouchEvent) {
     if (isDraggingSplitter) {
@@ -105,8 +108,7 @@
     }
   })
 
-  const sketch: Sketch = (p5: p5) => {
-    p5Instance = p5
+  const sketch: SketchFn = (p5) => {
     const { handleMousePressedVideo, handleMousePressedSpeculateMode, addCurrentPoint } =
       setupDrawing(p5)
 
@@ -116,9 +118,7 @@
       p5.strokeCap(p5.ROUND)
       p5.strokeJoin(p5.ROUND)
 
-      if (p5Instance) {
-        p5Instance.noLoop()
-      }
+      p5.noLoop()
     }
 
     // Helper to draw rotated floor plan image
@@ -218,9 +218,7 @@
       return false // Prevent scrolling only for canvas touches
     }
 
-    if (p5Instance) {
-      p5Instance.loop()
-    }
+    p5.loop()
   }
 
   export function setVideo(video: HTMLVideoElement) {
@@ -250,7 +248,7 @@
 
     video.loop = false
 
-    const { setVideo: setupP5Video } = setupVideo(p5Instance)
+    const { setVideo: setupP5Video } = setupVideo(p5Instance!)
     videoElement = setupP5Video(video)
 
     if (videoElement) {
@@ -286,7 +284,7 @@
     // Auto-detect recovery: paths exist but no image loaded yet
     const isImplicitRecovery = !isRecovery && hasRecordedPaths && !$drawingState.imageElement
 
-    p5Instance.loadImage(image.src, (p5Img: p5.Image) => {
+    p5Instance!.loadImage(image.src, (p5Img: p5.Image) => {
       if (!isRecovery && !isImplicitRecovery) {
         // Reset rotation for new floor plans (not recovery)
         drawingConfig.update((c) => ({ ...c, floorPlanRotation: 0 }))
@@ -480,21 +478,23 @@
     }
   }
 
-  $: if (containerDiv && $drawingConfig) {
-    containerDiv.style.setProperty('--split-width', `${$drawingConfig.splitPosition}%`)
-  }
+  $effect(() => {
+    if (containerDiv && $drawingConfig) {
+      containerDiv.style.setProperty('--split-width', `${$drawingConfig.splitPosition}%`)
+    }
+  })
 </script>
 
 <div
   bind:this={containerDiv}
   class="relative w-full h-[calc(100vh-64px)] touch-none"
-  on:mousemove={handleSplitterDrag}
-  on:mouseup={handleSplitterEnd}
-  on:mouseleave={handleSplitterEnd}
-  on:touchmove={handleSplitterDrag}
-  on:touchend={handleSplitterEnd}
-  on:touchcancel={handleSplitterEnd}
-  on:keydown={(e) => {
+  onmousemove={handleSplitterDrag}
+  onmouseup={handleSplitterEnd}
+  onmouseleave={handleSplitterEnd}
+  {@attach (node) => on(node, 'touchmove', handleSplitterDrag, { passive: false })}
+  ontouchend={handleSplitterEnd}
+  ontouchcancel={handleSplitterEnd}
+  onkeydown={(e) => {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault()
     }
@@ -502,7 +502,8 @@
   role="application"
   aria-label="Drawing Canvas"
 >
-  <P5 {sketch} />
+  <!-- The sketch reparents its canvas into containerDiv, so the host div must not take up height. -->
+  <P5Canvas {sketch} bind:instance={p5Instance} style="display: block;" />
 
   <!-- Empty State -->
   {#if !$drawingState.imageElement}
@@ -531,9 +532,9 @@
       class="absolute top-0 bottom-0 w-8 bg-transparent cursor-col-resize hover:bg-base-content/5 touch-none"
       style="left: calc({$drawingConfig.splitPosition}% - 16px)"
       data-ui-element
-      on:mousedown={startSplitterDrag}
-      on:touchstart={startSplitterDrag}
-      on:keydown={(e) => {
+      onmousedown={startSplitterDrag}
+      {@attach (node) => on(node, 'touchstart', startSplitterDrag, { passive: false })}
+      onkeydown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') startSplitterDrag(e)
       }}
       role="separator"
@@ -557,7 +558,7 @@
     >
       <button
         class="btn btn-ghost btn-sm btn-circle"
-        on:click={handleRewindSpeculateMode}
+        onclick={handleRewindSpeculateMode}
         aria-label="Rewind"
         title="Rewind (R)"
       >
@@ -565,7 +566,7 @@
       </button>
       <button
         class="btn btn-ghost btn-sm btn-circle"
-        on:click={handleForwardSpeculateMode}
+        onclick={handleForwardSpeculateMode}
         aria-label="Forward"
         title="Forward (F)"
       >

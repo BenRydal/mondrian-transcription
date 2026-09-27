@@ -2920,7 +2920,6 @@ __metadata:
     fflate: "npm:^0.8.2"
     moment: "npm:^2.30.1"
     p5: "npm:^2.0.5"
-    p5-svelte: "npm:^3.1.2"
     papaparse: "npm:^5.5.3"
     postcss: "npm:^8.5.6"
     prettier: "npm:^3.6.2"
@@ -2928,6 +2927,7 @@ __metadata:
     svelte: "npm:^5.40.1"
     svelte-check: "npm:^4.3.3"
     svelte-icons: "npm:^2.1.0"
+    svelte-p5: "npm:^1.0.0"
     svelte-preprocess: "npm:^6.0.3"
     tailwindcss: "npm:^4.1.14"
     toolcool-range-slider: "npm:^4.0.28"
@@ -3081,25 +3081,6 @@ __metadata:
   version: 7.0.3
   resolution: "p-map@npm:7.0.3"
   checksum: 10c0/46091610da2b38ce47bcd1d8b4835a6fa4e832848a6682cf1652bc93915770f4617afc844c10a77d1b3e56d2472bb2d5622353fa3ead01a7f42b04fc8e744a5c
-  languageName: node
-  linkType: hard
-
-"p5-svelte@npm:^3.1.2":
-  version: 3.1.2
-  resolution: "p5-svelte@npm:3.1.2"
-  dependencies:
-    p5: "npm:^1.4.1"
-  peerDependencies:
-    "@types/p5": ^1.4.2
-    p5: ^1.4.0
-  checksum: 10c0/86e96281f0dfd8adaa8e6627ce77d7cc3086a792177819c2176f8ce5eca9c161948a6771e11c7ec1c15c3ccbb4354e16c00237f8e99eb7c7ee775f49f60cc53b
-  languageName: node
-  linkType: hard
-
-"p5@npm:^1.4.1":
-  version: 1.11.2
-  resolution: "p5@npm:1.11.2"
-  checksum: 10c0/5e7b86dca5e20038067a64d52c7e498d4e0d89085fa9c6b5b2260ca031234880ef79e3956e77fa9c419fad79926b5461747fdb5c2fd82901ee5126c394fe98e3
   languageName: node
   linkType: hard
 
@@ -3789,6 +3770,16 @@ __metadata:
   version: 2.1.0
   resolution: "svelte-icons@npm:2.1.0"
   checksum: 10c0/1150b9f67302e3b3b2b7d403d5695a5e11d3f77a10393516b719ce3b306e9a300a0fc02be9ff328a2488723feccdad7709329a97c7d43d55605ab00566a482f2
+  languageName: node
+  linkType: hard
+
+"svelte-p5@npm:^1.0.0":
+  version: 1.0.0
+  resolution: "svelte-p5@npm:1.0.0"
+  peerDependencies:
+    p5: ">=1.11.0 <3"
+    svelte: ^5.0.0
+  checksum: 10c0/2d3c75959988cc78fb6503bd4defb75f3e0e0f78799308269e34e54f15daa95a43d5f1534022dbc1ef3f0474b955163efc8b7e540d855067376017a77a8bea1a
   languageName: node
   linkType: hard
 
