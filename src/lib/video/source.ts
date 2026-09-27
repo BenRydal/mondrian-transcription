@@ -10,14 +10,12 @@ export type VideoEvent =
   | 'ratechange'
   | 'error'
 
-/** The playback surface the media clock, controls and recording share, whatever plays the video. */
 export interface VideoSource {
   readonly kind: 'local' | 'youtube'
   currentTime: number
   readonly duration: number
   readonly paused: boolean
   playbackRate: number
-  /** Seconds per arrow-key step when frames can't be observed; null means estimate from frames. */
   readonly fixedFrameStep: number | null
   play(): Promise<void>
   pause(): void
@@ -25,6 +23,12 @@ export interface VideoSource {
   addEventListener(type: VideoEvent, listener: () => void, options?: AddEventListenerOptions): void
   removeEventListener(type: VideoEvent, listener: () => void): void
   destroy(): void
+}
+
+const END_TOLERANCE = 0.1
+
+export function isAtVideoEnd(video: VideoSource): boolean {
+  return video.currentTime >= video.duration - END_TOLERANCE
 }
 
 export class LocalVideoSource implements VideoSource {
@@ -49,7 +53,6 @@ export class LocalVideoSource implements VideoSource {
     return this.element.playbackRate
   }
   set playbackRate(rate: number) {
-    // load() resets playbackRate to defaultPlaybackRate, so set both.
     this.element.defaultPlaybackRate = rate
     this.element.playbackRate = rate
   }

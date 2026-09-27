@@ -7,7 +7,6 @@ import {
   fadeTicks,
   fitScene,
   formatTick,
-  indexAtTime,
   liveHead,
   markerPoint,
   MIN_TIME_SPAN,
@@ -15,7 +14,6 @@ import {
   releaseVelocity,
   timeAxis,
   timeExtent,
-  timeToHeight,
   toScenePoint,
 } from './geometry'
 
@@ -23,7 +21,6 @@ const W = 400
 const H = 200
 const ROTATIONS: RotationAngle[] = [0, 90, 180, 270]
 
-/** Rotate a centred unrotated point the way the 3D floor plane is rotated (rotateZ, y down). */
 function rotateLikePlane(x: number, y: number, deg: number): [number, number] {
   const a = (deg * Math.PI) / 180
   return [x * Math.cos(a) - y * Math.sin(a), x * Math.sin(a) + y * Math.cos(a)]
@@ -74,7 +71,7 @@ describe('fitScene', () => {
   })
 })
 
-describe('timeExtent and timeToHeight', () => {
+describe('timeExtent', () => {
   const paths = [
     {
       points: [
@@ -94,12 +91,6 @@ describe('timeExtent and timeToHeight', () => {
   it('never collapses below the minimum span', () => {
     expect(timeExtent([], 0)).toBe(MIN_TIME_SPAN)
     expect(timeExtent([], 0, Number.NaN)).toBe(MIN_TIME_SPAN)
-  })
-
-  it('maps time linearly onto the axis height', () => {
-    expect(timeToHeight(0, 60, 300)).toBe(0)
-    expect(timeToHeight(30, 60, 300)).toBe(150)
-    expect(timeToHeight(60, 60, 300)).toBe(300)
   })
 })
 
@@ -150,17 +141,6 @@ describe('formatTick', () => {
     expect(formatTick(0)).toBe('0:00')
     expect(formatTick(75)).toBe('1:15')
     expect(formatTick(3725)).toBe('1:02:05')
-  })
-})
-
-describe('indexAtTime', () => {
-  const pts = [0, 1, 2, 5].map((time) => ({ x: 0, y: 0, time }))
-
-  it('finds the last point at or before the time', () => {
-    expect(indexAtTime(pts, -1)).toBe(-1)
-    expect(indexAtTime(pts, 0)).toBe(0)
-    expect(indexAtTime(pts, 3)).toBe(2)
-    expect(indexAtTime(pts, 99)).toBe(3)
   })
 })
 

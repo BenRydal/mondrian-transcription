@@ -1,8 +1,9 @@
+import { clamp } from '$lib/utils/math'
+
 export const FALLBACK_FRAME_DURATION = 1 / 30
 const MIN_FRAME_DURATION = 1 / 240
 const MAX_SAMPLES = 60
 
-/** Estimates frame duration from requestVideoFrameCallback metadata. */
 export class FrameRateEstimator {
   private last: { mediaTime: number; presentedFrames: number } | null = null
   private samples: number[] = []
@@ -13,7 +14,6 @@ export class FrameRateEstimator {
     if (last) {
       const frames = presentedFrames - last.presentedFrames
       const d = (mediaTime - last.mediaTime) / frames
-      // Dropped frames only lengthen a gap, so the shortest recent gap is the frame duration.
       if (frames > 0 && d >= MIN_FRAME_DURATION && d <= 1) {
         this.samples.push(d)
         if (this.samples.length > MAX_SAMPLES) this.samples.shift()
@@ -28,7 +28,6 @@ export class FrameRateEstimator {
   }
 }
 
-/** Start time of the frame on screen: the reported one if it matches currentTime, else the grid. */
 export function currentFrameStart(
   currentTime: number,
   frameDuration: number,
@@ -40,7 +39,6 @@ export function currentFrameStart(
   return Math.floor(currentTime / frameDuration + 1e-6) * frameDuration
 }
 
-/** Seek target for `frames` frames away, aimed mid-frame so rounding can't land on a neighbour. */
 export function frameStepTarget(
   frameStart: number,
   frameDuration: number,
@@ -48,10 +46,9 @@ export function frameStepTarget(
   duration: number
 ): number {
   const target = frameStart + (frames + 0.5) * frameDuration
-  return Math.min(Math.max(target, frameDuration / 2), duration)
+  return clamp(target, frameDuration / 2, duration)
 }
 
-/** Feed an estimator from every presented frame; returns a stop function. */
 export function watchVideoFrames(video: HTMLVideoElement, estimator: FrameRateEstimator) {
   if (!('requestVideoFrameCallback' in HTMLVideoElement.prototype)) return () => {}
   let handle = 0

@@ -1,4 +1,5 @@
 import { MediaClock } from '$lib/timing/clock'
+import { clamp } from '$lib/utils/math'
 import type { VideoEvent, VideoSource } from './source'
 
 export const YT_STATE = {
@@ -10,15 +11,13 @@ export const YT_STATE = {
   CUED: 5,
 } as const
 
-export const YOUTUBE_FRAME_STEP = 1 / 30
+const YOUTUBE_FRAME_STEP = 1 / 30
 const API_URL = 'https://www.youtube.com/iframe_api'
 const API_TIMEOUT_MS = 15_000
-// getCurrentTime only moves every few hundred ms, so interpolate further than for a local video.
-const MAX_EXTRAPOLATION = 1
+const MAX_EXTRAPOLATION_BETWEEN_POLLS = 1
 const SEEK_TOLERANCE = 0.25
 const SEEK_HOLD_MS = 1500
 
-/** The subset of YT.Player this app calls. */
 export interface YTPlayerLike {
   playVideo(): void
   pauseVideo(): void
@@ -38,13 +37,13 @@ export interface YTPlayerEvents {
   onError(code: number): void
 }
 
-export type PlayerFactory = (
+type PlayerFactory = (
   host: HTMLElement,
   videoId: string,
   events: YTPlayerEvents
 ) => Promise<YTPlayerLike>
 
-export class YouTubeUnavailableError extends Error {}
+class YouTubeUnavailableError extends Error {}
 
 type YTNamespace = {
   Player: new (el: HTMLElement, options: Record<string, unknown>) => YTPlayerLike
@@ -53,8 +52,7 @@ type YTWindow = Window & { YT?: YTNamespace; onYouTubeIframeAPIReady?: () => voi
 
 let apiPromise: Promise<YTNamespace> | null = null
 
-/** Inject the IFrame API script once, on first use; a failed load can be retried. */
-export function loadYouTubeApi(): Promise<YTNamespace> {
+function loadYouTubeApi(): Promise<YTNamespace> {
   const w = window as YTWindow
   if (w.YT?.Player) return Promise.resolve(w.YT)
   apiPromise ??= new Promise<YTNamespace>((resolve, reject) => {
@@ -87,7 +85,7 @@ export function loadYouTubeApi(): Promise<YTNamespace> {
   return apiPromise
 }
 
-export const createIframePlayer: PlayerFactory = async (host, videoId, events) => {
+const createIframePlayer: PlayerFactory = async (host, videoId, events) => {
   const YT = await loadYouTubeApi()
   const target = document.createElement('div')
   host.replaceChildren(target)
@@ -113,7 +111,7 @@ export const createIframePlayer: PlayerFactory = async (host, videoId, events) =
   })
 }
 
-export function youtubeErrorMessage(code: number): string {
+function youtubeErrorMessage(code: number): string {
   switch (code) {
     case 101:
     case 150:
@@ -130,7 +128,7 @@ export function youtubeErrorMessage(code: number): string {
   }
 }
 
-export interface YouTubeSourceOptions {
+interface YouTubeSourceOptions {
   videoId: string
   host: HTMLElement
   startTime?: number
@@ -138,12 +136,13 @@ export interface YouTubeSourceOptions {
   now?: () => number
 }
 
-/** A YouTube embed behind the VideoSource interface; `paused` is ours and the player follows it. */
 export class YouTubeVideoSource implements VideoSource {
   readonly kind = 'youtube'
   readonly fixedFrameStep = YOUTUBE_FRAME_STEP
   readonly videoId: string
   error: string | null = null
+
+  private host: HTMLElement
 
   private player: YTPlayerLike | null = null
   private ready = false
@@ -156,7 +155,7 @@ export class YouTubeVideoSource implements VideoSource {
   private startTime: number
   private seekTarget: number | null = null
   private seekAt = 0
-  private clock = new MediaClock(MAX_EXTRAPOLATION)
+  private clock = new MediaClock(MAX_EXTRAPOLATION_BETWEEN_POLLS)
   private events = new EventTarget()
   private now: () => number
   private settleReady!: (error?: Error) => void
@@ -166,6 +165,7 @@ export class YouTubeVideoSource implements VideoSource {
 
   constructor(opts: YouTubeSourceOptions) {
     this.videoId = opts.videoId
+    this.host = opts.host
     this.whenReady.catch(() => {})
     this.startTime = Math.max(0, opts.startTime ?? 0)
     this.now = opts.now ?? (() => performance.now())
@@ -213,7 +213,6 @@ export class YouTubeVideoSource implements VideoSource {
     this.emit('ratechange')
   }
 
-  /** Interpolated between polls while playing; exact while paused; the seek target until it lands. */
   get currentTime(): number {
     if (!this.player || !this.ready) return this.seekTarget ?? this.startTime
     const now = this.now()
@@ -232,7 +231,7 @@ export class YouTubeVideoSource implements VideoSource {
   }
   set currentTime(time: number) {
     const max = this.knownDuration > 0 ? this.knownDuration : Infinity
-    const target = Math.min(Math.max(0, time), max)
+    const target = clamp(time, 0, max)
     this.seekTarget = target
     this.seekAt = this.now()
     this.clock.reset()
@@ -242,7 +241,6 @@ export class YouTubeVideoSource implements VideoSource {
     this.emit('timeupdate')
   }
 
-  /** Before the player is ready, time holds still and playback starts once it is. */
   play(): Promise<void> {
     if (this.error) return Promise.reject(new Error(this.error))
     if (this.isPaused) {
@@ -257,10 +255,7 @@ export class YouTubeVideoSource implements VideoSource {
 
   pause() {
     this.call((p) => p.pauseVideo())
-    if (this.isPaused) return
-    this.isPaused = true
-    this.clock.reset()
-    this.emit('pause')
+    if (!this.isPaused) this.markPaused()
   }
 
   supportsRate(rate: number) {
@@ -278,6 +273,7 @@ export class YouTubeVideoSource implements VideoSource {
     this.destroyed = true
     this.call((p) => p.destroy())
     this.player = null
+    this.host.replaceChildren()
   }
 
   private handleReady() {
@@ -300,15 +296,19 @@ export class YouTubeVideoSource implements VideoSource {
   private handleState(state: number) {
     this.state = state
     this.refreshDuration()
-    // seekTo from a cued or unstarted player starts playback; keep it paused unless we asked.
-    if (state === YT_STATE.PLAYING && this.isPaused) this.call((p) => p.pauseVideo())
+    const startedWithoutAsking = state === YT_STATE.PLAYING && this.isPaused
+    if (startedWithoutAsking) this.call((p) => p.pauseVideo())
     if ((state === YT_STATE.PAUSED || state === YT_STATE.ENDED) && !this.isPaused) {
-      this.isPaused = true
-      this.clock.reset()
-      this.emit('pause')
+      this.markPaused()
     }
     if (state === YT_STATE.ENDED) this.emit('ended')
     this.emit('timeupdate')
+  }
+
+  private markPaused() {
+    this.isPaused = true
+    this.clock.reset()
+    this.emit('pause')
   }
 
   private refreshDuration() {
@@ -332,7 +332,6 @@ export class YouTubeVideoSource implements VideoSource {
     this.emit('error')
   }
 
-  /** Player calls throw while the iframe is detached or still loading. */
   private call<T>(fn: (p: YTPlayerLike) => T): T | undefined {
     if (!this.player) return undefined
     try {

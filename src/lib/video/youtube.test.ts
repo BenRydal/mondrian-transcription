@@ -47,13 +47,14 @@ class FakePlayer implements YTPlayerLike {
 }
 
 const flush = () => new Promise((r) => setTimeout(r, 0))
+const host = { replaceChildren() {} } as unknown as HTMLElement
 
 async function makeSource(opts: { startTime?: number; rates?: number[] } = {}) {
   let perf = 1000
   let player!: FakePlayer
   const source = new YouTubeVideoSource({
     videoId: 'abc',
-    host: {} as HTMLElement,
+    host,
     startTime: opts.startTime,
     now: () => perf,
     createPlayer: async (_host, _id, events) => {
@@ -92,7 +93,6 @@ describe('YouTubeVideoSource media time', () => {
     let last = source.currentTime
     for (let i = 0; i < 60; i++) {
       advance(16.7)
-      // Polls land every 250 ms and trail real time by up to 100 ms.
       if (i % 15 === 0) player.time = 5 + (i * 16.7) / 1000 - 0.1
       const t = source.currentTime
       expect(t).toBeGreaterThanOrEqual(last)
@@ -187,7 +187,7 @@ describe('YouTubeVideoSource interface', () => {
     let player!: FakePlayer
     const source = new YouTubeVideoSource({
       videoId: 'abc',
-      host: {} as HTMLElement,
+      host,
       createPlayer: async (_host, _id, events) => (player = new FakePlayer(events)),
     })
     const playing = source.play()
@@ -214,10 +214,22 @@ describe('YouTubeVideoSource interface', () => {
   it('reports a failed API load as an error', async () => {
     const source = new YouTubeVideoSource({
       videoId: 'abc',
-      host: {} as HTMLElement,
+      host,
       createPlayer: () => Promise.reject(new Error('offline')),
     })
     await flush()
     expect(source.error).toBe('offline')
+  })
+
+  it('destroys the player and empties its host', async () => {
+    let cleared = 0
+    const source = new YouTubeVideoSource({
+      videoId: 'abc',
+      host: { replaceChildren: () => cleared++ } as unknown as HTMLElement,
+      createPlayer: async (_host, _id, events) => new FakePlayer(events),
+    })
+    await flush()
+    source.destroy()
+    expect(cleared).toBe(1)
   })
 })

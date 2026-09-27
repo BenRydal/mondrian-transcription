@@ -1,12 +1,14 @@
+import { clamp } from '$lib/utils/math'
+
 export interface TimedPoint {
   x: number
   y: number
   time: number
 }
 
-export const MIN_POINT_INTERVAL = 0.01
-export const HOLD_GAP = 0.1
-export const HOLD_INTERVAL = 0.1
+const MIN_POINT_INTERVAL = 0.01
+const HOLD_GAP = 0.1
+const HOLD_INTERVAL = 0.1
 
 export function shouldKeepPoint(
   prevTime: number | undefined,
@@ -16,7 +18,6 @@ export function shouldKeepPoint(
   return prevTime === undefined || time - prevTime >= minInterval
 }
 
-/** Clock times owed to a still pointer: every interval after its last point, up to now. */
 export function holdTimes(lastTime: number, now: number, interval = HOLD_INTERVAL): number[] {
   const times: number[] = []
   if (!(interval > 0) || !Number.isFinite(now)) return times
@@ -35,23 +36,18 @@ export function thinByTime<T extends TimedPoint>(
   return kept
 }
 
-export interface ResampleOptions {
+interface ResampleOptions {
   rate: number
   scale?: number
   holdGap?: number
 }
 
-/** One factor for the whole session: the latest end across all paths lands on `duration`. */
 export function sessionScale(paths: TimedPoint[][], duration: number): number {
   let end = 0
   for (const path of paths) for (const p of path) end = Math.max(end, p.time)
   return end > 0 ? duration / end : 1
 }
 
-/**
- * Resample onto the grid k / rate within the path's own start-end.
- * With scale, times are first multiplied by it, so scaled paths stay aligned.
- */
 export function resamplePath(points: TimedPoint[], options: ResampleOptions): TimedPoint[] {
   const { rate, scale = 1, holdGap = HOLD_GAP } = options
   if (points.length === 0 || !(rate > 0) || !(scale > 0)) return []
@@ -73,14 +69,13 @@ export function resamplePath(points: TimedPoint[], options: ResampleOptions): Ti
   let seg = 0
   for (let k = kStart; k <= kEnd; k++) {
     const time = k / rate + 0
-    const raw = Math.min(Math.max(toRaw(time), t0), t1)
+    const raw = clamp(toRaw(time), t0, t1)
     while (seg < sorted.length - 2 && sorted[seg + 1].time <= raw) seg++
     result.push({ ...positionAt(sorted, seg, raw, gap), time })
   }
   return result
 }
 
-/** Legacy pseudo-time paths have uniform gaps far above holdGap; they interpolate instead. */
 function medianGap(sorted: TimedPoint[]): number {
   const gaps = sorted.slice(1).map((p, i) => p.time - sorted[i].time)
   if (gaps.length === 0) return 0

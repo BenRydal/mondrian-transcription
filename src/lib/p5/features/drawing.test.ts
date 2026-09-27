@@ -27,7 +27,6 @@ function startRecording(isTranscriptionMode: boolean, time = 2) {
   addPointsToCurrentPath([{ x: 40, y: 60, time, pathId: 1 }])
 }
 
-/** Run the draw loop at `fps` for `wallSeconds`, advancing a playing video like a browser would. */
 function runFrames(fps: number, wallSeconds: number, perfStart: number, video?: FakeVideo) {
   const frames = Math.round(wallSeconds * fps)
   let perf = perfStart

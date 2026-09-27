@@ -2,8 +2,11 @@ import { openDB, type DBSchema, type IDBPDatabase, type IDBPTransaction } from '
 import type { PathData } from '$lib/stores/drawingState'
 import type { RotationAngle } from '$lib/stores/drawingConfig'
 import {
-  CHUNK_SIZE,
+  chunkCount,
   encodeChunk,
+  fnv1a,
+  forEachChunkRange,
+  manifestFor,
   summarize,
   type ChunkKey,
   type ChunkRecord,
@@ -12,7 +15,7 @@ import {
 } from './chunks'
 
 export const DB_NAME = 'mondrian-autosave'
-export const DB_VERSION = 2
+const DB_VERSION = 2
 export const MIGRATED_SESSION_ID = 'migrated-v1'
 
 export interface SessionConfig {
@@ -31,7 +34,6 @@ export interface VideoMeta {
   duration?: number
 }
 
-/** A streamed video: nothing is stored but the id, so it never needs re-attaching. */
 export interface YouTubeVideoRef {
   kind: 'youtube'
   videoId: string
@@ -65,7 +67,6 @@ export interface SnapshotMeta {
   floorPlanName: string | null
   videoKey: string | null
   video: (VideoMeta & { status: VideoStatus }) | null
-  /** Absent in snapshots saved before YouTube sources existed. */
   videoSource?: YouTubeVideoRef
   paths: PathSummary[]
 }
@@ -111,8 +112,7 @@ export const STORES = [
   'videos',
 ] as const
 
-/** Fire a request whose failure surfaces through the transaction instead. */
-export const quiet = (request: Promise<unknown>) => void request.catch(() => {})
+export const queueInTx = (request: Promise<unknown>) => void request.catch(() => {})
 
 const isFiniteNumber = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v)
 
@@ -154,15 +154,11 @@ export function isValidManifest(record: unknown, pointCount: number): record is 
   for (const p of r.paths) {
     if (!p || !isFiniteNumber(p.pathId) || typeof p.color !== 'string') return false
     if (!isFiniteNumber(p.count) || p.count < 0 || !Array.isArray(p.chunks)) return false
-    if (p.chunks.length !== Math.ceil(p.count / CHUNK_SIZE)) return false
+    if (p.chunks.length !== chunkCount(p.count)) return false
     if (!p.chunks.every(isFiniteNumber)) return false
     total += p.count
   }
   return total === pointCount
-}
-
-export function countPoints(paths: readonly { points: unknown[] }[]): number {
-  return paths.reduce((sum, p) => sum + p.points.length, 0)
 }
 
 export function emptySession(id: string, now: number, name: string | null = null): SessionRecord {
@@ -181,10 +177,7 @@ export function emptySession(id: string, now: number, name: string | null = null
 }
 
 function hashChunk(data: Float64Array): number {
-  const words = new Uint32Array(data.buffer, data.byteOffset, data.length * 2)
-  let h = 0x811c9dc5
-  for (let i = 0; i < words.length; i++) h = Math.imul(h ^ words[i], 0x01000193)
-  return h >>> 0
+  return fnv1a(new Uint32Array(data.buffer, data.byteOffset, data.length * 2))
 }
 
 function sameData(a: Float64Array, b: Float64Array) {
@@ -195,11 +188,7 @@ function sameData(a: Float64Array, b: Float64Array) {
 
 type AnyTx = IDBPTransaction<unknown, string[], 'versionchange'>
 
-/**
- * Move v1 ring snapshots (full path copies in `snapshotPaths`) into one session of shared
- * chunks. Runs inside the version-change transaction, so it commits or rolls back whole.
- */
-export async function migrateV1Snapshots(tx: AnyTx): Promise<void> {
+async function migrateV1Snapshots(tx: AnyTx): Promise<void> {
   const snapshots = tx.objectStore('snapshots')
   const legacyPaths = tx.objectStore('snapshotPaths')
   const chunks = tx.objectStore('chunks')
@@ -222,29 +211,20 @@ export async function migrateV1Snapshots(tx: AnyTx): Promise<void> {
     }
     const manifests: PathManifest[] = record.paths.map((path) => {
       const ids: number[] = []
-      for (let start = 0; start < path.points.length; start += CHUNK_SIZE) {
-        const end = Math.min(path.points.length, start + CHUNK_SIZE)
+      forEachChunkRange(path.points.length, (start, end) => {
         const encoded = encodeChunk(sessionId, seq, path.points, start, end)
         const hash = hashChunk(encoded.data)
         const existing = byHash.get(hash)?.find((c) => sameData(c.data, encoded.data))
         if (existing) {
           ids.push(existing.seq)
-          continue
+          return
         }
         byHash.set(hash, [...(byHash.get(hash) ?? []), encoded])
-        quiet(chunks.put(encoded))
+        queueInTx(chunks.put(encoded))
         bytes += encoded.data.byteLength
         ids.push(seq++)
-      }
-      const m: PathManifest = {
-        pathId: path.pathId,
-        color: path.color,
-        count: path.points.length,
-        chunks: ids,
-      }
-      if (path.name !== undefined) m.name = path.name
-      if (path.visible !== undefined) m.visible = path.visible
-      return m
+      })
+      return manifestFor(path, ids)
     })
     const meta = {
       ...old,

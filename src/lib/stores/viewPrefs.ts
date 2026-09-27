@@ -1,4 +1,5 @@
 import { writable } from 'svelte/store'
+import { clamp } from '$lib/utils/math'
 
 export const PLAYBACK_RATES = [0.25, 0.5, 0.75, 1, 1.5, 2] as const
 
@@ -10,67 +11,60 @@ export const TRAIL_LENGTHS = [0, 1, 3, 5] as const
 export const NEW_PATH_STARTS = ['zero', 'current'] as const
 export type NewPathStart = (typeof NEW_PATH_STARTS)[number]
 
-export interface ViewPrefs {
+interface ViewPrefs {
   playbackRate: number
   recordingMode: RecordingMode
   trailSeconds: number
-  /** Speculate: a new path starts at 0:00 or at the session clock's current time. */
   newPathStart: NewPathStart
 }
 
 const STORAGE_KEY = 'mondrian-view-prefs'
 
-// Node exposes a warning-emitting localStorage global, so only touch it in a browser.
-const storage = () => (typeof window === 'undefined' ? null : window.localStorage)
+const isOneOf = <T>(list: readonly T[], value: unknown): value is T =>
+  (list as readonly unknown[]).includes(value)
 
-export const defaultViewPrefs: ViewPrefs = {
+const browserStorage = () => (typeof window === 'undefined' ? null : window.localStorage)
+
+const defaultViewPrefs: ViewPrefs = {
   playbackRate: 1,
   recordingMode: 'toggle',
   trailSeconds: 3,
   newPathStart: 'zero',
 }
 
-/** Drop unknown or invalid values so a stale or hand-edited entry can't break the app. */
 export function sanitizeViewPrefs(raw: unknown): ViewPrefs {
   const prefs = { ...defaultViewPrefs }
   if (!raw || typeof raw !== 'object') return prefs
   const r = raw as Record<string, unknown>
-  if ((PLAYBACK_RATES as readonly unknown[]).includes(r.playbackRate)) {
-    prefs.playbackRate = r.playbackRate as number
-  }
-  if ((RECORDING_MODES as readonly unknown[]).includes(r.recordingMode)) {
-    prefs.recordingMode = r.recordingMode as RecordingMode
-  }
-  if ((TRAIL_LENGTHS as readonly unknown[]).includes(r.trailSeconds)) {
-    prefs.trailSeconds = r.trailSeconds as number
-  }
-  if ((NEW_PATH_STARTS as readonly unknown[]).includes(r.newPathStart)) {
-    prefs.newPathStart = r.newPathStart as NewPathStart
-  }
+  if (isOneOf(PLAYBACK_RATES, r.playbackRate)) prefs.playbackRate = r.playbackRate
+  if (isOneOf(RECORDING_MODES, r.recordingMode)) prefs.recordingMode = r.recordingMode
+  if (isOneOf(TRAIL_LENGTHS, r.trailSeconds)) prefs.trailSeconds = r.trailSeconds
+  if (isOneOf(NEW_PATH_STARTS, r.newPathStart)) prefs.newPathStart = r.newPathStart
   return prefs
 }
 
 function load(): ViewPrefs {
   try {
-    const text = storage()?.getItem(STORAGE_KEY)
+    const text = browserStorage()?.getItem(STORAGE_KEY)
     return sanitizeViewPrefs(text ? JSON.parse(text) : null)
   } catch {
     return { ...defaultViewPrefs }
   }
 }
 
-/** Per-browser view settings; kept out of session snapshots on purpose. */
 export const viewPrefs = writable<ViewPrefs>(load())
 
-viewPrefs.subscribe((prefs) => {
+function saveIfStorageAllowed(prefs: ViewPrefs): boolean {
   try {
-    storage()?.setItem(STORAGE_KEY, JSON.stringify(prefs))
+    browserStorage()?.setItem(STORAGE_KEY, JSON.stringify(prefs))
+    return true
   } catch {
-    // Private mode or blocked storage: the preference just won't survive a reload.
+    return false
   }
-})
+}
 
-/** Next allowed rate in the list, clamped at both ends. */
+viewPrefs.subscribe(saveIfStorageAllowed)
+
 export function stepPlaybackRate(
   rate: number,
   direction: 1 | -1,
@@ -80,7 +74,7 @@ export function stepPlaybackRate(
   if (rates.length === 0) return rate
   const i = rates.findIndex((r) => r >= rate)
   const current = i === -1 ? rates.length - 1 : rates[i] > rate && direction === 1 ? i - 1 : i
-  const next = Math.min(rates.length - 1, Math.max(0, current + direction))
+  const next = clamp(current + direction, 0, rates.length - 1)
   return rates[next]
 }
 

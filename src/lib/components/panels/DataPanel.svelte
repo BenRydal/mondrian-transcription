@@ -9,7 +9,8 @@
   import type { AutosaveStatus } from '$lib/storage/autosave'
   import type { Snippet } from 'svelte'
   import type { VideoMeta } from '$lib/storage/sessionDb'
-  import { formatBytes, formatClockTime, formatDuration } from '$lib/stores/sessionRecovery'
+  import { formatBytes, formatClockTime } from '$lib/utils/format'
+  import { formatDuration } from '$lib/utils/time'
   import PanelSection from './PanelSection.svelte'
   import { groupVideoExamples, type VideoExample } from '$lib/examples/videoExamples'
 
@@ -90,13 +91,16 @@
     const file = e.dataTransfer?.files[0]
     if (!file) return
 
-    // Wrap the dropped file as an input change event for the upload handlers.
+    routeFile(file, asFileInputEvent(file))
+  }
+
+  function asFileInputEvent(file: File): Event {
     const input = document.createElement('input')
     input.type = 'file'
     const dataTransfer = new DataTransfer()
     dataTransfer.items.add(file)
     input.files = dataTransfer.files
-    routeFile(file, { target: input } as unknown as Event)
+    return { target: input } as unknown as Event
   }
 </script>
 

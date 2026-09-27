@@ -3,6 +3,7 @@
   import Icon3D from '~icons/material-symbols/view-in-ar-outline'
   import { drawingConfig } from '$lib/stores/drawingConfig'
   import ConfirmDialog from '$lib/components/dialogs/ConfirmDialog.svelte'
+  import SegmentedControl from '$lib/components/SegmentedControl.svelte'
 
   let {
     fileLabel,
@@ -15,8 +16,8 @@
   } = $props()
 
   const modes = [
-    { label: 'Transcription', isTranscriptionMode: true },
-    { label: 'Speculate', isTranscriptionMode: false },
+    { label: 'Transcription', value: true },
+    { label: 'Speculate', value: false },
   ]
 
   let pendingMode = $state<boolean | null>(null)
@@ -48,19 +49,12 @@
   </div>
 
   <div class="flex flex-none items-center gap-2">
-    <div class="join" role="group" aria-label="Mode">
-      {#each modes as mode (mode.label)}
-        {@const active = mode.isTranscriptionMode === $drawingConfig.isTranscriptionMode}
-        <button
-          class="btn btn-sm join-item"
-          class:btn-active={active}
-          aria-pressed={active}
-          onclick={() => requestMode(mode.isTranscriptionMode)}
-        >
-          {mode.label}
-        </button>
-      {/each}
-    </div>
+    <SegmentedControl
+      options={modes}
+      value={$drawingConfig.isTranscriptionMode}
+      onSelect={requestMode}
+      label="Mode"
+    />
 
     <button
       class="btn btn-sm"

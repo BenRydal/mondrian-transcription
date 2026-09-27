@@ -8,6 +8,8 @@
   import IconVisibility from '~icons/material-symbols/visibility'
   import IconVisibilityOff from '~icons/material-symbols/visibility-off'
   import IconClose from '~icons/material-symbols/close'
+  import { formatPoints } from '$lib/utils/format'
+  import { formatHms } from '$lib/utils/time'
 
   let { onDelete }: { onDelete: (pathId: number) => void } = $props()
 
@@ -18,30 +20,14 @@
   const currentPathId = $derived($drawingState.currentPathId)
   const isRecording = $derived($drawingState.shouldTrackMouse)
 
-  function formatTime(seconds: number): string {
-    const totalSecs = Math.floor(seconds)
-    const hrs = Math.floor(totalSecs / 3600)
-    const mins = Math.floor((totalSecs % 3600) / 60)
-    const secs = totalSecs % 60
-
-    if (hrs > 0) {
-      return `${hrs}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
-    }
-    return `${mins}:${secs.toString().padStart(2, '0')}`
-  }
-
-  function formatPoints(count: number): string {
-    return count >= 1000 ? `${(count / 1000).toFixed(1)}k` : count.toString()
-  }
-
   function getPathDuration(points: { time: number }[]): string {
     if (points.length === 0) return '--'
-    return formatTime(points[points.length - 1].time - points[0].time)
+    return formatHms(points[points.length - 1].time - points[0].time)
   }
 
   function getPathSpan(points: { time: number }[]): string | undefined {
     if (points.length === 0) return undefined
-    return `${formatTime(points[0].time)}–${formatTime(points[points.length - 1].time)}`
+    return `${formatHms(points[0].time)}–${formatHms(points[points.length - 1].time)}`
   }
 
   function startEditing(pathId: number, currentName: string) {

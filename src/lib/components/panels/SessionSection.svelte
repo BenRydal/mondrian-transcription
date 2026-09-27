@@ -6,7 +6,8 @@
   import IconUpload from '~icons/material-symbols/upload'
   import type { SessionRecord } from '$lib/storage/sessionDb'
   import { sessionName } from '$lib/storage/history'
-  import { formatBytes, getSessionAge } from '$lib/stores/sessionRecovery'
+  import { getSessionAge } from '$lib/stores/sessionRecovery'
+  import { formatBytes } from '$lib/utils/format'
   import PanelSection from './PanelSection.svelte'
 
   let {
@@ -64,7 +65,7 @@
   }
 </script>
 
-{#snippet nameEditor(id: string, name: string)}
+{#snippet nameEditor(name: string)}
   <input
     type="text"
     class="input input-xs flex-1 min-w-0"
@@ -80,7 +81,7 @@
   <div class="flex flex-col gap-1" data-testid="current-session">
     <div class="flex items-center gap-2">
       {#if editingId !== null && editingId === currentId}
-        {@render nameEditor(currentId, currentName)}
+        {@render nameEditor(currentName)}
       {:else}
         <span class="flex-1 min-w-0 truncate text-sm font-medium">{currentName}</span>
         {#if currentId}
@@ -125,7 +126,7 @@
       {#each others as session (session.id)}
         <li class="flex items-center gap-2 rounded-lg bg-base-200 p-2 text-sm">
           {#if editingId === session.id}
-            {@render nameEditor(session.id, sessionName(session))}
+            {@render nameEditor(sessionName(session))}
           {:else}
             <div class="flex flex-col flex-1 min-w-0">
               <span class="truncate font-medium">{sessionName(session)}</span>

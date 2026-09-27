@@ -8,6 +8,8 @@
 
   let { videoElement }: { videoElement: VideoSource } = $props()
 
+  const PROGRESS_KEY_STEP = 5
+
   let progress = $state(0)
   let duration = $state(0)
   let currentTime = $state(0)
@@ -42,10 +44,13 @@
   function handleKeyPress(e: KeyboardEvent) {
     if (e.key === 'ArrowLeft') {
       e.preventDefault()
-      videoElement.currentTime = Math.max(0, videoElement.currentTime - 5)
+      videoElement.currentTime = Math.max(0, videoElement.currentTime - PROGRESS_KEY_STEP)
     } else if (e.key === 'ArrowRight') {
       e.preventDefault()
-      videoElement.currentTime = Math.min(videoElement.duration, videoElement.currentTime + 5)
+      videoElement.currentTime = Math.min(
+        videoElement.duration,
+        videoElement.currentTime + PROGRESS_KEY_STEP
+      )
     }
   }
 
@@ -67,7 +72,6 @@
       updateDuration()
       updateProgress()
     }
-    // timeupdate fires only a few times a second, too slow for a tenths display.
     let raf = 0
     const tick = () => {
       onChange()

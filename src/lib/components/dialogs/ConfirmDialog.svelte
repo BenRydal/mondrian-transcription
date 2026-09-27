@@ -1,4 +1,6 @@
 <script lang="ts">
+  import Modal from './Modal.svelte'
+
   let {
     open,
     title,
@@ -18,16 +20,10 @@
   } = $props()
 </script>
 
-<dialog class="modal" class:modal-open={open} data-ui-element>
-  <div class="modal-box {className}">
-    <h2 class="text-lg font-semibold mb-4">{title}</h2>
-    <p class="mb-6 text-sm">{message}</p>
-    <div class="modal-action">
-      <button class="btn" onclick={onCancel}>Cancel</button>
-      <button class="btn btn-error" onclick={onConfirm}>{confirmLabel}</button>
-    </div>
+<Modal {open} {title} onClose={onCancel} class={className}>
+  <p class="mb-6 text-sm">{message}</p>
+  <div class="modal-action">
+    <button class="btn" onclick={onCancel}>Cancel</button>
+    <button class="btn btn-error" onclick={onConfirm}>{confirmLabel}</button>
   </div>
-  <form method="dialog" class="modal-backdrop">
-    <button onclick={onCancel}>close</button>
-  </form>
-</dialog>
+</Modal>

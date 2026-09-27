@@ -1,8 +1,7 @@
-export interface Timed {
+interface Timed {
   time: number
 }
 
-/** Index of the last point with time <= t in time-sorted points, or -1 if none. */
 export function lastIndexAtOrBefore(points: readonly Timed[], t: number): number {
   let lo = 0
   let hi = points.length
@@ -14,7 +13,6 @@ export function lastIndexAtOrBefore(points: readonly Timed[], t: number): number
   return lo - 1
 }
 
-/** Inclusive index range of the points within `seconds` before t, ending at t; null if empty. */
 export function trailRange(
   points: readonly Timed[],
   t: number,

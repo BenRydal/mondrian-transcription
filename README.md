@@ -156,7 +156,7 @@ Contributions are welcome! Please open an issue first to discuss major changes. 
 
 If you use Mondrian Transcription in your research, please cite:
 
-> Shapiro, B. R., Silvis, D., & Hall, R. (2025). Visualization as theory and experience: Interactive qualitative data visualization for the learning sciences. *Journal of the Learning Sciences, 34*(5), 840–871. https://doi.org/10.1080/10508406.2025.2537945
+> Shapiro, B. R., Silvis, D., & Hall, R. (2025). Visualization as theory and experience: Interactive qualitative data visualization for the learning sciences. _Journal of the Learning Sciences, 34_(5), 840–871. https://doi.org/10.1080/10508406.2025.2537945
 
 <details>
 <summary>BibTeX</summary>

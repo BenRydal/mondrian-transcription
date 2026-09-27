@@ -1,11 +1,11 @@
 <script lang="ts">
   import { onMount } from 'svelte'
   import {
-    formatBytes,
-    formatClockTime,
+    countRecordedPaths,
     getSessionAge,
     getTotalPointCount,
   } from '$lib/stores/sessionRecovery'
+  import { formatBytes, formatClockTime } from '$lib/utils/format'
   import type { RestoredSession } from '$lib/storage/sessionDb'
   import IconRestore from '~icons/material-symbols/history'
   import IconInfo from '~icons/material-symbols/info-outline'
@@ -18,7 +18,6 @@
 
   let { session, onRestore, onDiscard }: Props = $props()
 
-  // This modal is a plain div, not a native <dialog>, so Escape needs a listener.
   onMount(() => {
     const handleKeydown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onDiscard()
@@ -27,7 +26,7 @@
     return () => window.removeEventListener('keydown', handleKeydown)
   })
 
-  const pathCount = $derived(session.paths.filter((p) => p.points.length > 0).length)
+  const pathCount = $derived(countRecordedPaths(session.paths))
   const totalPoints = $derived(getTotalPointCount(session.paths))
   const sessionAge = $derived(getSessionAge(session.meta.savedAt))
   const isTranscription = $derived(session.meta.config.isTranscriptionMode)

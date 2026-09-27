@@ -5,18 +5,20 @@ export function sessionName(s: Pick<SessionRecord, 'name' | 'floorPlanName'> | n
   return s?.name || s?.floorPlanName || 'Untitled session'
 }
 
-export interface PathChange {
+interface PathChange {
   pathId: number
   label: string
   change: 'added' | 'removed' | 'changed'
 }
 
-export function pathLabel(paths: readonly PathSummary[], pathId: number): string {
+export function pathLabel(
+  paths: readonly Pick<PathSummary, 'pathId' | 'name'>[],
+  pathId: number
+): string {
   const index = paths.findIndex((p) => p.pathId === pathId)
   return paths[index]?.name || `Path ${index + 1}`
 }
 
-/** What differs in `newer` compared with the entry before it (none for the oldest entry). */
 export function diffPaths(
   newer: readonly PathSummary[] = [],
   older: readonly PathSummary[] | undefined

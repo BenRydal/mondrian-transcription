@@ -69,7 +69,6 @@ describe('session archive', () => {
     }
     expect(await (await db.loadLatest(imported.id))!.video!.text()).toBe('movie')
 
-    // The copy is independent: deleting the source leaves it intact.
     await db.deleteSession(source.id)
     expect((await db.loadLatest(imported.id))!.paths[1]).toEqual(b)
     db.close()

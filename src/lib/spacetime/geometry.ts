@@ -1,5 +1,8 @@
 import type { RotationAngle } from '$lib/stores/drawingConfig'
 import { applyForwardRotation, getRotatedDimensions } from '$lib/utils/drawingUtils'
+import { clamp, expDecay } from '$lib/utils/math'
+import { formatHms } from '$lib/utils/time'
+import { lastIndexAtOrBefore } from '$lib/timing/timeWindow'
 
 export type Vec3 = [number, number, number]
 export type TimedPoint = { x: number; y: number; time: number }
@@ -11,7 +14,6 @@ export const MAX_PITCH = Math.PI / 2 - 0.01
 export const MIN_ZOOM = 0.4
 export const MAX_ZOOM = 3
 
-/** Image point to scene x/y (centred, rotated like the 2D floor plan) with raw time as z. */
 export function toScenePoint(
   pt: TimedPoint,
   imgW: number,
@@ -23,7 +25,6 @@ export function toScenePoint(
   return [(nx - 0.5) * displayW, (ny - 0.5) * displayH, pt.time]
 }
 
-/** Floor scale, time-axis height and camera distance that fit the scene into a view of any aspect. */
 export function fitScene(
   viewW: number,
   viewH: number,
@@ -43,7 +44,6 @@ export function fitScene(
   }
 }
 
-/** Latest time the scene must show: every path's end, the clock, and the video length. */
 export function timeExtent(paths: { points: TimedPoint[] }[], now: number, duration = 0): number {
   let max = Math.max(now, Number.isFinite(duration) ? duration : 0)
   for (const path of paths) {
@@ -53,13 +53,8 @@ export function timeExtent(paths: { points: TimedPoint[] }[], now: number, durat
   return Math.max(max, MIN_TIME_SPAN)
 }
 
-export function timeToHeight(time: number, span: number, height: number): number {
-  return span > 0 ? (time / span) * height : 0
-}
-
 const NICE_STEPS = [1, 2, 5, 10, 15, 30, 60, 120, 300, 600, 900, 1800, 3600]
 
-/** Axis span rounded up to a whole number of round steps, so it grows in jumps and its top is a tick. */
 export function timeAxis(extent: number, target = 4): { span: number; ticks: number[] } {
   if (!(extent > 0)) return { span: 0, ticks: [0] }
   const raw = extent / target
@@ -68,10 +63,9 @@ export function timeAxis(extent: number, target = 4): { span: number; ticks: num
   return { span: count * step, ticks: Array.from({ length: count + 1 }, (_, i) => i * step) }
 }
 
-export const AXIS_EASE_TAU = 0.1
-export const TICK_FADE_SECONDS = 0.25
+const AXIS_EASE_TAU = 0.1
+const TICK_FADE_SECONDS = 0.25
 
-/** Ease the shown axis span toward its target over dt (settles in ~3 tau), never below `content`. */
 export function easeSpan(
   shown: number,
   target: number,
@@ -80,12 +74,11 @@ export function easeSpan(
   tau = AXIS_EASE_TAU
 ): number {
   if (!(shown > 0) || !(tau > 0)) return target
-  const next = target + (shown - target) * Math.exp(-Math.max(0, dt) / tau)
+  const next = target + (shown - target) * expDecay(dt, tau)
   const settled = Math.abs(next - target) <= target * 1e-3
   return Math.max(settled ? target : next, Math.min(content, target))
 }
 
-/** Step each tick's label opacity toward 1 if shown, 0 if not; fully faded ticks are dropped. */
 export function fadeTicks(
   alphas: ReadonlyMap<number, number>,
   shown: readonly number[],
@@ -101,32 +94,9 @@ export function fadeTicks(
 }
 
 export function formatTick(seconds: number): string {
-  const total = Math.round(seconds)
-  const h = Math.floor(total / 3600)
-  const m = Math.floor((total % 3600) / 60)
-  const s = total % 60
-  const ss = String(s).padStart(2, '0')
-  return h > 0 ? `${h}:${String(m).padStart(2, '0')}:${ss}` : `${m}:${ss}`
+  return formatHms(Math.round(seconds))
 }
 
-/** Index of the last point at or before `time` (points sorted by time); -1 if none. */
-export function indexAtTime(points: TimedPoint[], time: number): number {
-  let lo = 0
-  let hi = points.length - 1
-  let found = -1
-  while (lo <= hi) {
-    const mid = (lo + hi) >> 1
-    if (points[mid].time <= time) {
-      found = mid
-      lo = mid + 1
-    } else {
-      hi = mid - 1
-    }
-  }
-  return found
-}
-
-/** While recording, the current path's still-open end: its last position at the clock time. */
 export function liveHead<T extends TimedPoint>(
   points: readonly T[],
   now: number,
@@ -137,7 +107,6 @@ export function liveHead<T extends TimedPoint>(
   return { x: last.x, y: last.y, time: now }
 }
 
-/** Where a path's marker sits at `now`, as in 2D: the current path at its end, others once started. */
 export function markerPoint(
   points: readonly TimedPoint[],
   now: number,
@@ -145,11 +114,10 @@ export function markerPoint(
   recording: boolean
 ): TimedPoint | null {
   if (isCurrent) return liveHead(points, now, recording) ?? points.at(-1) ?? null
-  const i = indexAtTime(points as TimedPoint[], now)
+  const i = lastIndexAtOrBefore(points, now)
   return i < 0 ? null : points[i]
 }
 
-/** Split n points into fixed-size runs that share their end points, so strokes stay joined. */
 export function chunkRanges(n: number, size: number): [number, number][] {
   const ranges: [number, number][] = []
   if (n < 2) return n === 1 ? [[0, 1]] : ranges
@@ -159,7 +127,6 @@ export function chunkRanges(n: number, size: number): [number, number][] {
   return ranges
 }
 
-/** Camera eye for an orbit around `target`; +z is up (time) and yaw 0 looks from the floor plan's bottom edge. */
 export function orbitEye(target: Vec3, yaw: number, pitch: number, distance: number): Vec3 {
   const flat = Math.cos(pitch) * distance
   return [
@@ -172,10 +139,9 @@ export function orbitEye(target: Vec3, yaw: number, pitch: number, distance: num
 export type DragSample = { ms: number; yaw: number }
 
 export const INERTIA_WINDOW_MS = 100
-export const INERTIA_TAU = 0.35
+const INERTIA_TAU = 0.35
 const MAX_INERTIA = 6
 
-/** Yaw velocity (rad/s) at release from recent drag moves; 0 if the pointer had come to rest. */
 export function releaseVelocity(
   samples: readonly DragSample[],
   releaseMs: number,
@@ -189,12 +155,7 @@ export function releaseVelocity(
   return clamp(moved / seconds, -MAX_INERTIA, MAX_INERTIA)
 }
 
-/** Exponentially decay a coasting velocity over dt seconds, stopping once it is negligible. */
 export function coast(velocity: number, dt: number, tau = INERTIA_TAU, rest = 0.02): number {
-  const next = velocity * Math.exp(-Math.max(0, dt) / tau)
+  const next = velocity * expDecay(dt, tau)
   return Math.abs(next) < rest ? 0 : next
-}
-
-export function clamp(value: number, min: number, max: number): number {
-  return Math.min(max, Math.max(min, value))
 }

@@ -83,7 +83,6 @@ describe('resamplePath', () => {
   })
 })
 
-/** Piecewise-linear trajectory: moves, then sits still from 2 s until the stop at 3 s. */
 function trajectory(t: number) {
   const keys = [
     { t: 0, x: 0, y: 0 },
@@ -102,7 +101,6 @@ function trajectory(t: number) {
   return { x: 300, y: 120 }
 }
 
-/** Record like the canvas does: events stamped by the session clock, thinned, final point on stop. */
 function recordSpeculate(clock: SessionClock, perfStart: number, eventHz: number, duration = 3) {
   const moveEnd = 2
   clock.start(perfStart)
@@ -215,7 +213,6 @@ describe('export of a path that starts at the current session time', () => {
   function recordLateEntrant() {
     const clock = new SessionClock()
     const first = recordSpeculate(clock, 1000, 60, 6)
-    // "Current time": the second path picks up the clock where the first left it.
     clock.seek(clock.timeAt(7000), 7000)
     const late = recordSpeculate(clock, 20000, 60, 6)
     return { first, late }
@@ -257,7 +254,6 @@ describe('hold points', () => {
     expect(holdTimes(5, 4)).toEqual([])
   })
 
-  /** Moves 0-1 s, sits still until 2.05 s (off the hold grid), then moves; 60 Hz events. */
   function stopAndGo(withHolds: boolean) {
     const at = (t: number) => (t <= 1 ? t * 100 : t <= 2.05 ? 100 : 100 + (t - 2.05) * 100)
     const raw: TimedPoint[] = []

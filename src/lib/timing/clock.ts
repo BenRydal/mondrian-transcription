@@ -1,4 +1,3 @@
-/** Session timeline for Speculate mode, driven by performance.now() milliseconds. */
 export class SessionClock {
   private base = 0
   private anchor: number | null = null
@@ -39,7 +38,6 @@ export class SessionClock {
 
 const MAX_EXTRAPOLATION = 0.25
 
-/** Maps pointer timestamps to video media time, monotonic within one take. */
 export class MediaClock {
   private anchorMedia = 0
   private anchorPerf = 0
@@ -68,7 +66,6 @@ export class MediaClock {
     return this.last
   }
 
-  /** Start a new take: allows time to move backwards after a seek. */
   reset() {
     this.last = -Infinity
   }

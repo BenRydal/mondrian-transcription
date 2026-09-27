@@ -6,7 +6,7 @@
   import IconSave from '~icons/material-symbols/bookmark-add-outline'
   import type { SnapshotMeta } from '$lib/storage/sessionDb'
   import { diffPaths, pathLabel } from '$lib/storage/history'
-  import { formatSavedAt } from '$lib/stores/sessionRecovery'
+  import { formatSavedAt } from '$lib/utils/format'
   import PanelSection from './PanelSection.svelte'
 
   const PAGE_SIZE = 20

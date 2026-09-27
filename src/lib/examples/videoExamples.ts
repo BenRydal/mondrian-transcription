@@ -1,18 +1,16 @@
-/** IGS example datasets that have a YouTube video; titles and durations follow the IGS picker. */
 export interface VideoExample {
   id: string
   group: string
   title: string
   duration: string
   videoId: string
-  /** Width over height of the video, for fitting the embed in the video slot. */
   aspect: number
 }
 
 const FOUR_THREE = 4 / 3
 const WIDE = 16 / 9
 
-export const VIDEO_EXAMPLES: readonly VideoExample[] = [
+const VIDEO_EXAMPLES: readonly VideoExample[] = [
   {
     id: 'example-1',
     group: 'Sports',
@@ -89,7 +87,6 @@ export const VIDEO_EXAMPLES: readonly VideoExample[] = [
 
 export const floorPlanUrl = (example: VideoExample) => `/examples/video/${example.id}.png`
 
-/** Examples in display order, grouped under their IGS category. */
 export function groupVideoExamples(examples: readonly VideoExample[] = VIDEO_EXAMPLES) {
   const groups = new Map<string, VideoExample[]>()
   for (const example of examples) {

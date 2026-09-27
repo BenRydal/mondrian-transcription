@@ -4,6 +4,7 @@
   import { drawingConfig, rotateFloorPlan } from '$lib/stores/drawingConfig'
   import { drawingState } from '$lib/stores/drawingState'
   import PanelSection from './PanelSection.svelte'
+  import SegmentedControl from '$lib/components/SegmentedControl.svelte'
   import {
     TRAIL_LENGTHS,
     viewPrefs,
@@ -64,20 +65,15 @@
 
 <div class="flex flex-col gap-6 px-3 py-4">
   <PanelSection title="Recording">
-    <div class="join w-full" role="group" aria-label="Recording">
-      {#each recordingModes as mode (mode.value)}
-        {@const active = $viewPrefs.recordingMode === mode.value}
-        <button
-          class="btn btn-sm join-item flex-1"
-          class:btn-active={active}
-          aria-pressed={active}
-          disabled={isRecording}
-          onclick={() => viewPrefs.update((p) => ({ ...p, recordingMode: mode.value }))}
-        >
-          {mode.label}
-        </button>
-      {/each}
-    </div>
+    <SegmentedControl
+      options={recordingModes}
+      value={$viewPrefs.recordingMode}
+      onSelect={(recordingMode) => viewPrefs.update((p) => ({ ...p, recordingMode }))}
+      disabled={isRecording}
+      label="Recording"
+      class="w-full"
+      itemClass="flex-1"
+    />
     <p class="text-xs text-base-content/60">
       {#if isRecording}
         Stop recording to change this.
@@ -91,19 +87,14 @@
     {#if !isTranscriptionMode}
       <div class="flex flex-col gap-1">
         <span id="new-path-start" class="text-sm">New path starts at</span>
-        <div class="join w-full" role="group" aria-labelledby="new-path-start">
-          {#each newPathStarts as option (option.value)}
-            {@const active = $viewPrefs.newPathStart === option.value}
-            <button
-              class="btn btn-sm join-item flex-1"
-              class:btn-active={active}
-              aria-pressed={active}
-              onclick={() => viewPrefs.update((p) => ({ ...p, newPathStart: option.value }))}
-            >
-              {option.label}
-            </button>
-          {/each}
-        </div>
+        <SegmentedControl
+          options={newPathStarts}
+          value={$viewPrefs.newPathStart}
+          onSelect={(newPathStart) => viewPrefs.update((p) => ({ ...p, newPathStart }))}
+          labelledby="new-path-start"
+          class="w-full"
+          itemClass="flex-1"
+        />
         <p class="text-xs text-base-content/60">
           {#if $viewPrefs.newPathStart === 'current'}
             A new path picks up the session clock where it is, for someone who arrives later.

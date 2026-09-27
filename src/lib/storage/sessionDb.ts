@@ -12,17 +12,18 @@ import {
   type PathManifest,
 } from './chunks'
 import { selectRetained } from './retention'
+import { randomId } from '$lib/utils/id'
+import { countRecordedPaths, getTotalPointCount } from '$lib/stores/sessionRecovery'
 import {
   DB_NAME,
   STORES,
-  countPoints,
   emptySession,
   isValidManifest,
   isValidMeta,
   isValidPaths,
   isYouTubeRef,
   openSessionDb,
-  quiet,
+  queueInTx,
   type Db,
   type ManifestRecord,
   type SessionConfig,
@@ -36,11 +37,8 @@ import {
 } from './schema'
 
 export {
-  DB_NAME,
-  countPoints,
   type SessionConfig,
   type SessionRecord,
-  type SnapshotKind,
   type SnapshotMeta,
   type VideoMeta,
   type VideoStatus,
@@ -66,7 +64,7 @@ export interface SnapshotInput {
   videoSource?: YouTubeVideoRef | null
 }
 
-export interface SaveOptions {
+interface SaveOptions {
   kind?: SnapshotKind
   label?: string | null
 }
@@ -82,12 +80,9 @@ export interface SaveResult {
   id: number | null
   savedAt: number
   videoStatus: VideoStatus | null
-  /** True when an autosave matched the previous snapshot and nothing was written. */
   skipped: boolean
-  /** Autosaves removed to recover from a full disk before this save landed. */
   evicted: number
   chunksWritten: number
-  /** Synchronous main-thread work before the transaction starts. */
   prepMs: number
 }
 
@@ -99,7 +94,7 @@ export interface SessionBundle {
   videos: Map<string, Blob>
 }
 
-export interface SessionDbOptions {
+interface SessionDbOptions {
   dbName?: string
   estimate?: () => Promise<{ usage?: number; quota?: number }>
   now?: () => number
@@ -107,12 +102,13 @@ export interface SessionDbOptions {
 
 export class StorageUnavailableError extends Error {}
 
-export function isQuotaError(e: unknown): boolean {
+function isQuotaError(e: unknown): boolean {
   const name = (e as { name?: string } | null)?.name
   return name === 'QuotaExceededError' || name === 'NS_ERROR_DOM_QUOTA_REACHED'
 }
 
 const BYTES_PER_POINT = CHUNK_STRIDE * 8
+const VIDEO_QUOTA_SHARE = 0.8
 
 interface IndexEntry {
   id: number
@@ -122,7 +118,6 @@ interface IndexEntry {
   videoKey: string | null
 }
 
-/** In-memory view of one session's history, owned by the tab holding its lock. */
 interface SessionIndex {
   sessionId: string
   refs: Map<number, number>
@@ -134,9 +129,6 @@ interface SessionIndex {
 
 type WriteTx = IDBPTransaction<SessionDbSchema, typeof STORES, 'readwrite'>
 type ReadTx = IDBPTransaction<SessionDbSchema, StoreNames<SessionDbSchema>[], 'readonly'>
-
-const newId = () =>
-  globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`
 
 const byNewest = (a: { id?: number }, b: { id?: number }) => (b.id ?? 0) - (a.id ?? 0)
 
@@ -150,7 +142,6 @@ function toEntry(meta: SnapshotMeta): IndexEntry {
   }
 }
 
-/** Identity of a snapshot's content, used to skip autosaves that would change nothing. */
 function snapshotSig(manifests: PathManifest[], meta: SnapshotMeta): string {
   return JSON.stringify([
     manifests,
@@ -188,15 +179,27 @@ function chunkRange(sessionId: string) {
   return IDBKeyRange.bound([sessionId, -Infinity], [sessionId, Infinity])
 }
 
+type BlobStore = 'floorPlans' | 'videos'
+
+async function putBlobIfAbsent(tx: WriteTx, store: BlobStore, key: string, blob: Blob) {
+  const target = tx.objectStore(store)
+  if ((await target.getKey(key)) === undefined) await target.put(blob, key)
+}
+
+function abortIfActive(tx: { abort(): void }): boolean {
+  try {
+    tx.abort()
+    return true
+  } catch {
+    return false
+  }
+}
+
 async function abortAndThrow(
   tx: { abort(): void; error: DOMException | null },
   e: unknown
 ): Promise<never> {
-  try {
-    tx.abort()
-  } catch {
-    // Already aborted or committed.
-  }
+  abortIfActive(tx)
   throw tx.error ?? e
 }
 
@@ -228,14 +231,12 @@ export class SessionDb {
     return this.opts.now?.() ?? Date.now()
   }
 
-  /** Writes run one at a time so the in-memory indexes always match what committed. */
   private enqueue<T>(fn: () => Promise<T>): Promise<T> {
     const run = this.tail.then(fn, fn)
     this.tail = run.catch(() => {})
     return run
   }
 
-  /** Forget cached state for a session, e.g. after another tab may have written to it. */
   invalidate(sessionId: string) {
     this.indexes.delete(sessionId)
   }
@@ -256,12 +257,12 @@ export class SessionDb {
         lengths.set(seq, length)
       })
     }
-    // Sweep chunks no snapshot references; nothing else can create them, but be safe.
     let maxSeq = -1
     const chunks = tx.objectStore('chunks')
     for (const key of await chunks.getAllKeys(chunkRange(sessionId))) {
       maxSeq = Math.max(maxSeq, key[1])
-      if (!refs.has(key[1])) quiet(chunks.delete(key))
+      const orphaned = !refs.has(key[1])
+      if (orphaned) queueInTx(chunks.delete(key))
     }
     await tx.done
     for (const seq of refs.keys()) maxSeq = Math.max(maxSeq, seq)
@@ -279,17 +280,24 @@ export class SessionDb {
     return index
   }
 
+  private async inWriteTx<T>(work: (tx: WriteTx) => Promise<T>): Promise<T> {
+    const tx = this.db.transaction(STORES, 'readwrite')
+    tx.done.catch(() => {})
+    try {
+      const result = await work(tx)
+      await tx.done
+      return result
+    } catch (e) {
+      return abortAndThrow(tx, e)
+    }
+  }
+
   private async videoFits(video: NonNullable<SnapshotInput['video']>): Promise<boolean> {
     if (this.rejectedVideos.has(video.key)) return false
     if ((await this.db.getKey('videos', video.key)) !== undefined) return true
-    const margin = 0.8
-    return video.blob.size < (await availableBytes(this.opts)) * margin
+    return video.blob.size < (await availableBytes(this.opts)) * VIDEO_QUOTA_SHARE
   }
 
-  /**
-   * Save one snapshot atomically. On a full disk: evict old autosaves and retry once,
-   * then drop the video (never the paths).
-   */
   save(sessionId: string, input: SnapshotInput, opts: SaveOptions = {}): Promise<SaveResult> {
     return this.enqueue(async () => {
       const index = await this.ensureIndex(sessionId)
@@ -338,8 +346,8 @@ export class SessionDb {
       imageWidth: input.imageWidth,
       imageHeight: input.imageHeight,
       config: input.config,
-      pathCount: input.paths.filter((p) => p.points.length > 0).length,
-      pointCount: countPoints(input.paths),
+      pathCount: countRecordedPaths(input.paths),
+      pointCount: getTotalPointCount(input.paths),
       floorPlanKey: input.floorPlan?.key ?? null,
       floorPlanName: input.floorPlan?.name ?? null,
       videoKey: video?.key ?? null,
@@ -361,21 +369,14 @@ export class SessionDb {
       }
     }
 
-    const tx = this.db.transaction(STORES, 'readwrite')
-    tx.done.catch(() => {})
-    try {
+    const committed = await this.inWriteTx(async (tx) => {
       const chunks = tx.objectStore('chunks')
-      for (const chunk of plan.newChunks) quiet(chunks.put(chunk))
+      for (const chunk of plan.newChunks) queueInTx(chunks.put(chunk))
       const prepMs = performance.now() - started
-      if (
-        input.floorPlan &&
-        (await tx.objectStore('floorPlans').getKey(input.floorPlan.key)) === undefined
-      ) {
-        await tx.objectStore('floorPlans').put(input.floorPlan.blob, input.floorPlan.key)
+      if (input.floorPlan) {
+        await putBlobIfAbsent(tx, 'floorPlans', input.floorPlan.key, input.floorPlan.blob)
       }
-      if (video && (await tx.objectStore('videos').getKey(video.key)) === undefined) {
-        await tx.objectStore('videos').put(video.blob, video.key)
-      }
+      if (video) await putBlobIfAbsent(tx, 'videos', video.key, video.blob)
       const id = await tx.objectStore('snapshots').add(meta)
       meta.id = id
       await tx.objectStore('manifests').put({ sessionId, paths: plan.manifests }, id)
@@ -397,27 +398,26 @@ export class SessionDb {
         snapshotCount: entries.length - dropped.length,
         bytes: index.chunkBytes + newBytes - freed + assetBytes,
       }))
-      await tx.done
-      this.commit(
-        index,
-        deltas,
-        newBytes - freed,
-        entries.filter((e) => keep.has(e.id))
-      )
-      index.nextSeq = plan.nextSeq
-      index.lastSig = sig
-      for (const ref of plan.newRefs) this.registry.register(sessionId, ref.seq, ref.points)
       return {
         id,
-        savedAt,
-        videoStatus: videoMeta?.status ?? null,
-        skipped: false,
-        evicted: 0,
-        chunksWritten: plan.newChunks.length,
         prepMs,
+        deltas,
+        byteDelta: newBytes - freed,
+        kept: entries.filter((e) => keep.has(e.id)),
       }
-    } catch (e) {
-      return abortAndThrow(tx, e)
+    })
+    this.commit(index, committed.deltas, committed.byteDelta, committed.kept)
+    index.nextSeq = plan.nextSeq
+    index.lastSig = sig
+    for (const ref of plan.newRefs) this.registry.register(sessionId, ref.seq, ref.points)
+    return {
+      id: committed.id,
+      savedAt,
+      videoStatus: videoMeta?.status ?? null,
+      skipped: false,
+      evicted: 0,
+      chunksWritten: plan.newChunks.length,
+      prepMs: committed.prepMs,
     }
   }
 
@@ -431,7 +431,6 @@ export class SessionDb {
     await store.put(update(current))
   }
 
-  /** Delete snapshots and any chunk or blob left unreferenced; returns chunk bytes freed. */
   private async deleteInTx(
     tx: WriteTx,
     index: SessionIndex,
@@ -443,8 +442,8 @@ export class SessionDb {
     const lengths = new Map<number, number>()
     for (const entry of dropped) {
       const manifest = await manifests.get(entry.id)
-      quiet(snapshots.delete(entry.id))
-      quiet(manifests.delete(entry.id))
+      queueInTx(snapshots.delete(entry.id))
+      queueInTx(manifests.delete(entry.id))
       if (!manifest) continue
       forEachChunk(manifest.paths, (seq, length) => {
         deltas.set(seq, (deltas.get(seq) ?? 0) - 1)
@@ -454,7 +453,7 @@ export class SessionDb {
     let freed = 0
     for (const [seq, delta] of deltas) {
       if (delta < 0 && (index.refs.get(seq) ?? 0) + delta <= 0) {
-        quiet(tx.objectStore('chunks').delete([index.sessionId, seq]))
+        queueInTx(tx.objectStore('chunks').delete([index.sessionId, seq]))
         freed += (lengths.get(seq) ?? 0) * BYTES_PER_POINT
       }
     }
@@ -472,14 +471,15 @@ export class SessionDb {
     videoKeys: (string | null)[]
   ) {
     const snapshots = tx.objectStore('snapshots')
-    for (const key of new Set(floorPlanKeys)) {
-      if (key && (await snapshots.index('byFloorPlan').count(key)) === 0) {
-        await tx.objectStore('floorPlans').delete(key)
-      }
-    }
-    for (const key of new Set(videoKeys)) {
-      if (key && (await snapshots.index('byVideo').count(key)) === 0) {
-        await tx.objectStore('videos').delete(key)
+    const sweeps = [
+      ['floorPlans', 'byFloorPlan', floorPlanKeys],
+      ['videos', 'byVideo', videoKeys],
+    ] as const
+    for (const [store, index, keys] of sweeps) {
+      for (const key of new Set(keys)) {
+        if (key && (await snapshots.index(index).count(key)) === 0) {
+          await tx.objectStore(store).delete(key)
+        }
       }
     }
   }
@@ -501,9 +501,7 @@ export class SessionDb {
 
   private async deleteEntries(index: SessionIndex, dropped: IndexEntry[]): Promise<void> {
     if (dropped.length === 0) return
-    const tx = this.db.transaction(STORES, 'readwrite')
-    tx.done.catch(() => {})
-    try {
+    const { deltas, freed, entries } = await this.inWriteTx(async (tx) => {
       const deltas = new Map<number, number>()
       const freed = await this.deleteInTx(tx, index, dropped, deltas)
       const ids = new Set(dropped.map((e) => e.id))
@@ -513,15 +511,12 @@ export class SessionDb {
         snapshotCount: entries.length,
         bytes: Math.max(0, s.bytes - freed),
       }))
-      await tx.done
-      this.commit(index, deltas, -freed, entries)
-      index.lastSig = null
-    } catch (e) {
-      await abortAndThrow(tx, e)
-    }
+      return { deltas, freed, entries }
+    })
+    this.commit(index, deltas, -freed, entries)
+    index.lastSig = null
   }
 
-  /** Oldest half of the autosaves (never pinned, never the newest snapshot). */
   private async evictNow(index: SessionIndex): Promise<number> {
     const newest = index.entries.at(-1)?.id
     const candidates = index.entries.filter((e) => !e.pinned && e.id !== newest)
@@ -555,10 +550,15 @@ export class SessionDb {
     })
   }
 
-  private async loadEntry(tx: ReadTx, meta: SnapshotMeta): Promise<RestoredSession | null> {
-    if (!isValidMeta(meta)) return null
+  private async validManifest(tx: ReadTx, meta: SnapshotMeta | undefined) {
+    if (!meta || !isValidMeta(meta)) return null
     const manifest = await tx.objectStore('manifests').get(meta.id!)
-    if (!isValidManifest(manifest, meta.pointCount)) return null
+    return isValidManifest(manifest, meta.pointCount) ? manifest : null
+  }
+
+  private async loadEntry(tx: ReadTx, meta: SnapshotMeta): Promise<RestoredSession | null> {
+    const manifest = await this.validManifest(tx, meta)
+    if (!manifest) return null
     const paths: PathData[] = []
     for (const p of manifest.paths) {
       const points = await this.readPathPoints(tx, meta.sessionId, p)
@@ -602,7 +602,6 @@ export class SessionDb {
     ) as unknown as ReadTx
   }
 
-  /** Newest snapshot of a session that passes validation; damaged ones are skipped. */
   async loadLatest(sessionId: string): Promise<RestoredSession | null> {
     const tx = this.readTx()
     const metas = await tx.objectStore('snapshots').index('bySession').getAll(sessionId)
@@ -619,20 +618,15 @@ export class SessionDb {
     return meta ? this.loadEntry(tx, meta) : null
   }
 
-  /** One path from a snapshot, without reading the others. */
   async loadPath(id: number, pathId: number): Promise<PathData | null> {
     const tx = this.readTx()
     const meta = await tx.objectStore('snapshots').get(id)
-    if (!meta || !isValidMeta(meta)) return null
-    const manifest = await tx.objectStore('manifests').get(id)
-    if (!isValidManifest(manifest, meta.pointCount)) return null
-    const p = manifest.paths.find((m) => m.pathId === pathId)
-    if (!p) return null
+    const p = (await this.validManifest(tx, meta))?.paths.find((m) => m.pathId === pathId)
+    if (!meta || !p) return null
     const points = await this.readPathPoints(tx, meta.sessionId, p)
     return points ? toPathData(p, points) : null
   }
 
-  /** Snapshots with recorded data, newest first. */
   async listSnapshots(sessionId: string): Promise<SnapshotMeta[]> {
     const all = await this.db.getAllFromIndex('snapshots', 'bySession', sessionId)
     return all.sort(byNewest).filter((m) => m.pathCount > 0)
@@ -646,7 +640,6 @@ export class SessionDb {
     return (await this.db.get('sessions', id)) ?? null
   }
 
-  /** The session most recently opened in any tab. */
   async lastOpenedSessionId(): Promise<string | null> {
     const sessions = await this.db.getAll('sessions')
     sessions.sort((a, b) => b.lastOpenedAt - a.lastOpenedAt)
@@ -655,7 +648,7 @@ export class SessionDb {
 
   createSession(name: string | null = null): Promise<SessionRecord> {
     return this.enqueue(async () => {
-      const session = emptySession(newId(), this.now(), name)
+      const session = emptySession(randomId(), this.now(), name)
       await this.db.put('sessions', session)
       return session
     })
@@ -678,18 +671,15 @@ export class SessionDb {
     return this.patchSession(id, (s) => ({ ...s, name: name.trim() || null }))
   }
 
-  /** Remove a session with all its snapshots, chunks and any blobs no other session uses. */
   deleteSession(id: string): Promise<void> {
     return this.enqueue(async () => {
-      const tx = this.db.transaction(STORES, 'readwrite')
-      tx.done.catch(() => {})
-      try {
+      await this.inWriteTx(async (tx) => {
         const snapshots = tx.objectStore('snapshots')
         const metas = await snapshots.index('bySession').getAll(id)
-        for (const meta of metas) quiet(snapshots.delete(meta.id!))
+        for (const meta of metas) queueInTx(snapshots.delete(meta.id!))
         const manifests = tx.objectStore('manifests')
         for (const key of await manifests.index('bySession').getAllKeys(id)) {
-          quiet(manifests.delete(key))
+          queueInTx(manifests.delete(key))
         }
         await tx.objectStore('chunks').delete(chunkRange(id))
         await tx.objectStore('sessions').delete(id)
@@ -698,15 +688,11 @@ export class SessionDb {
           metas.map((m) => m.floorPlanKey),
           metas.map((m) => m.videoKey)
         )
-        await tx.done
-        this.indexes.delete(id)
-      } catch (e) {
-        await abortAndThrow(tx, e)
-      }
+      })
+      this.indexes.delete(id)
     })
   }
 
-  /** Everything needed to rebuild a session elsewhere. */
   async exportSession(id: string): Promise<SessionBundle | null> {
     const tx = this.db.transaction(STORES, 'readonly')
     const session = await tx.objectStore('sessions').get(id)
@@ -722,40 +708,30 @@ export class SessionDb {
     const chunks = await tx.objectStore('chunks').getAll(chunkRange(id))
     const floorPlans = new Map<string, Blob>()
     const videos = new Map<string, Blob>()
+    const collect = async (store: BlobStore, key: string | null, into: Map<string, Blob>) => {
+      if (!key || into.has(key)) return
+      const blob = await tx.objectStore(store).get(key)
+      if (blob) into.set(key, blob)
+    }
     for (const { meta } of snapshots) {
-      if (meta.floorPlanKey && !floorPlans.has(meta.floorPlanKey)) {
-        const blob = await tx.objectStore('floorPlans').get(meta.floorPlanKey)
-        if (blob) floorPlans.set(meta.floorPlanKey, blob)
-      }
-      if (meta.videoKey && !videos.has(meta.videoKey)) {
-        const blob = await tx.objectStore('videos').get(meta.videoKey)
-        if (blob) videos.set(meta.videoKey, blob)
-      }
+      await collect('floorPlans', meta.floorPlanKey, floorPlans)
+      await collect('videos', meta.videoKey, videos)
     }
     return { session, snapshots, chunks, floorPlans, videos }
   }
 
-  /** Write a bundle as a brand-new session in one transaction; returns its record. */
   importSession(bundle: SessionBundle): Promise<SessionRecord> {
     return this.enqueue(async () => {
-      const id = newId()
+      const id = randomId()
       const now = this.now()
       const session: SessionRecord = { ...bundle.session, id, lastOpenedAt: now }
-      const tx = this.db.transaction(STORES, 'readwrite')
-      tx.done.catch(() => {})
-      try {
+      return this.inWriteTx(async (tx) => {
         for (const chunk of bundle.chunks)
-          quiet(tx.objectStore('chunks').put({ ...chunk, sessionId: id }))
+          queueInTx(tx.objectStore('chunks').put({ ...chunk, sessionId: id }))
         for (const [key, blob] of bundle.floorPlans) {
-          if ((await tx.objectStore('floorPlans').getKey(key)) === undefined) {
-            await tx.objectStore('floorPlans').put(blob, key)
-          }
+          await putBlobIfAbsent(tx, 'floorPlans', key, blob)
         }
-        for (const [key, blob] of bundle.videos) {
-          if ((await tx.objectStore('videos').getKey(key)) === undefined) {
-            await tx.objectStore('videos').put(blob, key)
-          }
-        }
+        for (const [key, blob] of bundle.videos) await putBlobIfAbsent(tx, 'videos', key, blob)
         for (const { meta, manifest } of bundle.snapshots) {
           const copy: SnapshotMeta = { ...meta, sessionId: id }
           delete copy.id
@@ -767,15 +743,11 @@ export class SessionDb {
           await tx.objectStore('manifests').put({ ...manifest, sessionId: id }, newSnapshotId)
         }
         await tx.objectStore('sessions').put(session)
-        await tx.done
         return session
-      } catch (e) {
-        return abortAndThrow(tx, e)
-      }
+      })
     })
   }
 
-  /** Import a pre-IndexedDB localStorage session; the key is removed only after the write commits. */
   async importLegacy(storage: Storage): Promise<string | null> {
     const raw = storage.getItem(LEGACY_STORAGE_KEY)
     if (!raw) return null
@@ -784,7 +756,7 @@ export class SessionDb {
     const timestamp = Number.isFinite(legacy.timestamp) ? legacy.timestamp : this.now()
     const sessionId = `legacy-${timestamp}`
     const exists = (await this.db.getKey('sessions', sessionId)) !== undefined
-    if (!exists && countPoints(legacy.paths) > 0) {
+    if (!exists && getTotalPointCount(legacy.paths) > 0) {
       const floorPlan =
         typeof legacy.floorPlanDataUrl === 'string'
           ? await (await fetch(legacy.floorPlanDataUrl)).blob()
@@ -809,7 +781,7 @@ export class SessionDb {
       }))
     }
     storage.removeItem(LEGACY_STORAGE_KEY)
-    return exists || countPoints(legacy.paths) > 0 ? sessionId : null
+    return exists || getTotalPointCount(legacy.paths) > 0 ? sessionId : null
   }
 }
 

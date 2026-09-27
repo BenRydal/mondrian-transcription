@@ -1,20 +1,16 @@
 import type p5 from 'p5'
-import { drawingState, appendFinalPoint } from '../../stores/drawingState'
+import { drawingState, appendFinalPoint, STOPPED_TRACKING } from '../../stores/drawingState'
 import { get } from 'svelte/store'
 import { drawingConfig, getVideoHeightPercent } from '../../stores/drawingConfig'
-import type { VideoSource } from '../../video/source'
+import { isAtVideoEnd, type VideoSource } from '../../video/source'
+
+const stopTracking = () => drawingState.update((state) => ({ ...state, ...STOPPED_TRACKING }))
 
 function stopRecording(time: number) {
   appendFinalPoint(time)
-  drawingState.update((state) => ({
-    ...state,
-    isVideoPlaying: false,
-    shouldTrackMouse: false,
-    isDrawing: false,
-  }))
+  stopTracking()
 }
 
-/** Mirror a source's play, pause and end into the drawing state; returns an unbind function. */
 export function bindPlaybackState(source: VideoSource) {
   const onPlay = () => drawingState.update((state) => ({ ...state, isVideoPlaying: true }))
   const onStop = () => stopRecording(source.currentTime)
@@ -37,7 +33,6 @@ export function setupVideo(p5: p5) {
     videoElt.loop = false
     videoElt.currentTime = 0
 
-    // Seek once metadata is ready, so a restore doesn't race a blind timed seek.
     videoElt.addEventListener(
       'loadedmetadata',
       () => {
@@ -59,9 +54,7 @@ export function setupVideo(p5: p5) {
     videoElt.load()
 
     p5Vid.elt.addEventListener('loadeddata', () => {
-      if (p5.draw) {
-        p5.redraw()
-      }
+      p5.redraw()
 
       let frameCount = 0
       const tempDraw = () => {
@@ -102,17 +95,11 @@ export function setupVideo(p5: p5) {
   }
 
   const checkVideoEnd = (source: VideoSource) => {
-    // Paused at the end: acting again would update the store and redraw forever.
-    if (!source.paused && source.currentTime >= source.duration - 0.1) {
+    if (!source.paused && isAtVideoEnd(source)) {
       appendFinalPoint(source.currentTime)
       source.pause()
       source.currentTime = source.duration
-      drawingState.update((state) => ({
-        ...state,
-        isVideoPlaying: false,
-        shouldTrackMouse: false,
-        isDrawing: false,
-      }))
+      stopTracking()
     }
   }
 

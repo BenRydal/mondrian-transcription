@@ -15,7 +15,6 @@ function makePaths(total: number): PathData[] {
   }))
 }
 
-/** Steady-state cost of an autosave while one path grows by a second of drawing. */
 async function measure(total: number) {
   let now = 1_000_000_000_000
   const db = await SessionDb.open({ dbName: `bench-${total}`, now: () => now })
@@ -61,7 +60,6 @@ describe('save cost benchmark', () => {
     for (const total of [1_000, 60_000, 360_000]) results.push(await measure(total))
     console.table(results)
     const [small, , large] = results
-    // Generous: fake-indexeddb timing is noisy, but a full copy would be ~100x here.
     expect(large.msPerSave).toBeLessThan(Math.max(small.msPerSave * 6, 15))
     expect(large.prepMs).toBeLessThan(10)
   }, 60_000)

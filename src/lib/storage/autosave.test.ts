@@ -40,7 +40,6 @@ function snapshot(points: number): SnapshotInput {
   }
 }
 
-/** Minimal single-process LockManager: exclusive locks, ifAvailable, and abort signals. */
 class FakeLocks {
   private held = new Set<string>()
   private queue: Array<{ name: string; grant: () => void }> = []

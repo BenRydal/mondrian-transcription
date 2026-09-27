@@ -11,10 +11,11 @@ import {
   setNewPathStart,
 } from '../timing/sessionClocks'
 
-/** Autosave spots changed points by identity, so dev builds make in-place edits throw. */
 export const freezePoint: (point: Point) => Point = import.meta.env.DEV
   ? (point) => Object.freeze(point)
   : (point) => point
+
+export const PATH_COLORS = ['#FF0000', '#00FF00', '#0000FF', '#FFFF00', '#FF00FF', '#00FFFF']
 
 export interface PathData {
   points: Point[]
@@ -24,7 +25,7 @@ export interface PathData {
   visible?: boolean
 }
 
-export interface DrawingState {
+interface DrawingState {
   isVideoPlaying: boolean
   isDrawing: boolean
   shouldTrackMouse: boolean
@@ -58,19 +59,53 @@ function clearJumpingOnSeek(videoElement: VideoSource) {
   videoElement.addEventListener('seeked', onSeeked)
 }
 
-function syncClockToCurrentPath(state: DrawingState, now: number) {
-  const currentPath = state.paths.find((p) => p.pathId === state.currentPathId)
-  syncSpeculateClock(state.currentPathId, currentPath?.points.at(-1)?.time, now)
+const syntheticPoints = new WeakSet<Point>()
+
+export const STOPPED_TRACKING = {
+  shouldTrackMouse: false,
+  isDrawing: false,
+  isVideoPlaying: false,
+} as const
+
+export function findCurrentPath(state: Pick<DrawingState, 'paths' | 'currentPathId'>) {
+  return state.paths.find((p) => p.pathId === state.currentPathId)
 }
+
+function currentPathIndex(state: DrawingState) {
+  return state.paths.findIndex((p) => p.pathId === state.currentPathId)
+}
+
+function replacePathAt(paths: PathData[], index: number, path: PathData): PathData[] {
+  const updated = [...paths]
+  updated[index] = path
+  return updated
+}
+
+function truncateAfter(path: PathData, time: number): PathData {
+  return { ...path, points: path.points.filter((point) => point.time <= time) }
+}
+
+function holdPoint(last: Point, time: number, pathId: number): Point {
+  const point = freezePoint({ x: last.x, y: last.y, time, pathId })
+  syntheticPoints.add(point)
+  return point
+}
+
+export function nextPathId(state: Pick<DrawingState, 'paths' | 'currentPathId'>) {
+  return Math.max(state.currentPathId, ...state.paths.map((p) => p.pathId)) + 1
+}
+
+export function syncClockToCurrentPath(state: DrawingState, now: number) {
+  syncSpeculateClock(state.currentPathId, findCurrentPath(state)?.points.at(-1)?.time, now)
+}
+
+const canJump = (state: DrawingState, video: VideoSource) =>
+  !state.isJumping && !!video.duration && !isNaN(video.duration)
 
 export function handleRewindSpeculateMode() {
   drawingState.update((state) => {
-    const currentPathIndex = state.paths.findIndex((p) => p.pathId === state.currentPathId)
-    if (currentPathIndex === -1) return state
-
-    const updatedPaths = [...state.paths]
-    const currentPath = updatedPaths[currentPathIndex]
-    if (currentPath.points.length === 0) return state
+    const index = currentPathIndex(state)
+    if (index === -1 || state.paths[index].points.length === 0) return state
 
     const now = performance.now()
     syncClockToCurrentPath(state, now)
@@ -81,21 +116,16 @@ export function handleRewindSpeculateMode() {
     )
     speculateClock.seek(newTime, now)
 
-    const updatedPoints = currentPath.points.filter((point) => point.time <= newTime)
-    updatedPaths[currentPathIndex] = { ...currentPath, points: updatedPoints }
-
-    return { ...state, shouldTrackMouse: false, isDrawing: false, paths: updatedPaths }
+    const paths = replacePathAt(state.paths, index, truncateAfter(state.paths[index], newTime))
+    return { ...state, shouldTrackMouse: false, isDrawing: false, paths }
   })
 }
 
 export function handleForwardSpeculateMode() {
   drawingState.update((state) => {
-    const currentPathIndex = state.paths.findIndex((p) => p.pathId === state.currentPathId)
-    if (currentPathIndex === -1) return state
-
-    const updatedPaths = [...state.paths]
-    const currentPath = updatedPaths[currentPathIndex]
-    const lastPoint = currentPath.points.at(-1)
+    const index = currentPathIndex(state)
+    const path = state.paths[index]
+    const lastPoint = path?.points.at(-1)
     if (!lastPoint) return state
 
     const now = performance.now()
@@ -104,51 +134,31 @@ export function handleForwardSpeculateMode() {
     const newTime = from + get(drawingConfig).speculateJumpSeconds
     speculateClock.seek(newTime, now)
 
-    const holdPoint = freezePoint({
-      x: lastPoint.x,
-      y: lastPoint.y,
-      time: newTime,
-      pathId: state.currentPathId,
-    })
-    syntheticPoints.add(holdPoint)
-    updatedPaths[currentPathIndex] = { ...currentPath, points: [...currentPath.points, holdPoint] }
-
-    return { ...state, paths: updatedPaths }
+    const points = [...path.points, holdPoint(lastPoint, newTime, state.currentPathId)]
+    return { ...state, paths: replacePathAt(state.paths, index, { ...path, points }) }
   })
 }
 
 export function handleForwardTranscription(videoElement: VideoSource) {
   drawingState.update((state) => {
-    if (state.isJumping) return state
-    if (!videoElement.duration || isNaN(videoElement.duration)) return state
-
-    const { jumpSeconds } = get(drawingConfig)
-    const currentTime = state.videoTime
-    const currentPathIndex = state.paths.findIndex((p) => p.pathId === state.currentPathId)
-    if (currentPathIndex === -1) return state
-
-    const updatedPaths = [...state.paths]
-    const currentPath = updatedPaths[currentPathIndex]
-    const lastPoint = currentPath.points[currentPath.points.length - 1]
+    if (!canJump(state, videoElement)) return state
+    const index = currentPathIndex(state)
+    const path = state.paths[index]
+    const lastPoint = path?.points.at(-1)
     if (!lastPoint) return state
 
-    const newTime = Math.min(currentTime + jumpSeconds, videoElement.duration)
+    const newTime = Math.min(
+      state.videoTime + get(drawingConfig).jumpSeconds,
+      videoElement.duration
+    )
     videoElement.currentTime = newTime
 
-    const updatedPoints = [...currentPath.points]
-    if (newTime > lastPoint.time) {
-      const holdPoint = freezePoint({
-        x: lastPoint.x,
-        y: lastPoint.y,
-        time: newTime,
-        pathId: state.currentPathId,
-      })
-      syntheticPoints.add(holdPoint)
-      updatedPoints.push(holdPoint)
-    }
-    updatedPaths[currentPathIndex] = { ...currentPath, points: updatedPoints }
-
-    return { ...state, isJumping: true, videoTime: newTime, paths: updatedPaths }
+    const points =
+      newTime > lastPoint.time
+        ? [...path.points, holdPoint(lastPoint, newTime, state.currentPathId)]
+        : [...path.points]
+    const paths = replacePathAt(state.paths, index, { ...path, points })
+    return { ...state, isJumping: true, videoTime: newTime, paths }
   })
 
   clearJumpingOnSeek(videoElement)
@@ -156,35 +166,29 @@ export function handleForwardTranscription(videoElement: VideoSource) {
 
 export function handleRewindTranscription(videoElement: VideoSource) {
   drawingState.update((state) => {
-    if (state.isJumping) return state
-    if (!videoElement.duration || isNaN(videoElement.duration)) return state
+    if (!canJump(state, videoElement)) return state
+    const index = currentPathIndex(state)
+    if (index === -1) return state
 
-    const { jumpSeconds } = get(drawingConfig)
-    const currentTime = state.videoTime
-    const currentPathIndex = state.paths.findIndex((p) => p.pathId === state.currentPathId)
-    if (currentPathIndex === -1) return state
-
-    const newTime = Math.max(currentTime - jumpSeconds, 0)
+    const newTime = Math.max(state.videoTime - get(drawingConfig).jumpSeconds, 0)
     videoElement.currentTime = newTime
     videoElement.pause()
 
-    const updatedPaths = [...state.paths]
-    const currentPath = updatedPaths[currentPathIndex]
-    const updatedPoints = currentPath.points.filter((point) => point.time <= newTime)
-    updatedPaths[currentPathIndex] = { ...currentPath, points: updatedPoints }
-
-    return {
-      ...state,
-      isJumping: true,
-      shouldTrackMouse: false,
-      isDrawing: false,
-      isVideoPlaying: false,
-      videoTime: newTime,
-      paths: updatedPaths,
-    }
+    const paths = replacePathAt(state.paths, index, truncateAfter(state.paths[index], newTime))
+    return { ...state, ...STOPPED_TRACKING, isJumping: true, videoTime: newTime, paths }
   })
 
   clearJumpingOnSeek(videoElement)
+}
+
+export function handleForward(source: VideoSource | null) {
+  if (get(drawingConfig).isTranscriptionMode && source) handleForwardTranscription(source)
+  else handleForwardSpeculateMode()
+}
+
+export function handleRewind(source: VideoSource | null) {
+  if (get(drawingConfig).isTranscriptionMode && source) handleRewindTranscription(source)
+  else handleRewindSpeculateMode()
 }
 
 export const drawingState = writable<DrawingState>(initialState)
@@ -200,12 +204,7 @@ export function toggleDrawing(videoElement?: VideoSource) {
           if (playPromise !== undefined) {
             playPromise.catch((error) => {
               console.error('Error playing video:', error)
-              drawingState.update((s) => ({
-                ...s,
-                shouldTrackMouse: false,
-                isDrawing: false,
-                isVideoPlaying: false,
-              }))
+              drawingState.update((s) => ({ ...s, ...STOPPED_TRACKING }))
             })
           }
         } else {
@@ -213,12 +212,7 @@ export function toggleDrawing(videoElement?: VideoSource) {
         }
       } catch (error) {
         console.error('Error handling video:', error)
-        return {
-          ...state,
-          shouldTrackMouse: false,
-          isDrawing: false,
-          isVideoPlaying: false,
-        }
+        return { ...state, ...STOPPED_TRACKING }
       }
     }
 
@@ -242,13 +236,11 @@ export function toggleDrawingNoVideo() {
   })
 }
 
-/** Add an empty path and make it current; in Speculate its clock starts at `startTime`. */
 export function createNewPath(color: string, startTime = 0) {
   console.log('Creating new path with color', color)
   invalidateSpeculateClock()
   drawingState.update((state) => {
-    // Restored paths can hold ids above currentPathId, so never reuse one.
-    const newPathId = Math.max(state.currentPathId, ...state.paths.map((p) => p.pathId)) + 1
+    const newPathId = nextPathId(state)
     setNewPathStart(newPathId, startTime)
     return {
       ...state,
@@ -265,18 +257,14 @@ export function createNewPath(color: string, startTime = 0) {
   })
 }
 
-/** Hold and final points repeat the last position; a real move may replace one. */
-const syntheticPoints = new WeakSet<Point>()
-
-/** Append points while recording, dropping any closer than the minimum interval in clock time. */
 export function addPointsToCurrentPath(points: Point[], synthetic = false) {
   drawingState.update((state) => {
     if (!state.shouldTrackMouse || points.length === 0) return state
 
-    const currentPathIndex = state.paths.findIndex((p) => p.pathId === state.currentPathId)
-    if (currentPathIndex === -1) return state
+    const index = currentPathIndex(state)
+    if (index === -1) return state
 
-    const currentPath = state.paths[currentPathIndex]
+    const currentPath = state.paths[index]
     const updatedPoints = [...currentPath.points]
     let changed = false
     for (const point of points) {
@@ -297,16 +285,14 @@ export function addPointsToCurrentPath(points: Point[], synthetic = false) {
     }
     if (!changed) return state
 
-    const updatedPaths = [...state.paths]
-    updatedPaths[currentPathIndex] = { ...currentPath, points: updatedPoints }
-    return { ...state, paths: updatedPaths }
+    const paths = replacePathAt(state.paths, index, { ...currentPath, points: updatedPoints })
+    return { ...state, paths }
   })
 }
 
-/** Hold the last position until the stop time so stationary endings survive export. */
 export function appendFinalPoint(time: number) {
   const state = get(drawingState)
-  const lastPoint = state.paths.find((p) => p.pathId === state.currentPathId)?.points.at(-1)
+  const lastPoint = findCurrentPath(state)?.points.at(-1)
   if (!lastPoint) return
   addPointsToCurrentPath(
     [{ x: lastPoint.x, y: lastPoint.y, time, pathId: state.currentPathId }],
@@ -314,10 +300,9 @@ export function appendFinalPoint(time: number) {
   )
 }
 
-/** Repeat the last position on the hold grid up to clock time `now` while the pointer is still. */
 export function appendHoldPoints(now: number) {
   const state = get(drawingState)
-  const lastPoint = state.paths.find((p) => p.pathId === state.currentPathId)?.points.at(-1)
+  const lastPoint = findCurrentPath(state)?.points.at(-1)
   if (!state.shouldTrackMouse || !lastPoint) return
   const { x, y, pathId } = lastPoint
   addPointsToCurrentPath(
@@ -326,22 +311,17 @@ export function appendHoldPoints(now: number) {
   )
 }
 
-export function renamePathById(pathId: number, name: string) {
+function patchPathById(pathId: number, patch: (path: PathData) => Partial<PathData>) {
   drawingState.update((state) => {
-    const pathIndex = state.paths.findIndex((p) => p.pathId === pathId)
-    if (pathIndex === -1) return state
-
-    const updatedPaths = [...state.paths]
-    updatedPaths[pathIndex] = {
-      ...updatedPaths[pathIndex],
-      name: name.trim() || undefined,
-    }
-
-    return {
-      ...state,
-      paths: updatedPaths,
-    }
+    const index = state.paths.findIndex((p) => p.pathId === pathId)
+    if (index === -1) return state
+    const path = state.paths[index]
+    return { ...state, paths: replacePathAt(state.paths, index, { ...path, ...patch(path) }) }
   })
+}
+
+export function renamePathById(pathId: number, name: string) {
+  patchPathById(pathId, () => ({ name: name.trim() || undefined }))
 }
 
 export function deletePathById(pathId: number) {
@@ -351,7 +331,7 @@ export function deletePathById(pathId: number) {
 
     // If no paths remain, create a new empty path (consistent with Clear All behavior)
     const newPaths =
-      updatedPaths.length === 0 ? [{ points: [], color: '#FF0000', pathId: 1 }] : updatedPaths
+      updatedPaths.length === 0 ? [{ points: [], color: PATH_COLORS[0], pathId: 1 }] : updatedPaths
 
     const newCurrentPathId =
       updatedPaths.length === 0
@@ -360,49 +340,14 @@ export function deletePathById(pathId: number) {
           ? (updatedPaths.at(-1)?.pathId ?? 0)
           : state.currentPathId
 
-    return {
-      ...state,
-      paths: newPaths,
-      currentPathId: newCurrentPathId,
-      shouldTrackMouse: false,
-      isDrawing: false,
-      isVideoPlaying: false,
-    }
+    return { ...state, ...STOPPED_TRACKING, paths: newPaths, currentPathId: newCurrentPathId }
   })
 }
 
 export function togglePathVisibility(pathId: number) {
-  drawingState.update((state) => {
-    const pathIndex = state.paths.findIndex((p) => p.pathId === pathId)
-    if (pathIndex === -1) return state
-
-    const updatedPaths = [...state.paths]
-    updatedPaths[pathIndex] = {
-      ...updatedPaths[pathIndex],
-      visible: updatedPaths[pathIndex].visible === false,
-    }
-
-    return {
-      ...state,
-      paths: updatedPaths,
-    }
-  })
+  patchPathById(pathId, (path) => ({ visible: path.visible === false }))
 }
 
 export function updatePathColor(pathId: number, color: string) {
-  drawingState.update((state) => {
-    const pathIndex = state.paths.findIndex((p) => p.pathId === pathId)
-    if (pathIndex === -1) return state
-
-    const updatedPaths = [...state.paths]
-    updatedPaths[pathIndex] = {
-      ...updatedPaths[pathIndex],
-      color,
-    }
-
-    return {
-      ...state,
-      paths: updatedPaths,
-    }
-  })
+  patchPathById(pathId, () => ({ color }))
 }

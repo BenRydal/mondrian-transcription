@@ -1,15 +1,14 @@
 <script lang="ts">
-  import type p5 from 'p5'
   import { onMount } from 'svelte'
   import { get } from 'svelte/store'
   import { P5Canvas, type SketchFn } from 'svelte-p5'
+  import { createRedrawRequester, setLooping } from '$lib/p5/loop'
   import { drawingState, type PathData } from '$lib/stores/drawingState'
   import { drawingConfig } from '$lib/stores/drawingConfig'
-  import type { Point } from '$lib/p5/types/sketch'
+  import { PathGeometryCache, type WebglP5 } from '$lib/spacetime/pathGeometryCache'
   import { isShortcutEvent } from '$lib/utils/keyboard'
+  import { clamp } from '$lib/utils/math'
   import {
-    chunkRanges,
-    clamp,
     coast,
     DEFAULT_PITCH,
     type DragSample,
@@ -43,16 +42,13 @@
 
   const SPIN_RADIANS_PER_SECOND = 0.25
   const DRAG_RADIANS_PER_PIXEL = 0.008
-  const CHUNK_SIZE = 256
   const NOW_COLOR = '#6d28d9'
   const MAX_FRAME_DT = 0.05
-  // Lets the top tick fade in as the ease nears it, not only once it snaps.
-  const TICK_REACH = 1.02
-  // p5 skips rAF callbacks that come sooner than its target rate; this draws on every refresh.
+  const TICK_FADE_IN_REACH = 1.02
   const UNCAPPED_FPS = 1000
 
   let container: HTMLDivElement
-  let instance = $state.raw<P5 | null>(null)
+  let instance = $state.raw<WebglP5 | null>(null)
   let spinning = $state(true)
   let dragging = false
   let reducedMotion = false
@@ -68,66 +64,9 @@
   let axisEasing = false
   const hasFloorPlan = $derived(!!$drawingState.imageElement)
 
-  // p5 2.x APIs missing from @types/p5 (1.x), which is what the project type-checks against.
-  type P5 = p5 & {
-    buildGeometry(callback: () => void): p5.Geometry
-    freeGeometry(geometry: p5.Geometry): void
-    worldToScreen(x: number, y: number, z: number): p5.Vector
-  }
+  const geometryCache = new PathGeometryCache()
 
-  type Chunk = { first: Point; last: Point; geometry: p5.Geometry }
-  const chunkCache = new Map<number, Chunk[]>()
-  let cacheKey = ''
-
-  function freeAll(p: P5) {
-    for (const chunks of chunkCache.values()) for (const c of chunks) p.freeGeometry(c.geometry)
-    chunkCache.clear()
-  }
-
-  const sketch: SketchFn<P5> = (p) => {
-    const vertices = (
-      points: Point[],
-      start: number,
-      end: number,
-      toScene: (pt: Point) => Vec3
-    ) => {
-      p.beginShape()
-      for (let i = start; i < end; i++) p.vertex(...toScene(points[i]))
-      p.endShape()
-    }
-
-    /** Draw a path from cached chunks, rebuilding only chunks whose points changed. */
-    const drawPath = (path: PathData, toScene: (pt: Point) => Vec3) => {
-      const { points } = path
-      const ranges = chunkRanges(points.length, CHUNK_SIZE)
-      const cached = chunkCache.get(path.pathId) ?? []
-      const kept: Chunk[] = []
-      for (const [i, [start, end]] of ranges.entries()) {
-        if (end - start < 2) {
-          p.point(...toScene(points[start]))
-          continue
-        }
-        if (end - start <= CHUNK_SIZE) {
-          vertices(points, start, end, toScene)
-          continue
-        }
-        let chunk = cached[i]
-        if (!chunk || chunk.first !== points[start] || chunk.last !== points[end - 1]) {
-          if (chunk) p.freeGeometry(chunk.geometry)
-          const geometry = p.buildGeometry(() => {
-            p.noFill()
-            p.stroke(0)
-            vertices(points, start, end, toScene)
-          })
-          chunk = { first: points[start], last: points[end - 1], geometry }
-        }
-        kept.push(chunk)
-        p.model(chunk.geometry)
-      }
-      for (const stale of cached.slice(kept.length)) p.freeGeometry(stale.geometry)
-      chunkCache.set(path.pathId, kept)
-    }
-
+  const sketch: SketchFn<WebglP5> = (p) => {
     p.setup = () => {
       p.createCanvas(
         Math.max(1, container.clientWidth),
@@ -160,17 +99,8 @@
       }
 
       const rotation = config.floorPlanRotation
-      const key = `${imgW}x${imgH}@${rotation}`
-      if (key !== cacheKey) {
-        freeAll(p)
-        cacheKey = key
-      }
-      const livePathIds = new Set(state.paths.map((path) => path.pathId))
-      for (const [id, chunks] of chunkCache) {
-        if (livePathIds.has(id)) continue
-        for (const c of chunks) p.freeGeometry(c.geometry)
-        chunkCache.delete(id)
-      }
+      geometryCache.invalidateUnless(p, `${imgW}x${imgH}@${rotation}`)
+      geometryCache.retainPaths(p, new Set(state.paths.map((path) => path.pathId)))
 
       const fit = fitScene(p.width, p.height, imgW, imgH, rotation)
       const now = getNow()
@@ -178,7 +108,7 @@
       const axis = timeAxis(extent)
       const ease = reducedMotion ? Infinity : dt
       shownSpan = easeSpan(shownSpan, axis.span, extent, ease)
-      const shownTicks = axis.ticks.filter((t) => t <= shownSpan * TICK_REACH)
+      const shownTicks = axis.ticks.filter((t) => t <= shownSpan * TICK_FADE_IN_REACH)
       tickAlphas = fadeTicks(tickAlphas, shownTicks, ease)
       const easing = shownSpan !== axis.span || [...tickAlphas.values()].some((a) => a < 1)
       if (easing !== axisEasing) {
@@ -211,7 +141,7 @@
       const tickLen = Math.max(fit.floorW, fit.floorH) * 0.03
       const nextLabels: typeof labels = []
       for (const [t, opacity] of tickAlphas) {
-        if (t > shownSpan * TICK_REACH) continue
+        if (t > shownSpan * TICK_FADE_IN_REACH) continue
         const z = t * zScale
         p.stroke(120, 255 * opacity)
         p.line(left, top, z, left - tickLen, top, z)
@@ -233,7 +163,7 @@
         const isCurrent = path.pathId === state.currentPathId
         p.stroke(path.color)
         p.strokeWeight(isCurrent ? 3.5 : 1.5)
-        drawPath(path, toScene)
+        geometryCache.draw(p, path, toScene)
         const head = headOf(path)
         if (head) p.line(...toScene(path.points.at(-1)!), ...toScene(head))
       }
@@ -260,7 +190,6 @@
         p.sphere(isCurrent ? 5 : 3.5, 12, 8)
         p.pop()
         p.push()
-        // Lifted off the floor plane so the disc doesn't z-fight its texture.
         p.translate(sx, sy, 0.5)
         p.fill(path.color)
         p.stroke(isCurrent ? 20 : 255)
@@ -298,18 +227,9 @@
   }
 
   let ready = false
-  let redrawQueued = false
-  function requestRedraw() {
-    if (redrawQueued) return
-    redrawQueued = true
-    requestAnimationFrame(() => {
-      redrawQueued = false
-      if (ready && instance && !instance.isLooping()) instance.redraw()
-    })
-  }
+  const requestRedraw = createRedrawRequester(() => (ready ? instance : null))
 
-  /** Animate only while something moves; otherwise redraw on demand. */
-  function syncLoop(p: P5 | null = instance) {
+  function syncLoop(p: WebglP5 | null = instance) {
     if (!p) return
     const { isDrawing, isVideoPlaying } = get(drawingState)
     const animate =
@@ -319,10 +239,7 @@
       axisEasing ||
       isDrawing ||
       isVideoPlaying
-    if (animate && !p.isLooping()) {
-      lastFrameMs = null
-      p.loop()
-    } else if (!animate && p.isLooping()) p.noLoop()
+    setLooping(p, animate, () => (lastFrameMs = null))
     requestRedraw()
   }
 
@@ -388,7 +305,7 @@
       resize.disconnect()
       unsubState()
       unsubConfig()
-      if (instance) freeAll(instance)
+      if (instance) geometryCache.freeAll(instance)
     }
   })
 

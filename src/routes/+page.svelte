@@ -18,11 +18,16 @@
     drawingState,
     deletePathById,
     freezePoint,
+    nextPathId,
+    STOPPED_TRACKING,
     type PathData,
   } from '$lib/stores/drawingState'
   import { drawingConfig } from '$lib/stores/drawingConfig'
   import { invalidateSpeculateClock } from '$lib/timing/sessionClocks'
-  import { hasRecordedData, formatBytes } from '$lib/stores/sessionRecovery'
+  import { hasRecordedData } from '$lib/stores/sessionRecovery'
+  import { formatBytes } from '$lib/utils/format'
+  import { downloadBlob } from '$lib/utils/download'
+  import { randomId } from '$lib/utils/id'
   import { isCheckpointShortcut } from '$lib/utils/keyboard'
   import { createAutosave, SessionBusyError, type AutosaveState } from '$lib/storage/autosave'
   import type {
@@ -57,8 +62,7 @@
     help: 'Help',
   }
   let activePanel = $state<PanelId | null>(null)
-  // Keeps the panel body rendered while it slides closed.
-  let lastPanel = $state<PanelId>('data')
+  let renderedPanel = $state<PanelId>('data')
   let panelWidth = $state(300)
   let pendingDeletePathId = $state<number | null>(null)
   let showClearAllModal = $state(false)
@@ -82,16 +86,14 @@
   function handleRailSelect(id: string) {
     const panel = id as PanelId
     activePanel = activePanel === panel ? null : panel
-    if (activePanel) lastPanel = activePanel
+    if (activePanel) renderedPanel = activePanel
   }
 
   function confirmDeletePath() {
     const id = pendingDeletePathId
     pendingDeletePathId = null
     if (id === null) return
-    const paths = get(drawingState).paths
-    const index = paths.findIndex((p) => p.pathId === id)
-    void pin(`Before deleting ${paths[index]?.name || `Path ${index + 1}`}`)
+    void pin(`Before deleting ${pathLabel(get(drawingState).paths, id)}`)
     deletePathById(id)
   }
 
@@ -111,9 +113,6 @@
   let storageLabel = $state<string | null>(null)
   let pendingRestoreId = $state<number | null>(null)
   let pendingDeleteSession = $state<SessionRecord | null>(null)
-
-  const newAssetKey = () =>
-    window.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`
 
   function getSnapshot(): SnapshotInput | null {
     const state = get(drawingState)
@@ -151,7 +150,6 @@
     new Set($drawingState.paths.filter((p) => p.points.length > 0).map((p) => p.pathId))
   )
 
-  // History is only read while the Data panel is open; saves while drawing just mark it stale.
   let historyStale = true
   let historyLoading: Promise<void> | null = null
   let historyAgain = false
@@ -186,7 +184,6 @@
     if (activePanel === 'data' && historyStale) refreshHistory()
   })
 
-  /** Pin the live state; the snapshot is captured synchronously, before any await. */
   async function pin(label: string | null) {
     const result = await autosave.checkpoint(label)
     if (result) refreshHistory()
@@ -197,11 +194,12 @@
     'other-tab': 'Mondrian is open in another tab, so autosave is paused here.',
     unavailable: 'Autosave is unavailable in this window. Use Export to keep your work.',
   }
+  const NOTICE_MS = 6000
   let noticeTimer: ReturnType<typeof setTimeout> | undefined
   function showNotice(message: string) {
     notice = message
     clearTimeout(noticeTimer)
-    noticeTimer = setTimeout(() => (notice = null), 6000)
+    noticeTimer = setTimeout(() => (notice = null), NOTICE_MS)
   }
 
   $effect(() => {
@@ -212,8 +210,6 @@
 
   onMount(() => {
     autosave.init().then((session) => {
-      // An empty latest snapshot (e.g. after a clear) is not offered here;
-      // older non-empty ones remain reachable from Saved Versions.
       if (session && hasRecordedData(session.paths)) {
         recoveredSession = session
         showRecoveryModal = true
@@ -268,7 +264,6 @@
       }
     }
     window.addEventListener('beforeunload', handleBeforeUnload)
-    // Capture phase: the panel's text inputs stop keydown from bubbling.
     window.addEventListener('keydown', handleCheckpointShortcut, { capture: true })
 
     return () => {
@@ -293,14 +288,17 @@
     void pin(null).then((result) => result && showNotice('Checkpoint saved.'))
   }
 
-  /** Empty canvas, no floor plan or video: the state of a brand-new session. */
-  function resetWorkspace() {
-    p5Component.clearDrawing()
+  function detachVideo() {
     p5Component.clearVideo()
     videoName = null
     videoAsset = null
     reattachVideo = null
     youtubeSource = null
+  }
+
+  function resetWorkspace() {
+    p5Component.clearDrawing()
+    detachVideo()
     pendingSessionName = null
     floorPlanAsset = null
     floorPlanName = null
@@ -316,13 +314,7 @@
   function applyRestoredSession(session: RestoredSession) {
     const { meta, paths, floorPlan, video } = session
 
-    if (!meta.config.isTranscriptionMode || (!meta.video && !meta.videoSource)) {
-      p5Component.clearVideo()
-      videoName = null
-      videoAsset = null
-      reattachVideo = null
-      youtubeSource = null
-    }
+    if (!meta.config.isTranscriptionMode || (!meta.video && !meta.videoSource)) detachVideo()
 
     drawingConfig.update((config) => ({
       ...config,
@@ -369,7 +361,7 @@
         attachVideo(video, meta.video.name, meta.videoTime)
       } else {
         reattachVideo = meta.video
-        activePanel = lastPanel = 'data'
+        activePanel = renderedPanel = 'data'
       }
     }
   }
@@ -381,7 +373,6 @@
     recoveredSession = null
   }
 
-  /** Start Fresh keeps the recovered session intact and begins a new one. */
   async function handleDiscardSession() {
     showRecoveryModal = false
     recoveredSession = null
@@ -389,7 +380,6 @@
     refreshHistory()
   }
 
-  /** Pins the live session first, so restoring an older version is itself undoable. */
   async function confirmRestoreVersion() {
     const id = pendingRestoreId
     pendingRestoreId = null
@@ -401,7 +391,6 @@
     refreshHistory()
   }
 
-  /** Replace one path (or add it back / as a copy) without touching the others. */
   async function restorePath(snapshotId: number, pathId: number, mode: 'replace' | 'copy') {
     const path = await autosave.loadPath(snapshotId, pathId)
     if (!path) return showNotice('That saved version is damaged and cannot be restored.')
@@ -413,7 +402,7 @@
       const paths = [...state.paths]
       const index = paths.findIndex((p) => p.pathId === pathId)
       if (mode === 'copy') {
-        const id = Math.max(state.currentPathId, ...paths.map((p) => p.pathId)) + 1
+        const id = nextPathId(state)
         const points = path.points.map((p) => freezePoint({ ...p, pathId: id }))
         paths.push({ ...path, pathId: id, points, name: `${label} (restored)` } as PathData)
       } else if (index >= 0) {
@@ -422,7 +411,7 @@
         const after = paths.findIndex((p) => p.pathId > pathId)
         paths.splice(after < 0 ? paths.length : after, 0, path)
       }
-      return { ...state, paths, shouldTrackMouse: false, isDrawing: false, isVideoPlaying: false }
+      return { ...state, ...STOPPED_TRACKING, paths }
     })
     refreshHistory()
   }
@@ -455,21 +444,12 @@
     refreshHistory()
   }
 
-  function download(blob: Blob, name: string) {
-    const url = window.URL.createObjectURL(blob)
-    const a = window.document.createElement('a')
-    a.href = url
-    a.download = name
-    a.click()
-    setTimeout(() => window.URL.revokeObjectURL(url), 1000)
-  }
-
   async function handleExportHistory() {
     const id = autosave.sessionId
     const bundle = id ? await autosave.exportSession(id) : null
     if (!bundle) return showNotice('Nothing has been saved in this session yet.')
     const videoBytes = [...bundle.videos.values()].reduce((sum, b) => sum + b.size, 0)
-    download(
+    downloadBlob(
       await packSession(bundle),
       archiveFileName(bundle.session, sessionName(bundle.session))
     )
@@ -531,14 +511,13 @@
   function handleVideoUpload(event: Event) {
     const file = (event.target as HTMLInputElement).files?.[0]
     if (file) {
-      // Re-attaching a missing video, or a local copy of a blocked YouTube one, keeps the paths.
       const replacesFailed = youtubeSource !== null && p5Component.getVideoError() !== null
       const keepPaths = reattachVideo !== null || replacesFailed
       const restoreTime = keepPaths ? get(drawingState).videoTime : undefined
       if (!keepPaths) void pin('Before new video')
       youtubeSource = null
       const meta: VideoMeta = { name: file.name, size: file.size, type: file.type }
-      videoAsset = { key: newAssetKey(), blob: file, name: file.name, meta }
+      videoAsset = { key: randomId(), blob: file, name: file.name, meta }
       const video = attachVideo(file, file.name, restoreTime)
       video.addEventListener(
         'loadedmetadata',
@@ -559,7 +538,7 @@
       image.src = window.URL.createObjectURL(file)
       image.onload = () => {
         void pin('Before new floor plan')
-        floorPlanAsset = { key: newAssetKey(), blob: file, name: file.name }
+        floorPlanAsset = { key: randomId(), blob: file, name: file.name }
         p5Component.setImage(image)
         floorPlanName = file.name
       }
@@ -580,11 +559,7 @@
   function handleModeSwitch() {
     void pin('Before mode switch')
     p5Component.clearDrawing()
-    p5Component.clearVideo()
-    videoName = null
-    videoAsset = null
-    reattachVideo = null
-    youtubeSource = null
+    detachVideo()
     p5Component.startNewPath()
   }
 
@@ -612,7 +587,6 @@
     closeWelcomeModal()
   }
 
-  /** A blank tracing exercise in its own session: the example's floor plan and YouTube video. */
   async function loadVideoExample(example: VideoExample) {
     await pin('Before loading example')
     await autosave.newSession(example.title)
@@ -634,10 +608,14 @@
     }
     image.onerror = () => showNotice('Could not load the example floor plan.')
     image.src = url
+    keepExampleFloorPlan(url, `example-floorplan-${example.id}`, name)
+  }
+
+  function keepExampleFloorPlan(url: string, key: string, name: string) {
     fetch(url)
       .then((r) => r.blob())
       .then((blob) => {
-        floorPlanAsset = { key: `example-floorplan-${example.id}`, blob, name }
+        floorPlanAsset = { key, blob, name }
         autosave.schedule()
       })
       .catch((e) => console.warn('Could not keep example floor plan for autosave:', e))
@@ -651,15 +629,8 @@
       void pin('Before loading example')
       p5Component.setImage(image)
       floorPlanName = `${imageID}.png`
-      const key = newAssetKey()
       floorPlanAsset = null
-      fetch(filePath)
-        .then((r) => r.blob())
-        .then((blob) => {
-          floorPlanAsset = { key, blob, name: `${imageID}.png` }
-          autosave.schedule()
-        })
-        .catch((e) => console.warn('Could not keep example floor plan for autosave:', e))
+      keepExampleFloorPlan(filePath, randomId(), floorPlanName)
     }
     image.onerror = (error) => {
       window.console.error(`Error loading example image from ${filePath}:`, error)
@@ -696,7 +667,7 @@
         <div
           id="side-panel"
           role="tabpanel"
-          aria-label="{PANEL_LABELS[lastPanel]} panel"
+          aria-label="{PANEL_LABELS[renderedPanel]} panel"
           class="side-panel-shell"
           class:side-panel-shell--open={activePanel !== null}
           style:width="{activePanel ? panelWidth : 0}px"
@@ -704,11 +675,11 @@
         >
           <SidePanel
             open={true}
-            title={PANEL_LABELS[lastPanel]}
+            title={PANEL_LABELS[renderedPanel]}
             bind:width={panelWidth}
             onClose={() => (activePanel = null)}
           >
-            {#if lastPanel === 'data'}
+            {#if renderedPanel === 'data'}
               <DataPanel
                 onImageUpload={handleImageUpload}
                 onVideoUpload={handleVideoUpload}
@@ -749,11 +720,11 @@
                   />
                 {/snippet}
               </DataPanel>
-            {:else if lastPanel === 'paths'}
+            {:else if renderedPanel === 'paths'}
               <PathsPanel onDelete={(id) => (pendingDeletePathId = id)} />
-            {:else if lastPanel === 'settings'}
+            {:else if renderedPanel === 'settings'}
               <SettingsPanel />
-            {:else if lastPanel === 'help'}
+            {:else if renderedPanel === 'help'}
               <HelpPanel onOpenWelcome={openWelcomeModal} {videoKind} />
             {/if}
           </SidePanel>
@@ -814,28 +785,27 @@
 
 <WelcomeModal onClose={closeWelcomeModal} onTryExample={handleTryExample} />
 
-{#if notice}
+{#snippet toast(alertClass: string, message: string, role?: 'status')}
   <div class="fixed top-20 left-4 right-4 flex justify-center pointer-events-none z-50">
-    <div class="alert alert-info shadow-lg max-w-md pointer-events-auto" role="status">
+    <div class="alert {alertClass} shadow-lg max-w-md pointer-events-auto" {role}>
       <IconWarning class="h-5 w-5" />
-      <span class="text-sm">{notice}</span>
+      <span class="text-sm">{message}</span>
     </div>
   </div>
+{/snippet}
+
+{#if notice}
+  {@render toast('alert-info', notice, 'status')}
 {/if}
 
 {#if showEmptyPathWarning}
-  <div class="fixed top-20 left-4 right-4 flex justify-center pointer-events-none z-50">
-    <div class="alert alert-warning shadow-lg max-w-md pointer-events-auto">
-      <IconWarning class="h-5 w-5" />
-      <span class="text-sm"
-        >Please record some data on the current path before adding a new one.</span
-      >
-    </div>
-  </div>
+  {@render toast(
+    'alert-warning',
+    'Please record some data on the current path before adding a new one.'
+  )}
 {/if}
 
 <style>
-  /* CanvasFrame needs a bounded parent; dvh keeps it clear of mobile URL bars. */
   .app-frame {
     height: 100vh;
     height: 100dvh;
@@ -870,7 +840,6 @@
     transition: width 180ms cubic-bezier(0.22, 1, 0.36, 1);
   }
 
-  /* Below lg the panel overlays the canvas instead of squeezing it. */
   @media (max-width: 1023px) {
     .side-panel-shell {
       position: absolute;

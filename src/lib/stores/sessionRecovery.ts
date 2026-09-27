@@ -1,9 +1,9 @@
-import type { PathData } from './drawingState'
+type HasPoints = { points: readonly unknown[] }
 
 /**
  * Check if paths contain any recorded data
  */
-export function hasRecordedData(paths: PathData[]): boolean {
+export function hasRecordedData<T extends HasPoints>(paths: readonly T[]): boolean {
   return paths.some((p) => p.points.length > 0)
 }
 
@@ -29,37 +29,10 @@ export function getSessionAge(timestamp: number): string {
 /**
  * Get total point count across all paths
  */
-export function getTotalPointCount(paths: PathData[]): number {
+export function getTotalPointCount<T extends HasPoints>(paths: readonly T[]): number {
   return paths.reduce((sum, path) => sum + path.points.length, 0)
 }
 
-export function formatClockTime(timestamp: number): string {
-  return new Date(timestamp).toLocaleTimeString([], {
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-  })
-}
-
-/** Clock time for today, otherwise a short date and time. */
-export function formatSavedAt(timestamp: number, now = Date.now()): string {
-  const date = new Date(timestamp)
-  if (date.toDateString() === new Date(now).toDateString()) return formatClockTime(timestamp)
-  return date.toLocaleString([], {
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
-}
-
-export function formatBytes(bytes: number): string {
-  if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`
-  if (bytes < 1024 ** 3) return `${(bytes / 1024 ** 2).toFixed(1)} MB`
-  return `${(bytes / 1024 ** 3).toFixed(2)} GB`
-}
-
-export function formatDuration(seconds: number): string {
-  const s = Math.round(seconds)
-  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
+export function countRecordedPaths<T extends HasPoints>(paths: readonly T[]): number {
+  return paths.filter((p) => p.points.length > 0).length
 }

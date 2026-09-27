@@ -3,6 +3,7 @@ import type p5 from 'p5'
 import { get } from 'svelte/store'
 import { drawingConfig, getSplitPositionForMode, type RotationAngle } from '../stores/drawingConfig'
 import { drawingState } from '../stores/drawingState'
+import { clamp } from './math'
 
 type Rect = { x: number; y: number; w: number; h: number }
 
@@ -145,9 +146,8 @@ export function convertToImageCoordinates(p5: p5, x: number, y: number) {
   const ny = (y - r.y) / r.h
 
   // Clamp normalized to [0,1] so clicks in letterbox map to edges
-  const clamp = (v: number) => Math.min(1, Math.max(0, v))
-  const clampedNx = clamp(nx)
-  const clampedNy = clamp(ny)
+  const clampedNx = clamp(nx, 0, 1)
+  const clampedNy = clamp(ny, 0, 1)
 
   // Apply inverse rotation to get original image coordinates
   return applyInverseRotation(clampedNx, clampedNy, imgW, imgH, rotation)

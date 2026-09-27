@@ -84,7 +84,6 @@ afterEach(() => {
   IDBObjectStore.prototype.put = originalPut
 })
 
-/** Count puts per store while `fn` runs. */
 async function countPuts(fn: () => Promise<unknown>): Promise<Record<string, number>> {
   const counts: Record<string, number> = {}
   IDBObjectStore.prototype.put = function (this: IDBObjectStore, ...args) {
@@ -99,7 +98,6 @@ async function countPuts(fn: () => Promise<unknown>): Promise<Record<string, num
   return counts
 }
 
-/** Every chunk referenced by a manifest exists, and no chunk is unreferenced. */
 async function assertChunksConsistent(name: string) {
   const raw = await openDB(name)
   const manifests = await raw.getAll('manifests')
@@ -207,7 +205,6 @@ describe('SessionDb chunked storage', () => {
     const rewound = { ...full, points: full.points.filter((p) => p.time <= 7) }
     expect(rewound.points.length).toBe(701)
     const r = await db.save(SID, makeInput({ paths: [rewound] }))
-    // Chunk 0 is shared; chunk 1 is now a 201-point open chunk.
     expect(r.chunksWritten).toBe(1)
     const regrown = {
       ...rewound,
@@ -252,7 +249,6 @@ describe('SessionDb chunked storage', () => {
     expect(listed.length).toBeLessThan(40)
     expect(listed.filter((m) => m.kind === 'pinned').length).toBe(1)
     const { chunks } = await assertChunksConsistent(name)
-    // pathB's two chunks are shared by every snapshot.
     expect(chunks).toBeLessThan(listed.length * 2 + 2)
     for (const meta of listed) expect(await db.loadSnapshot(meta.id!)).not.toBeNull()
     db.close()
@@ -339,7 +335,6 @@ describe('SessionDb chunked storage', () => {
     const result = await db.save(SID, makeInput({ paths: [path] }))
     expect(result.evicted).toBe(3)
     const remaining = (await db.listSnapshots(SID)).map((m) => m.id!).reverse()
-    // Autosaves were ids[1,2,4,5,6,7]; the oldest half (excluding the newest) went first.
     expect(remaining).toEqual([ids[0], ids[3], ids[5], ids[6], ids[7], result.id])
     db.close()
     await assertChunksConsistent(name)
@@ -384,7 +379,6 @@ describe('SessionDb chunked storage', () => {
     await expect(db.save(SID, makeInput({ paths: makePaths(5) }))).rejects.toThrow()
     IDBObjectStore.prototype.put = originalPut
     expect((await db.loadLatest(SID))!.meta.pointCount).toBe(2)
-    // The in-memory index is unchanged, so later saves still work.
     await db.save(SID, makeInput({ paths: makePaths(7) }))
     expect((await db.loadLatest(SID))!.meta.pointCount).toBe(7)
     db.close()
@@ -561,7 +555,6 @@ describe('SessionDb migrations', () => {
     const raw = await openDB(name)
     expect(raw.objectStoreNames.contains('snapshotPaths')).toBe(false)
     const { chunks } = await assertChunksConsistent(name)
-    // Naive copies would need 10 * (3 + 1) chunks; the shared first two chunks are stored once.
     expect(chunks).toBeLessThan(20)
     raw.close()
   })
@@ -605,13 +598,11 @@ describe('SessionDb migrations', () => {
     expect(restored!.meta.savedAt).toBe(legacy.timestamp)
     expect(restored!.meta.config).toMatchObject({ isTranscriptionMode: false, pollingRate: 20 })
     expect(await restored!.floorPlan!.text()).toBe('legacy-png')
-    // Dated by its own timestamp, so newer sessions still open first.
     expect(await db.getSession(sessionId!)).toMatchObject({
       updatedAt: legacy.timestamp,
       lastOpenedAt: legacy.timestamp,
     })
 
-    // Idempotent: the same payload again (e.g. a removeItem that never landed) adds nothing.
     storage.setItem(LEGACY_STORAGE_KEY, JSON.stringify(legacy))
     expect(await db.importLegacy(storage)).toBe(sessionId)
     expect(await db.listSessions()).toHaveLength(1)

@@ -1,4 +1,4 @@
-import type { VideoSource } from '../../video/source'
+import { isAtVideoEnd, type VideoSource } from '../../video/source'
 import type p5 from 'p5'
 import type { Point } from '../types/sketch'
 import { get } from 'svelte/store'
@@ -7,6 +7,8 @@ import {
   addPointsToCurrentPath,
   appendFinalPoint,
   appendHoldPoints,
+  findCurrentPath,
+  syncClockToCurrentPath,
   toggleDrawing,
   toggleDrawingNoVideo,
   type PathData,
@@ -17,21 +19,18 @@ import {
   convertToImageCoordinates,
   getFittedImageDisplayRect,
 } from '../../utils/drawingUtils'
-import { mediaClock, speculateClock, syncSpeculateClock } from '../../timing/sessionClocks'
+import { mediaClock, speculateClock } from '../../timing/sessionClocks'
 import { lastIndexAtOrBefore, trailRange } from '../../timing/timeWindow'
 import { viewPrefs } from '../../stores/viewPrefs'
-import { imageToDisplay, type PathLayer } from './pathLayer'
+import { applyAffine, imageToDisplay, type PathLayer } from './pathLayer'
 
 type CanvasPos = { x: number; y: number }
 
+const isOverUi = (e: PointerEvent) =>
+  !!(e.target as HTMLElement | null)?.closest?.('[data-ui-element]')
+
 export function observeVideo(video: VideoSource, perfMs: number) {
   mediaClock.observe(video.currentTime, perfMs, !video.paused, video.playbackRate)
-}
-
-function syncSpeculateClockToCurrentPath(perfMs: number) {
-  const state = get(drawingState)
-  const path = state.paths.find((p) => p.pathId === state.currentPathId)
-  syncSpeculateClock(state.currentPathId, path?.points.at(-1)?.time, perfMs)
 }
 
 export function setupDrawing(p5: p5, getCanvas: () => HTMLCanvasElement | null) {
@@ -41,12 +40,11 @@ export function setupDrawing(p5: p5, getCanvas: () => HTMLCanvasElement | null) 
   }
 
   const isDrawableEvent = (e: PointerEvent) => {
-    if ((e.target as HTMLElement | null)?.closest?.('[data-ui-element]')) return false
+    if (isOverUi(e)) return false
     const { x, y } = toCanvas(e)
     return isInDrawableArea(p5, x, y)
   }
 
-  /** Record pointer samples, each stamped with the session clock at its own timeStamp. */
   const recordPointerEvent = (event: PointerEvent, video?: VideoSource | null) => {
     const state = get(drawingState)
     if (!state.shouldTrackMouse) return
@@ -100,8 +98,6 @@ export function setupDrawing(p5: p5, getCanvas: () => HTMLCanvasElement | null) 
     toggleDrawingNoVideo()
   }
 
-  const isAtVideoEnd = (video: VideoSource) => video.currentTime >= video.duration - 0.1
-
   const handlePressVideo = (event: PointerEvent, video: VideoSource) => {
     if (!isDrawableEvent(event) || isAtVideoEnd(video)) return
     if (get(drawingState).shouldTrackMouse) stopVideoTake(event, video)
@@ -110,25 +106,23 @@ export function setupDrawing(p5: p5, getCanvas: () => HTMLCanvasElement | null) 
 
   const handlePressSpeculate = (event: PointerEvent) => {
     if (!isDrawableEvent(event)) return
-    syncSpeculateClockToCurrentPath(performance.now())
+    syncClockToCurrentPath(get(drawingState), performance.now())
     if (get(drawingState).shouldTrackMouse) stopSpeculateTake(event)
     else startSpeculateTake(event)
   }
 
-  /** Hold mode: start a take on press; returns whether one started. */
   const handleHoldStart = (event: PointerEvent, video: VideoSource | null): boolean => {
     if (get(drawingState).shouldTrackMouse || !isDrawableEvent(event)) return false
     if (get(drawingConfig).isTranscriptionMode) {
       if (!video || isAtVideoEnd(video)) return false
       startVideoTake(event, video)
     } else {
-      syncSpeculateClockToCurrentPath(performance.now())
+      syncClockToCurrentPath(get(drawingState), performance.now())
       startSpeculateTake(event)
     }
     return true
   }
 
-  /** Hold mode: record the release sample, then stop with a final held point. */
   const handleHoldEnd = (event: PointerEvent, video: VideoSource | null) => {
     if (!get(drawingState).shouldTrackMouse) return
     recordPointerEvent(event, video)
@@ -140,14 +134,13 @@ export function setupDrawing(p5: p5, getCanvas: () => HTMLCanvasElement | null) 
   }
 
   const handleMove = (event: PointerEvent, video?: VideoSource | null) => {
-    if ((event.target as HTMLElement | null)?.closest?.('[data-ui-element]')) return
+    if (isOverUi(event)) return
     recordPointerEvent(event, video)
   }
 
   return { handlePressVideo, handlePressSpeculate, handleHoldStart, handleHoldEnd, handleMove }
 }
 
-/** Stop the current take (e.g. before switching paths), keeping a final held point. */
 export function endCurrentTake(video?: VideoSource | null) {
   if (!get(drawingState).shouldTrackMouse) return
   const now = performance.now()
@@ -162,7 +155,6 @@ export function endCurrentTake(video?: VideoSource | null) {
   }
 }
 
-/** Clock time of the running take, or null when paused or not recording. */
 function recordingClockTime(video: VideoSource | null | undefined, perfMs: number) {
   if (!get(drawingState).shouldTrackMouse) return null
   if (get(drawingConfig).isTranscriptionMode) {
@@ -173,7 +165,6 @@ function recordingClockTime(video: VideoSource | null | undefined, perfMs: numbe
   return speculateClock.running ? speculateClock.timeAt(perfMs) : null
 }
 
-/** Called every frame: keeps a still pointer recording, timed by the clock rather than frames. */
 export function sampleHold(video?: VideoSource | null, perfMs = performance.now()) {
   const now = recordingClockTime(video, perfMs)
   if (now !== null) appendHoldPoints(now)
@@ -189,10 +180,7 @@ export function drawPaths(p5: p5, layer: PathLayer) {
   const rotation = config.floorPlanRotation
   const rect = getFittedImageDisplayRect(p5, getSplitPositionForMode(), imgW, imgH, rotation)
   const m = imageToDisplay(imgW, imgH, rotation, rect)
-  const toDisplay = (pt: { x: number; y: number }) => ({
-    x: m.a * pt.x + m.c * pt.y + m.e,
-    y: m.b * pt.x + m.d * pt.y + m.f,
-  })
+  const toDisplay = (pt: { x: number; y: number }) => applyAffine(m, pt)
 
   const ctx = p5.drawingContext as CanvasRenderingContext2D
   layer.draw(ctx, {
@@ -215,8 +203,7 @@ export function drawPaths(p5: p5, layer: PathLayer) {
   p5.push()
 
   // Draw pulsing endpoints
-  const activePath = state.paths.find((p) => p.pathId === state.currentPathId)
-  const currentEndpoint = activePath?.points.at(-1) ?? null
+  const currentEndpoint = findCurrentPath(state)?.points.at(-1) ?? null
   const sessionTime = getSessionTime(config.isTranscriptionMode, state.videoTime)
 
   const { trailSeconds } = get(viewPrefs)
@@ -245,21 +232,18 @@ function getSessionTime(isTranscriptionMode: boolean, videoTime: number): number
   return isTranscriptionMode ? videoTime : speculateNow()
 }
 
-/** Speculate session time now, synced to the current path's end the first time it is read. */
 export function speculateNow(): number {
   const now = performance.now()
-  syncSpeculateClockToCurrentPath(now)
+  syncClockToCurrentPath(get(drawingState), now)
   return speculateClock.timeAt(now)
 }
 
-/** Latest point of a path at or before the shared session time; null before the path starts. */
 function findSyncedEndpoint(path: PathData, sessionTime: number): Point | null {
   return path.points[lastIndexAtOrBefore(path.points, sessionTime)] ?? null
 }
 
 const TRAIL_BANDS = 8
 
-/** Recent history behind a path's marker, fading out towards its oldest end. */
 function drawTrail(
   p5: p5,
   path: PathData,

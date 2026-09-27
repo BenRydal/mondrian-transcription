@@ -9,24 +9,24 @@
     videoKind = null,
   }: { onOpenWelcome: () => void; videoKind?: 'local' | 'youtube' | null } = $props()
 
+  const jump = $derived(
+    $drawingConfig.isTranscriptionMode
+      ? $drawingConfig.jumpSeconds
+      : $drawingConfig.speculateJumpSeconds
+  )
+  const videoShortcuts = $derived([
+    videoKind === 'youtube'
+      ? { key: '← / →', action: 'Step 1/30 s (paused; YouTube has no frame access)' }
+      : { key: '← / →', action: 'Step one frame (paused)' },
+    { key: 'Shift ← / →', action: 'Step one second (paused)' },
+    { key: '[', action: 'Slower playback' },
+    { key: ']', action: 'Faster playback' },
+  ])
   const shortcuts = $derived([
-    ...($drawingConfig.isTranscriptionMode
-      ? [
-          { key: 'F', action: `Forward ${$drawingConfig.jumpSeconds}s` },
-          { key: 'R', action: `Rewind ${$drawingConfig.jumpSeconds}s` },
-          { key: 'S', action: 'Pause or resume 3D spin' },
-          videoKind === 'youtube'
-            ? { key: '← / →', action: 'Step 1/30 s (paused; YouTube has no frame access)' }
-            : { key: '← / →', action: 'Step one frame (paused)' },
-          { key: 'Shift ← / →', action: 'Step one second (paused)' },
-          { key: '[', action: 'Slower playback' },
-          { key: ']', action: 'Faster playback' },
-        ]
-      : [
-          { key: 'F', action: `Forward ${$drawingConfig.speculateJumpSeconds}s` },
-          { key: 'R', action: `Rewind ${$drawingConfig.speculateJumpSeconds}s` },
-          { key: 'S', action: 'Pause or resume 3D spin' },
-        ]),
+    { key: 'F', action: `Forward ${jump}s` },
+    { key: 'R', action: `Rewind ${jump}s` },
+    { key: 'S', action: 'Pause or resume 3D spin' },
+    ...($drawingConfig.isTranscriptionMode ? videoShortcuts : []),
     { key: 'Ctrl/⌘ S', action: 'Save checkpoint, even while typing' },
   ])
 </script>

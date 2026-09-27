@@ -9,26 +9,21 @@ const MINUTE = 60 * SECOND
 const HOUR = 60 * MINUTE
 const DAY = 24 * HOUR
 
-/** Age limit (exclusive) and bucket width for each tier, youngest first. */
-export const RETENTION_TIERS: ReadonlyArray<{ maxAge: number; bucket: number }> = [
-  { maxAge: MINUTE, bucket: 0 },
-  { maxAge: 15 * MINUTE, bucket: MINUTE },
-  { maxAge: 2 * HOUR, bucket: 10 * MINUTE },
-  { maxAge: 7 * DAY, bucket: HOUR },
-  { maxAge: Infinity, bucket: DAY },
+const RETENTION_TIERS: ReadonlyArray<{ maxAgeBelow: number; bucketWidth: number }> = [
+  { maxAgeBelow: MINUTE, bucketWidth: 0 },
+  { maxAgeBelow: 15 * MINUTE, bucketWidth: MINUTE },
+  { maxAgeBelow: 2 * HOUR, bucketWidth: 10 * MINUTE },
+  { maxAgeBelow: 7 * DAY, bucketWidth: HOUR },
+  { maxAgeBelow: Infinity, bucketWidth: DAY },
 ]
 
 function bucketWidth(age: number): number {
-  return RETENTION_TIERS.find((t) => age < t.maxAge)!.bucket
+  return RETENTION_TIERS.find((t) => age < t.maxAgeBelow)!.bucketWidth
 }
 
 const isNewer = (a: RetentionEntry, b: RetentionEntry) =>
   a.savedAt !== b.savedAt ? a.savedAt > b.savedAt : a.id > b.id
 
-/**
- * Ids to keep: every pinned entry, the newest entry by id, everything under a minute old
- * (including future timestamps from clock skew), and the newest entry per tier bucket.
- */
 export function selectRetained(entries: readonly RetentionEntry[], now: number): Set<number> {
   const keep = new Set<number>()
   let newestId = -Infinity
@@ -44,8 +39,8 @@ export function selectRetained(entries: readonly RetentionEntry[], now: number):
       keep.add(entry.id)
       continue
     }
-    // Buckets are anchored to the epoch, so they nest and thinning is stable over time.
-    const key = `${width}:${Math.floor(entry.savedAt / width)}`
+    const epochBucket = Math.floor(entry.savedAt / width)
+    const key = `${width}:${epochBucket}`
     const current = buckets.get(key)
     if (!current || isNewer(entry, current)) buckets.set(key, entry)
   }

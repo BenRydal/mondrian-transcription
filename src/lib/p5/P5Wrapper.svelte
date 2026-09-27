@@ -4,18 +4,23 @@
   import { onMount } from 'svelte'
   import { on } from 'svelte/events'
   import { fade } from 'svelte/transition'
-  import { zip } from 'fflate'
-  import { drawingConfig, getSplitPositionForMode } from '../stores/drawingConfig'
+  import {
+    drawingConfig,
+    getSplitPositionForMode,
+    hasLeftColumn,
+    SPACE_TIME_SPLIT_RANGE,
+    SPLIT_POSITION_RANGE,
+    videoHeightPercent,
+  } from '../stores/drawingConfig'
   import {
     drawingState,
     createNewPath,
-    handleForwardTranscription,
-    handleRewindTranscription,
-    handleForwardSpeculateMode,
-    handleRewindSpeculateMode,
+    findCurrentPath,
+    PATH_COLORS,
+    handleForward,
+    handleRewind,
+    STOPPED_TRACKING,
   } from '../stores/drawingState'
-  import IconRewind from '~icons/material-symbols/fast-rewind'
-  import IconForward from '~icons/material-symbols/fast-forward'
   import {
     setupDrawing,
     drawPaths,
@@ -25,18 +30,27 @@
     speculateNow,
   } from './features/drawing'
   import { PathLayer } from './features/pathLayer'
-  import { formatClock } from '$lib/utils/time'
-  import { resamplePath, sessionScale } from '$lib/timing/sampling'
+  import { createRedrawRequester, setLooping } from './loop'
+  import {
+    dataUrlBytes,
+    EXPORT_ZIP_NAME,
+    FLOOR_PLAN_FILE,
+    pathCsvFiles,
+  } from '$lib/export/pathExport'
+  import { downloadBlob } from '$lib/utils/download'
+  import { zipBlob } from '$lib/utils/zip'
   import { bindPlaybackState, setupVideo } from './features/video'
   import { LocalVideoSource, type VideoEvent, type VideoSource } from '$lib/video/source'
   import { YouTubeVideoSource } from '$lib/video/youtube'
   import VideoControls from '../components/video/VideoControls.svelte'
+  import SpeculateControls from '../components/SpeculateControls.svelte'
   import { getFittedImageDisplayRect } from '$lib/utils/drawingUtils'
   import IconInfo from '~icons/material-symbols/info-outline'
   import IconVideoOff from '~icons/material-symbols/videocam-off-outline'
   import IconUpload from '~icons/material-symbols/upload'
   import { isShortcutEvent } from '$lib/utils/keyboard'
-  import { clamp } from '$lib/spacetime/geometry'
+  import { hasRecordedData } from '$lib/stores/sessionRecovery'
+  import { clamp } from '$lib/utils/math'
   import { speculateClock } from '$lib/timing/sessionClocks'
   import SpaceTimeView from '../components/spacetime/SpaceTimeView.svelte'
   import { stepPlaybackRate, viewPrefs } from '$lib/stores/viewPrefs'
@@ -61,19 +75,14 @@
   let unbindSource = () => {}
   let p5Instance = $state.raw<p5 | null>(null)
   let lastVideoTime = 0
-  const colors = ['#FF0000', '#00FF00', '#0000FF', '#FFFF00', '#FF00FF', '#00FFFF']
 
   const videoHtmlElement = $derived(
     videoElement ? (videoElement as { elt: HTMLVideoElement }).elt : null
   )
-  const showSplit = $derived($drawingConfig.isTranscriptionMode || $drawingConfig.showSpaceTime)
-  const videoHeight = $derived(
-    $drawingConfig.isTranscriptionMode && $drawingConfig.showSpaceTime
-      ? $drawingConfig.spaceTimeSplit
-      : 100
-  )
+  const showSplit = $derived(hasLeftColumn($drawingConfig))
+  const videoHeight = $derived(videoHeightPercent($drawingConfig))
   const showSpaceTime = $derived($drawingConfig.showSpaceTime)
-  const hasRecordedPaths = $derived($drawingState.paths.some((p) => p.points.length > 0))
+  const hasRecordedPaths = $derived(hasRecordedData($drawingState.paths))
 
   function spaceTimeNow() {
     return $drawingConfig.isTranscriptionMode
@@ -84,31 +93,6 @@
   const showSpeculateControls = $derived(
     !$drawingConfig.isTranscriptionMode && $drawingState.imageElement !== null
   )
-  const isDrawing = $derived($drawingState.isDrawing)
-  const currentPoints = $derived(
-    $drawingState.paths.find((p) => p.pathId === $drawingState.currentPathId)?.points ?? []
-  )
-  const pathStart = $derived(currentPoints[0]?.time)
-  const pathEnd = $derived(currentPoints.at(-1)?.time)
-  let speculateTime = $state(0)
-
-  $effect(() => {
-    // Rewind, forward and path switches move the clock without drawing.
-    void [pathStart, pathEnd, $drawingState.currentPathId]
-    if (showSpeculateControls) speculateTime = speculateNow()
-  })
-
-  $effect(() => {
-    if (!showSpeculateControls || !isDrawing) return
-    let raf = requestAnimationFrame(function tick() {
-      speculateTime = speculateNow()
-      raf = requestAnimationFrame(tick)
-    })
-    return () => {
-      cancelAnimationFrame(raf)
-      speculateTime = speculateNow()
-    }
-  })
 
   let frameEstimator = new FrameRateEstimator()
   $effect(() => {
@@ -117,25 +101,14 @@
     return watchVideoFrames(videoHtmlElement, frameEstimator)
   })
 
-  let redrawQueued = false
-  function requestRedraw() {
-    if (redrawQueued) return
-    redrawQueued = true
-    requestAnimationFrame(() => {
-      redrawQueued = false
-      if (p5Instance && !p5Instance.isLooping()) p5Instance.redraw()
-    })
-  }
+  const requestRedraw = createRedrawRequester(() => p5Instance)
 
-  /** Animate only while recording or playing; otherwise redraw on demand. */
   function syncLoop() {
     const p = p5Instance
     if (!p) return
     const { isDrawing, isVideoPlaying, shouldTrackMouse } = $drawingState
     const playing = source !== null && !source.paused
-    const animate = isDrawing || isVideoPlaying || shouldTrackMouse || playing
-    if (animate && !p.isLooping()) p.loop()
-    else if (!animate && p.isLooping()) p.noLoop()
+    setLooping(p, isDrawing || isVideoPlaying || shouldTrackMouse || playing)
     requestRedraw()
   }
 
@@ -154,13 +127,12 @@
     }
   })
 
-  /** Paused only: one frame, or one second with Shift. */
   function stepVideo(video: VideoSource, direction: 1 | -1, bySecond: boolean) {
     if (!video.paused || !(video.duration > 0)) return
     const fd = frameEstimator.frameDuration
     const fixed = bySecond ? 1 : video.fixedFrameStep
     video.currentTime = fixed
-      ? Math.min(Math.max(video.currentTime + direction * fixed, 0), video.duration)
+      ? clamp(video.currentTime + direction * fixed, 0, video.duration)
       : frameStepTarget(
           currentFrameStart(video.currentTime, fd, frameEstimator.displayedTime),
           fd,
@@ -174,21 +146,44 @@
     e.preventDefault()
     e.stopPropagation()
 
-    // Guard against empty touches array (e.g., touchend)
     if ('touches' in e && !e.touches.length) return
 
     const rect = containerDiv.getBoundingClientRect()
     const point = 'touches' in e ? e.touches[0] : e
     if (dragAxis === 'x') {
       const position = ((point.clientX - rect.left) / rect.width) * 100
-      drawingConfig.update((config) => ({ ...config, splitPosition: clamp(position, 30, 70) }))
+      const { min, max } = SPLIT_POSITION_RANGE
+      drawingConfig.update((config) => ({ ...config, splitPosition: clamp(position, min, max) }))
     } else {
       const position = ((point.clientY - rect.top) / rect.height) * 100
-      drawingConfig.update((config) => ({ ...config, spaceTimeSplit: clamp(position, 20, 80) }))
+      const { min, max } = SPACE_TIME_SPLIT_RANGE
+      drawingConfig.update((config) => ({ ...config, spaceTimeSplit: clamp(position, min, max) }))
+    }
+  }
+
+  let stopSplitterListeners = () => {}
+
+  function startSplitterDrag(axis: 'x' | 'y') {
+    return (e: Event) => {
+      e.preventDefault()
+      e.stopPropagation()
+      stopSplitterListeners()
+      dragAxis = axis
+      const offs = [
+        on(containerDiv, 'mousemove', handleSplitterDrag),
+        on(containerDiv, 'mouseup', handleSplitterEnd),
+        on(containerDiv, 'mouseleave', handleSplitterEnd),
+        on(containerDiv, 'touchmove', handleSplitterDrag, { passive: false }),
+        on(containerDiv, 'touchend', handleSplitterEnd),
+        on(containerDiv, 'touchcancel', handleSplitterEnd),
+      ]
+      stopSplitterListeners = () => offs.forEach((off) => off())
     }
   }
 
   function handleSplitterEnd() {
+    stopSplitterListeners()
+    stopSplitterListeners = () => {}
     dragAxis = null
     syncLoop()
   }
@@ -198,18 +193,10 @@
       if (!isShortcutEvent(e)) return
       if (e.key.toLowerCase() === 'f') {
         e.preventDefault()
-        if ($drawingConfig.isTranscriptionMode && source) {
-          handleForwardTranscription(source)
-        } else {
-          handleForwardSpeculateMode()
-        }
+        handleForward(source)
       } else if (e.key.toLowerCase() === 'r') {
         e.preventDefault()
-        if ($drawingConfig.isTranscriptionMode && source) {
-          handleRewindTranscription(source)
-        } else {
-          handleRewindSpeculateMode()
-        }
+        handleRewind(source)
       } else if (
         (e.key === 'ArrowLeft' || e.key === 'ArrowRight') &&
         !e.defaultPrevented &&
@@ -240,7 +227,6 @@
       }
     }
 
-    // The side panel resizes the canvas area without a window resize.
     const resizeObserver = new ResizeObserver(updateDimensions)
     window.addEventListener('keydown', handleKeydown)
     resizeObserver.observe(containerDiv)
@@ -270,7 +256,6 @@
         if (event.pointerType === 'mouse' && event.button !== 0) return
         if (handleHoldStart(event, source)) {
           holdPointerId = event.pointerId
-          // Capture keeps pointerup coming to the canvas if the pointer leaves it mid-stroke.
           canvasElt?.setPointerCapture(event.pointerId)
         }
       } else if (!$drawingConfig.isTranscriptionMode) {
@@ -353,7 +338,6 @@
     }
   }
 
-  /** Swap in a new video source; a restore keeps the paths and resumes at `restoreTime`. */
   function attachSource(next: VideoSource, p5Video: p5.Element | null, restoreTime?: number) {
     const isRecovery = restoreTime !== undefined
     lastVideoTime = 0
@@ -431,13 +415,13 @@
 
   export function startNewPath(): boolean {
     // Don't allow adding a new path if current path is empty
-    const currentPath = $drawingState.paths.find((p) => p.pathId === $drawingState.currentPathId)
+    const currentPath = findCurrentPath($drawingState)
     if (currentPath && currentPath.points.length === 0) {
       return false
     }
 
     const currentPathCount = $drawingState.paths.length
-    const newColor = colors[currentPathCount % colors.length]
+    const newColor = PATH_COLORS[currentPathCount % PATH_COLORS.length]
     endCurrentTake(source)
 
     if ($drawingConfig.isTranscriptionMode && source) {
@@ -450,27 +434,12 @@
         : 0
     createNewPath(newColor, speculateStart)
 
-    drawingState.update((state) => ({
-      ...state,
-      shouldTrackMouse: false,
-      isDrawing: false,
-      isVideoPlaying: false, // always false if no video
-    }))
+    drawingState.update((state) => ({ ...state, ...STOPPED_TRACKING }))
     return true
   }
 
   export function exportAll(onComplete?: () => void) {
-    const paths = $drawingState.paths
     const imageElement = $drawingState?.imageElement
-    const isTranscriptionMode = $drawingConfig.isTranscriptionMode
-    const sampleRate = $drawingConfig.exportSampleRate
-    const scale = isTranscriptionMode
-      ? 1
-      : sessionScale(
-          paths.map((path) => path.points),
-          $drawingConfig.speculateScale
-        )
-
     const files: Record<string, Uint8Array> = {}
 
     // Add image to ZIP
@@ -481,13 +450,7 @@
       const dataUrl = (canvas as unknown as { canvas: HTMLCanvasElement }).canvas.toDataURL(
         'image/png'
       )
-      const base64Data = dataUrl.split(',')[1]
-      const binaryString = window.atob(base64Data)
-      const bytes = new Uint8Array(binaryString.length)
-      for (let i = 0; i < binaryString.length; i++) {
-        bytes[i] = binaryString.charCodeAt(i)
-      }
-      files['floor-plan.png'] = bytes
+      files[FLOOR_PLAN_FILE] = dataUrlBytes(dataUrl)
       try {
         canvas.remove()
       } catch {
@@ -496,35 +459,20 @@
     }
 
     // Add each path as CSV
-    paths.forEach((path, index) => {
-      if (path.points.length === 0) return
-
-      const rows = resamplePath(path.points, { rate: sampleRate, scale })
-      const csv = rows.map((p) => `${p.x},${p.y},${p.time}`).join('\n')
-
-      const filename = path.name ? `${path.name}.csv` : `path-${index + 1}.csv`
-      files[filename] = new TextEncoder().encode(`x,y,time\n${csv}`)
-    })
+    Object.assign(
+      files,
+      pathCsvFiles($drawingState.paths, {
+        isTranscriptionMode: $drawingConfig.isTranscriptionMode,
+        sampleRate: $drawingConfig.exportSampleRate,
+        speculateScale: $drawingConfig.speculateScale,
+      })
+    )
 
     // Generate ZIP asynchronously (uses Web Workers, won't block UI)
-    zip(files, (err, data) => {
-      if (err) {
-        window.console.error('Error creating ZIP:', err)
-        onComplete?.()
-        return
-      }
-
-      const blob = new Blob([data], { type: 'application/zip' })
-      const url = window.URL.createObjectURL(blob)
-      const a = window.document.createElement('a')
-      a.href = url
-      a.download = 'transcription-export.zip'
-      window.document.body.appendChild(a)
-      a.click()
-      window.document.body.removeChild(a)
-      window.URL.revokeObjectURL(url)
-      onComplete?.()
-    })
+    zipBlob(files)
+      .then((blob) => downloadBlob(blob, EXPORT_ZIP_NAME))
+      .catch((err) => window.console.error('Error creating ZIP:', err))
+      .finally(() => onComplete?.())
   }
 
   export function clearDrawing() {
@@ -533,14 +481,7 @@
       source.pause()
     }
 
-    drawingState.update((state) => ({
-      ...state,
-      paths: [],
-      currentPathId: 0,
-      shouldTrackMouse: false,
-      isDrawing: false,
-      isVideoPlaying: false,
-    }))
+    drawingState.update((state) => ({ ...state, ...STOPPED_TRACKING, paths: [], currentPathId: 0 }))
   }
 
   export function clearVideo() {
@@ -552,7 +493,6 @@
     } catch (e) {
       window.console.warn('Error cleaning up video:', e)
     }
-    youtubeHost?.replaceChildren()
     source = null
     videoElement = null
     videoError = null
@@ -569,24 +509,11 @@
 <div
   bind:this={containerDiv}
   class="relative w-full h-full touch-none"
-  onmousemove={handleSplitterDrag}
-  onmouseup={handleSplitterEnd}
-  onmouseleave={handleSplitterEnd}
-  {@attach (node) => on(node, 'touchmove', handleSplitterDrag, { passive: false })}
-  ontouchend={handleSplitterEnd}
-  ontouchcancel={handleSplitterEnd}
-  onkeydown={(e) => {
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault()
-    }
-  }}
   role="application"
   aria-label="Drawing Canvas"
 >
-  <!-- The sketch reparents its canvas into containerDiv, so the host div must not take up height. -->
   <P5Canvas {sketch} bind:instance={p5Instance} style="display: block;" />
 
-  <!-- An iframe can't be drawn into the canvas, so YouTube sits over the video slot instead. -->
   <div
     class="absolute left-0 top-0 pointer-events-none"
     class:hidden={source?.kind !== 'youtube' || !$drawingConfig.isTranscriptionMode}
@@ -657,11 +584,6 @@
   {/if}
 
   {#if showSplit}
-    {@const startSplitterDrag = (axis: 'x' | 'y') => (e: Event) => {
-      e.preventDefault()
-      e.stopPropagation()
-      dragAxis = axis
-    }}
     <button
       class="absolute top-0 bottom-0 w-8 bg-transparent cursor-col-resize hover:bg-base-content/5 touch-none"
       style="left: calc({$drawingConfig.splitPosition}% - 16px)"
@@ -671,7 +593,6 @@
       onkeydown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') startSplitterDrag('x')(e)
       }}
-      role="separator"
       aria-label="Resize panels"
       transition:fade={{ duration: 200 }}
     >
@@ -691,10 +612,11 @@
         onkeydown={(e) => {
           if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
             e.preventDefault()
-            const step = e.key === 'ArrowUp' ? -2 : 2
+            const { min, max, step } = SPACE_TIME_SPLIT_RANGE
+            const delta = e.key === 'ArrowUp' ? -step : step
             drawingConfig.update((c) => ({
               ...c,
-              spaceTimeSplit: clamp(c.spaceTimeSplit + step, 20, 80),
+              spaceTimeSplit: clamp(c.spaceTimeSplit + delta, min, max),
             }))
           }
         }}
@@ -712,41 +634,7 @@
   {#if source}
     <VideoControls videoElement={source} />
   {:else if showSpeculateControls}
-    <!-- Speculate mode controls (forward/rewind buttons) -->
-    <div
-      class="absolute bottom-4 -translate-x-1/2 flex gap-2 bg-base-200/80 backdrop-blur-sm rounded-lg p-2 shadow-lg"
-      style:left="{showSplit ? ($drawingConfig.splitPosition + 100) / 2 : 50}%"
-      data-ui-element
-    >
-      <button
-        class="btn btn-ghost btn-sm btn-circle"
-        onclick={handleRewindSpeculateMode}
-        aria-label="Rewind"
-        title="Rewind (R)"
-      >
-        <IconRewind class="h-5 w-5" />
-      </button>
-      <button
-        class="btn btn-ghost btn-sm btn-circle"
-        onclick={handleForwardSpeculateMode}
-        aria-label="Forward"
-        title="Forward (F)"
-      >
-        <IconForward class="h-5 w-5" />
-      </button>
-      <div class="flex flex-col justify-center pl-1 pr-2 leading-tight tabular-nums">
-        <span class="text-sm font-medium" aria-label="Session time"
-          >{formatClock(speculateTime)}</span
-        >
-        <span class="text-xs text-base-content/60">
-          {#if pathStart !== undefined && pathEnd !== undefined}
-            Path {formatClock(pathStart)}–{formatClock(pathEnd)}
-          {:else}
-            Path not started
-          {/if}
-        </span>
-      </div>
-    </div>
+    <SpeculateControls left={showSplit ? ($drawingConfig.splitPosition + 100) / 2 : 50} />
   {/if}
 
   <!-- Assets needed for recovered session -->

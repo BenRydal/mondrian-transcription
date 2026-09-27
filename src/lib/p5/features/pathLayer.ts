@@ -3,10 +3,8 @@ import type { RotationAngle } from '../../stores/drawingConfig'
 export type Rect = { x: number; y: number; w: number; h: number }
 export type XY = { x: number; y: number }
 
-/** x' = a·x + c·y + e, y' = b·x + d·y + f (canvas matrix order). */
-export type Affine = { a: number; b: number; c: number; d: number; e: number; f: number }
+type Affine = { a: number; b: number; c: number; d: number; e: number; f: number }
 
-/** Stored image coords to canvas CSS pixels inside the fitted, rotated floor-plan rect. */
 export function imageToDisplay(
   imgW: number,
   imgH: number,
@@ -27,18 +25,20 @@ export function imageToDisplay(
   }
 }
 
-export interface PolylineSink {
+export function applyAffine(m: Affine, p: XY): XY {
+  return { x: m.a * p.x + m.c * p.y + m.e, y: m.b * p.x + m.d * p.y + m.f }
+}
+
+interface PolylineSink {
   moveTo(x: number, y: number): void
   lineTo(x: number, y: number): void
 }
 
-export interface DotSink {
+interface DotSink {
   moveTo(x: number, y: number): void
   arc(x: number, y: number, r: number, start: number, end: number): void
 }
 
-/** Trace points[start, end) as one polyline, skipping points on the last kept point's device
- * pixel; the first and last points are always kept. Returns the kept count. */
 export function traceDecimated(
   points: readonly XY[],
   start: number,
@@ -47,26 +47,11 @@ export function traceDecimated(
   density: number,
   sink: PolylineSink
 ): number {
-  let kept = 0
-  let lastPx = NaN
-  let lastPy = NaN
-  for (let i = start; i < end; i++) {
-    const p = points[i]
-    const x = m.a * p.x + m.c * p.y + m.e
-    const y = m.b * p.x + m.d * p.y + m.f
-    const px = Math.floor(x * density)
-    const py = Math.floor(y * density)
-    if (px === lastPx && py === lastPy && i !== end - 1) continue
-    if (kept === 0) sink.moveTo(x, y)
-    else sink.lineTo(x, y)
-    lastPx = px
-    lastPy = py
-    kept++
-  }
-  return kept
+  return forEachDistinctPixel(points, start, end, m, density, true, (x, y, kept) =>
+    kept === 0 ? sink.moveTo(x, y) : sink.lineTo(x, y)
+  )
 }
 
-/** Discrete mode: one circle per point, skipping repeats on the same device pixel. */
 export function traceDots(
   points: readonly XY[],
   start: number,
@@ -76,6 +61,21 @@ export function traceDots(
   radius: number,
   sink: DotSink
 ): number {
+  return forEachDistinctPixel(points, start, end, m, density, false, (x, y) => {
+    sink.moveTo(x + radius, y)
+    sink.arc(x, y, radius, 0, 2 * Math.PI)
+  })
+}
+
+function forEachDistinctPixel(
+  points: readonly XY[],
+  start: number,
+  end: number,
+  m: Affine,
+  density: number,
+  keepLast: boolean,
+  visit: (x: number, y: number, kept: number) => void
+): number {
   let kept = 0
   let lastPx = NaN
   let lastPy = NaN
@@ -85,9 +85,8 @@ export function traceDots(
     const y = m.b * p.x + m.d * p.y + m.f
     const px = Math.floor(x * density)
     const py = Math.floor(y * density)
-    if (px === lastPx && py === lastPy) continue
-    sink.moveTo(x + radius, y)
-    sink.arc(x, y, radius, 0, 2 * Math.PI)
+    if (px === lastPx && py === lastPy && !(keepLast && i === end - 1)) continue
+    visit(x, y, kept)
     lastPx = px
     lastPy = py
     kept++
@@ -95,7 +94,6 @@ export function traceDots(
   return kept
 }
 
-/** Everything besides the points that decides what the cached layer looks like. */
 export interface LayerKey {
   width: number
   height: number
@@ -124,15 +122,17 @@ interface LayerPathState {
   last: XY | undefined
 }
 
-export interface LayerState {
+interface LayerState {
   key: LayerKey
   paths: LayerPathState[]
 }
 
-export type LayerPlan =
+type LayerPlan =
   | { kind: 'none' }
   | { kind: 'rebuild' }
   | { kind: 'append'; index: number; from: number; onTop: boolean }
+
+const CPU_BACKED: CanvasRenderingContext2DSettings = { willReadFrequently: true }
 
 const isVisible = (p: { visible?: boolean }) => p.visible !== false
 const drawsSomething = (p: LayerPathInput) => isVisible(p) && p.points.length > 0
@@ -154,7 +154,6 @@ function sameKey(a: LayerKey, b: LayerKey): boolean {
   )
 }
 
-/** True when only the canvas size, density or image placement differ, e.g. mid-resize. */
 export function isGeometryOnlyChange(a: LayerKey, b: LayerKey): boolean {
   return (
     !sameKey(a, b) &&
@@ -166,7 +165,6 @@ export function isGeometryOnlyChange(a: LayerKey, b: LayerKey): boolean {
   )
 }
 
-/** What the layer holds after drawing `paths`; `counts` overrides how many points each has in it. */
 export function layerState(
   key: LayerKey,
   paths: readonly LayerPathInput[],
@@ -188,8 +186,9 @@ export function layerState(
   }
 }
 
-/** Compare the held layer with the next inputs. Points are never edited in place, so a path whose
- * held first and last points still sit at the same indices only grew at its end. */
+const onlyGrewAtEnd = (p: LayerPathInput, was: LayerPathState) =>
+  was.count === 0 || (p.points[0] === was.first && p.points[was.count - 1] === was.last)
+
 export function planLayer(
   prev: LayerState | null,
   key: LayerKey,
@@ -212,9 +211,7 @@ export function planLayer(
     if (!was.visible) continue
     const n = p.points.length
     if (n < was.count) return { kind: 'rebuild' }
-    if (was.count > 0 && (p.points[0] !== was.first || p.points[was.count - 1] !== was.last)) {
-      return { kind: 'rebuild' }
-    }
+    if (!onlyGrewAtEnd(p, was)) return { kind: 'rebuild' }
     if (n === was.count) continue
     if (grown !== -1) return { kind: 'rebuild' }
     grown = i
@@ -224,9 +221,7 @@ export function planLayer(
   return { kind: 'append', index: grown, from: held[grown].count, onTop }
 }
 
-/** Points appended per commit while recording; the rest is drawn live on top each frame. */
 export const COMMIT_BATCH = 128
-/** A path under other paths commits by a full rebuild, so it waits for a longer tail. */
 export const COMMIT_BATCH_UNDER = 2048
 
 export function shouldCommit(tail: number, onTop: boolean, recording: boolean): boolean {
@@ -234,20 +229,15 @@ export function shouldCommit(tail: number, onTop: boolean, recording: boolean): 
   return tail >= (onTop ? COMMIT_BATCH : COMMIT_BATCH_UNDER)
 }
 
-export interface LayerFrame {
+interface LayerFrame {
   key: LayerKey
   transform: Affine
   paths: readonly LayerPathInput[]
   recording: boolean
 }
 
-/** Counters for profiling how often the cache is rebuilt, appended to, or bypassed. */
-export const layerStats = { rebuilds: 0, appends: 0, liveTails: 0 }
+const RESIZE_SETTLE_MS = 150
 
-/** Resizes rebuild once the geometry has been still this long; until then the cache is stretched. */
-export const RESIZE_SETTLE_MS = 150
-
-/** Committed path geometry cached in a CPU-backed canvas at device resolution. */
 export class PathLayer {
   private canvas: HTMLCanvasElement | null = null
   private ctx: CanvasRenderingContext2D | null = null
@@ -257,10 +247,8 @@ export class PathLayer {
   private keyChangedAt = -Infinity
   private settleTimer: ReturnType<typeof setTimeout> | null = null
 
-  /** `onSettle` must redraw, so a stretched frame is replaced once a resize stops. */
   constructor(private readonly onSettle: () => void = () => {}) {}
 
-  /** Bring the cache up to date, blit it onto `target`, then draw any uncommitted tail live. */
   draw(target: CanvasRenderingContext2D, frame: LayerFrame, now = performance.now()) {
     if (!this.lastKey || !sameKey(this.lastKey, frame.key)) this.keyChangedAt = now
     this.lastKey = frame.key
@@ -282,7 +270,6 @@ export class PathLayer {
         this.strokeRange(this.ctx!, frame, plan.index, plan.from)
         this.state = layerState(frame.key, frame.paths)
         this.hasInk = true
-        layerStats.appends++
       } else {
         this.rebuild(frame)
       }
@@ -298,7 +285,6 @@ export class PathLayer {
     }
     if (live) {
       this.strokeRange(target, frame, live.index, live.from)
-      layerStats.liveTails++
     }
     target.restore()
   }
@@ -319,7 +305,6 @@ export class PathLayer {
     }, wait + 1)
   }
 
-  /** Map the cache drawn for `from` onto the image rect of `to`. */
   private stretchTransform(target: CanvasRenderingContext2D, from: LayerKey, to: LayerKey) {
     const sx = to.rect.w / from.rect.w
     const sy = to.rect.h / from.rect.h
@@ -338,8 +323,7 @@ export class PathLayer {
     const { width, height, density } = frame.key
     if (!this.canvas || !this.ctx) {
       this.canvas = document.createElement('canvas')
-      // CPU-backed: rasterising long stroked paths on the GPU canvas path is far slower.
-      this.ctx = this.canvas.getContext('2d', { willReadFrequently: true })!
+      this.ctx = this.canvas.getContext('2d', CPU_BACKED)!
     }
     if (this.canvas.width !== width || this.canvas.height !== height) {
       this.canvas.width = width
@@ -356,7 +340,6 @@ export class PathLayer {
       this.hasInk = true
     })
     this.state = layerState(frame.key, frame.paths)
-    layerStats.rebuilds++
   }
 
   private strokeRange(
@@ -377,15 +360,9 @@ export class PathLayer {
       traceDots(points, from, points.length, m, density, strokeWeight / 2, ctx)
       ctx.stroke()
     } else if (points.length === 1) {
-      const p = points[0]
+      const { x, y } = applyAffine(m, points[0])
       ctx.fillStyle = color
-      ctx.arc(
-        m.a * p.x + m.c * p.y + m.e,
-        m.b * p.x + m.d * p.y + m.f,
-        strokeWeight / 2,
-        0,
-        2 * Math.PI
-      )
+      ctx.arc(x, y, strokeWeight / 2, 0, 2 * Math.PI)
       ctx.fill()
     } else {
       traceDecimated(points, Math.max(0, from - 1), points.length, m, density, ctx)

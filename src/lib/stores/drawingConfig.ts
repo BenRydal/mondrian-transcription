@@ -4,22 +4,20 @@ export type RotationAngle = 0 | 90 | 180 | 270
 
 interface DrawingConfig {
   strokeWeight: number
-  strokeColor: string
   splitPosition: number // percentage (0-100)
-  exportSampleRate: number // Hz - shared export grid for all paths
+  exportSampleRate: number
   isTranscriptionMode: boolean
   speculateScale: number // optional scale for speculate mode
   isContinuousMode: boolean
   jumpSeconds: number // transcription mode: fast forward/rewind duration in seconds (5-60)
-  speculateJumpSeconds: number // speculate mode: fast forward/rewind duration in seconds
+  speculateJumpSeconds: number
   floorPlanRotation: RotationAngle // rotation angle for floor plan display (0, 90, 180, 270)
   showSpaceTime: boolean
-  spaceTimeSplit: number // transcription mode: video share of the left column height (%)
+  spaceTimeSplit: number
 }
 
 const defaultConfig: DrawingConfig = {
   strokeWeight: 5,
-  strokeColor: '#000000',
   splitPosition: 50,
   exportSampleRate: 10,
   isTranscriptionMode: true,
@@ -34,31 +32,26 @@ const defaultConfig: DrawingConfig = {
 
 export const drawingConfig = writable<DrawingConfig>(defaultConfig)
 
-export const updateStrokeWeight = (weight: number) => {
-  drawingConfig.update((config) => ({ ...config, strokeWeight: weight }))
+export const SPLIT_POSITION_RANGE = { min: 30, max: 70 } as const
+export const SPACE_TIME_SPLIT_RANGE = { min: 20, max: 80, step: 2 } as const
+
+type LayoutConfig = Pick<DrawingConfig, 'isTranscriptionMode' | 'showSpaceTime' | 'spaceTimeSplit'>
+
+export function hasLeftColumn(config: Omit<LayoutConfig, 'spaceTimeSplit'>) {
+  return config.isTranscriptionMode || config.showSpaceTime
 }
 
-export const updateStrokeColor = (color: string) => {
-  drawingConfig.update((config) => ({ ...config, strokeColor: color }))
-}
-
-export const updateSplitPosition = (position: number) => {
-  drawingConfig.update((config) => ({ ...config, splitPosition: position }))
-}
-
-export const updateExportSampleRate = (rate: number) => {
-  drawingConfig.update((config) => ({ ...config, exportSampleRate: rate }))
+export function videoHeightPercent(config: LayoutConfig) {
+  return config.isTranscriptionMode && config.showSpaceTime ? config.spaceTimeSplit : 100
 }
 
 export function getSplitPositionForMode() {
-  const { isTranscriptionMode, showSpaceTime, splitPosition } = get(drawingConfig)
-  return isTranscriptionMode || showSpaceTime ? splitPosition : 0
+  const config = get(drawingConfig)
+  return hasLeftColumn(config) ? config.splitPosition : 0
 }
 
-/** Height (%) of the video slot in the left column; the 3D view takes the rest. */
 export function getVideoHeightPercent() {
-  const { isTranscriptionMode, showSpaceTime, spaceTimeSplit } = get(drawingConfig)
-  return isTranscriptionMode && showSpaceTime ? spaceTimeSplit : 100
+  return videoHeightPercent(get(drawingConfig))
 }
 
 const ROTATION_ANGLES: RotationAngle[] = [0, 90, 180, 270]

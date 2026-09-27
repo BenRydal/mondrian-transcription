@@ -2,7 +2,6 @@ import type { Point } from '$lib/p5/types/sketch'
 import type { PathData } from '$lib/stores/drawingState'
 
 export const CHUNK_SIZE = 500
-/** Each point is stored as x, y, time, pathId. */
 export const CHUNK_STRIDE = 4
 
 export interface ChunkRecord {
@@ -29,17 +28,32 @@ export interface PathSummary {
   color: string
   visible?: boolean
   count: number
-  /** Changes whenever any chunk of the path changes. */
   sig: number
 }
 
-/** Number of points held by chunk `index` of a path with `count` points. */
 export function chunkLength(count: number, index: number): number {
   return Math.max(0, Math.min(CHUNK_SIZE, count - index * CHUNK_SIZE))
 }
 
 export function chunkCount(count: number): number {
   return Math.ceil(count / CHUNK_SIZE)
+}
+
+export function forEachChunkRange(count: number, fn: (start: number, end: number) => void) {
+  for (let start = 0; start < count; start += CHUNK_SIZE)
+    fn(start, Math.min(count, start + CHUNK_SIZE))
+}
+
+export function manifestFor(path: PathData, chunks: number[]): PathManifest {
+  const manifest: PathManifest = {
+    pathId: path.pathId,
+    color: path.color,
+    count: path.points.length,
+    chunks,
+  }
+  if (path.name !== undefined) manifest.name = path.name
+  if (path.visible !== undefined) manifest.visible = path.visible
+  return manifest
 }
 
 export function encodeChunk(
@@ -62,7 +76,6 @@ export function encodeChunk(
   return { sessionId, seq, n, data }
 }
 
-/** Decode into `out`; false when the record is malformed or holds non-finite coordinates. */
 export function decodeChunkInto(
   record: unknown,
   expectedLength: number,
@@ -85,10 +98,17 @@ export function decodeChunkInto(
   return true
 }
 
-export function pathSignature(chunks: readonly number[], count: number): number {
-  let h = 0x811c9dc5 ^ count
-  for (const seq of chunks) h = Math.imul(h ^ seq, 0x01000193)
+const FNV_OFFSET = 0x811c9dc5
+const FNV_PRIME = 0x01000193
+
+export function fnv1a(values: ArrayLike<number>, seed = FNV_OFFSET): number {
+  let h = seed
+  for (let i = 0; i < values.length; i++) h = Math.imul(h ^ values[i], FNV_PRIME)
   return h >>> 0
+}
+
+function pathSignature(chunks: readonly number[], count: number): number {
+  return fnv1a(chunks, FNV_OFFSET ^ count)
 }
 
 export function summarize(manifest: PathManifest): PathSummary {
@@ -104,10 +124,6 @@ interface ChunkRef {
 
 const MAX_CANDIDATES = 4
 
-/**
- * Remembers which stored chunk holds which run of point objects. Points are never mutated
- * in place, so identical object references mean identical content.
- */
 export class ChunkRegistry {
   private byFirst = new WeakMap<Point, ChunkRef[]>()
 
@@ -138,14 +154,13 @@ export class ChunkRegistry {
   }
 }
 
-export interface ChunkPlan {
+interface ChunkPlan {
   manifests: PathManifest[]
   newChunks: ChunkRecord[]
   newRefs: Array<{ seq: number; points: Point[] }>
   nextSeq: number
 }
 
-/** Split paths into chunks, reusing stored chunks whose points are unchanged. */
 export function planChunks(
   sessionId: string,
   paths: readonly PathData[],
@@ -159,8 +174,7 @@ export function planChunks(
   const manifests = paths.map((path) => {
     const { points } = path
     const chunks: number[] = []
-    for (let start = 0; start < points.length; start += CHUNK_SIZE) {
-      const end = Math.min(points.length, start + CHUNK_SIZE)
+    forEachChunkRange(points.length, (start, end) => {
       let seq = registry.find(sessionId, points, start, end, isLive)
       if (seq === null) {
         seq = nextSeq++
@@ -168,16 +182,8 @@ export function planChunks(
         newRefs.push({ seq, points: points.slice(start, end) })
       }
       chunks.push(seq)
-    }
-    const manifest: PathManifest = {
-      pathId: path.pathId,
-      color: path.color,
-      count: points.length,
-      chunks,
-    }
-    if (path.name !== undefined) manifest.name = path.name
-    if (path.visible !== undefined) manifest.visible = path.visible
-    return manifest
+    })
+    return manifestFor(path, chunks)
   })
   return { manifests, newChunks, newRefs, nextSeq }
 }

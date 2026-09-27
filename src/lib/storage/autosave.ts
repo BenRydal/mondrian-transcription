@@ -27,6 +27,8 @@ export interface AutosaveStatus {
   sessionId: string | null
 }
 
+const SAVE_DELAY_MS = 500
+const SAVE_MAX_WAIT_MS = 1000
 const LOCK_PREFIX = 'mondrian-autosave:'
 const MIGRATE_LOCK = 'mondrian-autosave-migrate'
 
@@ -36,8 +38,10 @@ export class SessionBusyError extends Error {
   }
 }
 
-/** Trailing debounce that still fires within maxWait while changes keep arriving. */
-export function createSaveScheduler(run: () => void, { delay = 500, maxWait = 1000 } = {}) {
+export function createSaveScheduler(
+  run: () => void,
+  { delay = SAVE_DELAY_MS, maxWait = SAVE_MAX_WAIT_MS } = {}
+) {
   let timer: ReturnType<typeof setTimeout> | null = null
   let firstPending: number | null = null
 
@@ -66,7 +70,7 @@ export function createSaveScheduler(run: () => void, { delay = 500, maxWait = 10
   }
 }
 
-export interface AutosaveOptions {
+interface AutosaveOptions {
   getSnapshot: () => SnapshotInput | null
   openDb?: () => Promise<SessionDb>
   locks?: LockManager | null
@@ -91,9 +95,14 @@ function safeLocalStorage(): Storage | null {
   }
 }
 
-/** A held lock that can be released, or a pending request that can be cancelled. */
 interface LockHandle {
   release: () => void
+}
+
+function holdUntilReleased() {
+  let release = () => {}
+  const held = new Promise<void>((resolve) => (release = resolve))
+  return { held, release: () => release() }
 }
 
 export function createAutosave(opts: AutosaveOptions) {
@@ -119,10 +128,8 @@ export function createAutosave(opts: AutosaveOptions) {
   let dirty = false
   let lock: LockHandle | null = null
   let destroyed = false
-  // Blocks saves while the live state still belongs to the session being left.
-  let switching = false
-  // Name for the session a new-session call will create on its first save.
-  let pendingName: string | null = null
+  let leavingSession = false
+  let nextSessionName: string | null = null
   const scheduler = createSaveScheduler(() => void runSave(), opts)
 
   const setState = (state: AutosaveState) => status.update((s) => ({ ...s, state }))
@@ -142,16 +149,14 @@ export function createAutosave(opts: AutosaveOptions) {
     }
   }
 
-  /** Try the session's lock now; if another tab has it, queue for when it is released. */
   function lockSession(id: string): Promise<boolean> {
     lock?.release()
     lock = null
     if (!locks) return Promise.resolve(true)
     const name = LOCK_PREFIX + id
     return new Promise((resolve) => {
-      let release = () => {}
-      const held = new Promise<void>((r) => (release = r))
-      const handle: LockHandle = { release: () => release() }
+      const { held, release } = holdUntilReleased()
+      const handle: LockHandle = { release }
       lock = handle
       locks
         .request(name, { ifAvailable: true }, (granted) => {
@@ -166,8 +171,7 @@ export function createAutosave(opts: AutosaveOptions) {
 
   function waitForTakeover(id: string, name: string) {
     const abort = new AbortController()
-    let release = () => {}
-    const held = new Promise<void>((r) => (release = r))
+    const { held, release } = holdUntilReleased()
     const handle: LockHandle = {
       release: () => {
         abort.abort()
@@ -189,7 +193,7 @@ export function createAutosave(opts: AutosaveOptions) {
 
   async function openSession(id: string | null) {
     sessionId = id
-    pendingName = null
+    nextSessionName = null
     status.update((s) => ({ ...s, sessionId: id, lastSavedAt: null, videoStatus: null }))
     if (id === null) {
       lock?.release()
@@ -207,7 +211,7 @@ export function createAutosave(opts: AutosaveOptions) {
 
   async function ensureSession(store: SessionDb): Promise<string> {
     if (sessionId) return sessionId
-    const created = await store.createSession(pendingName)
+    const created = await store.createSession(nextSessionName)
     await openSession(created.id)
     return created.id
   }
@@ -234,7 +238,6 @@ export function createAutosave(opts: AutosaveOptions) {
     }
   }
 
-  /** A loaded snapshot is already saved; show its time until the next write. */
   function seen(session: RestoredSession | null) {
     if (session) status.update((s) => ({ ...s, lastSavedAt: session.meta.savedAt }))
     return session
@@ -255,7 +258,7 @@ export function createAutosave(opts: AutosaveOptions) {
   }
 
   function runSave(): Promise<void> {
-    if (!isOwner || unavailable || switching) return Promise.resolve()
+    if (!isOwner || unavailable || leavingSession) return Promise.resolve()
     if (running) {
       dirty = true
       return running
@@ -276,24 +279,22 @@ export function createAutosave(opts: AutosaveOptions) {
   }
 
   async function ownedStore(): Promise<SessionDb | null> {
-    return isOwner && !switching ? getDb() : null
+    return isOwner && !leavingSession ? getDb() : null
   }
 
-  /** Save the live state, run `fn`, and keep saves off until the caller applies new state. */
   async function transition<T>(fn: () => Promise<T>): Promise<T> {
     await settle()
-    switching = true
+    leavingSession = true
     try {
       return await fn()
     } finally {
-      switching = false
+      leavingSession = false
     }
   }
 
   return {
     status: status as Readable<AutosaveStatus>,
 
-    /** Opens storage, migrates old data, locks the last-opened session and returns its latest state. */
     async init(): Promise<RestoredSession | null> {
       const store = await getDb()
       if (!store) return null
@@ -326,7 +327,6 @@ export function createAutosave(opts: AutosaveOptions) {
       return runSave()
     },
 
-    /** Pin the live state; the snapshot is captured before this returns its promise. */
     async checkpoint(label: string | null): Promise<SaveResult | null> {
       const snapshot = opts.getSnapshot()
       if (!snapshot) return null
@@ -377,7 +377,6 @@ export function createAutosave(opts: AutosaveOptions) {
       return store ? store.listSessions() : []
     },
 
-    /** Save the current session, then open another and return its latest state. */
     switchSession(id: string): Promise<RestoredSession | null> {
       return transition(async () => {
         await openSession(id)
@@ -386,11 +385,10 @@ export function createAutosave(opts: AutosaveOptions) {
       })
     },
 
-    /** Save the current session and start an empty one, created on its first save. */
     newSession(name: string | null = null): Promise<void> {
       return transition(async () => {
         await openSession(null)
-        pendingName = name
+        nextSessionName = name
       })
     },
 
@@ -398,7 +396,6 @@ export function createAutosave(opts: AutosaveOptions) {
       await (await getDb())?.renameSession(id, name)
     },
 
-    /** Delete a session; refuses when another tab has it open. */
     async deleteSession(id: string) {
       const store = await getDb()
       if (!store) return
@@ -423,7 +420,6 @@ export function createAutosave(opts: AutosaveOptions) {
       return store ? store.exportSession(id) : null
     },
 
-    /** Store an imported session and switch to it. */
     async importSession(bundle: SessionBundle): Promise<RestoredSession | null> {
       const store = await getDb()
       if (!store) return null
@@ -452,5 +448,3 @@ export function createAutosave(opts: AutosaveOptions) {
     },
   }
 }
-
-export type Autosave = ReturnType<typeof createAutosave>

@@ -8,7 +8,6 @@ export function isEditableTarget(target: EventTarget | KeyTarget): boolean {
   return el.isContentEditable === true || EDITABLE_TAGS.has(el.tagName?.toUpperCase() ?? '')
 }
 
-/** True for a bare key press meant as an app shortcut, not typing or a browser chord. */
 export function isShortcutEvent(e: {
   target: EventTarget | null
   ctrlKey: boolean
@@ -18,7 +17,6 @@ export function isShortcutEvent(e: {
   return !e.ctrlKey && !e.metaKey && !e.altKey && !isEditableTarget(e.target)
 }
 
-/** Ctrl/Cmd+S saves a checkpoint from anywhere, inputs included, instead of the browser's Save. */
 export function isCheckpointShortcut(e: {
   key: string
   ctrlKey: boolean

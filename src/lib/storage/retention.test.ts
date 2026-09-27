@@ -5,7 +5,6 @@ const S = 1000
 const M = 60 * S
 const H = 60 * M
 const D = 24 * H
-// A round epoch-aligned "now" keeps bucket arithmetic easy to reason about.
 const NOW = 1_000 * D
 
 function series(fromAge: number, toAge: number, step: number, startId = 1): RetentionEntry[] {
@@ -17,7 +16,6 @@ function series(fromAge: number, toAge: number, step: number, startId = 1): Rete
   return out
 }
 
-/** Simulate saving every `step` ms for `duration`, thinning after each save. */
 function simulate(duration: number, step: number) {
   let kept: RetentionEntry[] = []
   let id = 0
@@ -39,7 +37,6 @@ describe('selectRetained', () => {
   it('keeps one per minute between 1 and 15 minutes old', () => {
     const entries = series(15 * M - S, M, S)
     const kept = selectRetained(entries, NOW)
-    // 14 minutes of age span, plus the newest-overall entry which is also a bucket winner.
     expect(kept.size).toBeGreaterThanOrEqual(14)
     expect(kept.size).toBeLessThanOrEqual(15)
     const minutes = new Set(
@@ -69,7 +66,6 @@ describe('selectRetained', () => {
     const kept = selectRetained(entries, now)
     expect(kept.has(3)).toBe(true)
     expect(kept.has(2)).toBe(true)
-    // id 1 shares a minute bucket with id 2 and is older, so it is thinned.
     expect(kept.has(1)).toBe(false)
   })
 

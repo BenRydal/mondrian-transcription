@@ -1,4 +1,5 @@
-import { strFromU8, strToU8, unzip, zip, type Unzipped, type Zippable } from 'fflate'
+import { strFromU8, strToU8, unzip, type AsyncZippable, type Unzipped } from 'fflate'
+import { zipBlob } from '$lib/utils/zip'
 import { CHUNK_STRIDE, chunkLength, type ChunkRecord } from './chunks'
 import {
   isValidManifest,
@@ -8,9 +9,8 @@ import {
 } from './schema'
 import type { SessionBundle } from './sessionDb'
 
-export const ARCHIVE_FORMAT = 'mondrian-session'
-export const ARCHIVE_VERSION = 1
-/** Videos above this total are left out of an export; they can be re-attached after import. */
+const ARCHIVE_FORMAT = 'mondrian-session'
+const ARCHIVE_VERSION = 1
 export const MAX_ARCHIVE_VIDEO_BYTES = 512 * 1024 ** 2
 
 interface ArchiveAsset {
@@ -34,10 +34,6 @@ interface ArchiveManifest {
 
 export class ArchiveError extends Error {}
 
-const zipAsync = (files: Zippable) =>
-  new Promise<Uint8Array>((resolve, reject) =>
-    zip(files, { level: 0 }, (err, data) => (err ? reject(err) : resolve(data)))
-  )
 const unzipAsync = (data: Uint8Array) =>
   new Promise<Unzipped>((resolve, reject) =>
     unzip(data, (err, files) => (err ? reject(err) : resolve(files)))
@@ -47,9 +43,8 @@ async function blobBytes(blob: Blob) {
   return new Uint8Array(await blob.arrayBuffer())
 }
 
-/** Pack a session with its full history into one zip. */
 export async function packSession(bundle: SessionBundle): Promise<Blob> {
-  const files: Zippable = {}
+  const files: AsyncZippable = {}
   const chunks = bundle.chunks.map((c) => {
     const file = `chunks/${c.seq}.f64`
     files[file] = new Uint8Array(c.data.buffer, c.data.byteOffset, c.data.byteLength)
@@ -79,15 +74,13 @@ export async function packSession(bundle: SessionBundle): Promise<Blob> {
     omittedVideos: keepVideos ? [] : [...bundle.videos.keys()],
   }
   files['session.json'] = [strToU8(JSON.stringify(manifest)), { level: 6 }]
-  const data = await zipAsync(files)
-  return new Blob([data as Uint8Array<ArrayBuffer>], { type: 'application/zip' })
+  return zipBlob(files, { level: 0 })
 }
 
 function fail(message: string): never {
   throw new ArchiveError(message)
 }
 
-/** Parse and validate an archive; throws ArchiveError with a readable reason. */
 export async function unpackSession(file: Blob): Promise<SessionBundle> {
   let files: Unzipped
   try {
