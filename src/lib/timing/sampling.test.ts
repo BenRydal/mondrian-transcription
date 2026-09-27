@@ -211,6 +211,45 @@ describe('session-wide speculate scaling', () => {
   })
 })
 
+describe('export of a path that starts at the current session time', () => {
+  function recordLateEntrant() {
+    const clock = new SessionClock()
+    const first = recordSpeculate(clock, 1000, 60, 6)
+    // "Current time": the second path picks up the clock where the first left it.
+    clock.seek(clock.timeAt(7000), 7000)
+    const late = recordSpeculate(clock, 20000, 60, 6)
+    return { first, late }
+  }
+
+  it('records the late path on the shared timeline', () => {
+    const { first, late } = recordLateEntrant()
+    expect(first[0].time).toBe(0)
+    expect(late[0].time).toBeCloseTo(6)
+    expect(late.at(-1)!.time).toBeCloseTo(12)
+  })
+
+  it('scales by the session end and keeps the late start offset on the same grid', () => {
+    const { first, late } = recordLateEntrant()
+    const scale = sessionScale([first, late], 24)
+    expect(scale).toBeCloseTo(2)
+
+    const a = resamplePath(first, { rate: 2, scale })
+    const b = resamplePath(late, { rate: 2, scale })
+    expect(a[0].time).toBe(0)
+    expect(a.at(-1)!.time).toBe(12)
+    expect(b[0].time).toBe(12)
+    expect(b.at(-1)!.time).toBe(24)
+    expect(b.every((p) => Number.isInteger(p.time * 2))).toBe(true)
+    expect(b[0]).toMatchObject({ x: late[0].x, y: late[0].y })
+  })
+
+  it('writes no rows for the late path before it starts', () => {
+    const { first, late } = recordLateEntrant()
+    const b = resamplePath(late, { rate: 10, scale: sessionScale([first, late], 12) })
+    expect(Math.min(...b.map((p) => p.time))).toBeGreaterThanOrEqual(late[0].time)
+  })
+})
+
 describe('hold points', () => {
   it('fills the hold grid after the last point up to now, never past it', () => {
     expect(holdTimes(2, 2.09)).toEqual([])

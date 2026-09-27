@@ -2,7 +2,12 @@ import type { VideoSource } from '../../video/source'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { get } from 'svelte/store'
 import { sampleHold } from './drawing'
-import { addPointsToCurrentPath, drawingState } from '../../stores/drawingState'
+import {
+  addPointsToCurrentPath,
+  appendFinalPoint,
+  drawingState,
+  handleForwardSpeculateMode,
+} from '../../stores/drawingState'
 import { drawingConfig } from '../../stores/drawingConfig'
 import { mediaClock, speculateClock } from '../../timing/sessionClocks'
 import { resamplePath } from '../../timing/sampling'
@@ -118,5 +123,72 @@ describe('hold points for a still pointer', () => {
     expect(out.every((p, i) => Math.abs(p.time - i / 10) < 1e-9)).toBe(true)
     expect(out.slice(0, 10).every((p) => p.x === 40)).toBe(true)
     expect(out.at(-1)!.x).toBe(70)
+  })
+})
+
+describe('a real move right after a hold point', () => {
+  function holdThenMove(moveDelay: number) {
+    startRecording(false)
+    speculateClock.pause(0)
+    speculateClock.seek(2, 0)
+    speculateClock.start(1000)
+    sampleHold(null, 1100)
+    const time = speculateClock.timeAt(1100 + moveDelay)
+    addPointsToCurrentPath([{ x: 90, y: 10, time, pathId: 1 }])
+    speculateClock.pause(2000)
+    return points()
+  }
+
+  it.each([0, 4, 9])('keeps a move %i ms after the hold, replacing the hold point', (delay) => {
+    const recorded = holdThenMove(delay)
+    expect(recorded.map((p) => p.x)).toEqual([40, 90])
+    expect(recorded[1].time).toBeCloseTo(2.1 + delay / 1000, 9)
+  })
+
+  it('records the same points at 24 and 120 fps when the move lands just after a hold', () => {
+    const run = (fps: number) => {
+      startRecording(false)
+      speculateClock.pause(0)
+      speculateClock.seek(2, 0)
+      speculateClock.start(1000)
+      const moveAt = 1105
+      for (let perf = 1000 + 1000 / fps; perf <= moveAt; perf += 1000 / fps) sampleHold(null, perf)
+      const time = speculateClock.timeAt(moveAt)
+      addPointsToCurrentPath([{ x: 90, y: 10, time, pathId: 1 }])
+      runFrames(fps, 0.5, moveAt)
+      speculateClock.pause(2000)
+      return points().map((p) => [p.x, p.time])
+    }
+    expect(run(24)).toEqual(run(120))
+  })
+
+  it('keeps both once the move is past the minimum spacing', () => {
+    expect(holdThenMove(12).map((p) => p.x)).toEqual([40, 40, 90])
+  })
+
+  it('still thins a real move within 10 ms of a real one', () => {
+    startRecording(false)
+    addPointsToCurrentPath([{ x: 90, y: 10, time: 2.005, pathId: 1 }])
+    expect(points().map((p) => p.x)).toEqual([40])
+  })
+
+  it('keeps a move 4 ms after a Speculate fast-forward point', () => {
+    startRecording(false)
+    speculateClock.pause(0)
+    speculateClock.seek(2, 0)
+    handleForwardSpeculateMode()
+    const jumped = points().at(-1)!.time
+    addPointsToCurrentPath([{ x: 90, y: 10, time: jumped + 0.004, pathId: 1 }])
+    expect(points().map((p) => p.x)).toEqual([40, 90])
+  })
+
+  it('keeps a move landing on the final point of a stopped take', () => {
+    startRecording(false)
+    appendFinalPoint(2.5)
+    addPointsToCurrentPath([{ x: 90, y: 10, time: 2.5, pathId: 1 }])
+    expect(points().map((p) => [p.x, p.time])).toEqual([
+      [40, 2],
+      [90, 2.5],
+    ])
   })
 })

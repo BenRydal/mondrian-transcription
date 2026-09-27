@@ -30,5 +30,7 @@ describe('sanitizeViewPrefs', () => {
     expect(sanitizeViewPrefs({ recordingMode: 'drag' }).recordingMode).toBe('toggle')
     expect(sanitizeViewPrefs({ trailSeconds: 0 }).trailSeconds).toBe(0)
     expect(sanitizeViewPrefs({ trailSeconds: 4 }).trailSeconds).toBe(3)
+    expect(sanitizeViewPrefs({ newPathStart: 'current' }).newPathStart).toBe('current')
+    expect(sanitizeViewPrefs({ newPathStart: 'later' }).newPathStart).toBe('zero')
   })
 })

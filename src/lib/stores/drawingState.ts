@@ -8,6 +8,7 @@ import {
   speculateClock,
   syncSpeculateClock,
   invalidateSpeculateClock,
+  setNewPathStart,
 } from '../timing/sessionClocks'
 
 /** Autosave spots changed points by identity, so dev builds make in-place edits throw. */
@@ -109,6 +110,7 @@ export function handleForwardSpeculateMode() {
       time: newTime,
       pathId: state.currentPathId,
     })
+    syntheticPoints.add(holdPoint)
     updatedPaths[currentPathIndex] = { ...currentPath, points: [...currentPath.points, holdPoint] }
 
     return { ...state, paths: updatedPaths }
@@ -135,9 +137,14 @@ export function handleForwardTranscription(videoElement: VideoSource) {
 
     const updatedPoints = [...currentPath.points]
     if (newTime > lastPoint.time) {
-      updatedPoints.push(
-        freezePoint({ x: lastPoint.x, y: lastPoint.y, time: newTime, pathId: state.currentPathId })
-      )
+      const holdPoint = freezePoint({
+        x: lastPoint.x,
+        y: lastPoint.y,
+        time: newTime,
+        pathId: state.currentPathId,
+      })
+      syntheticPoints.add(holdPoint)
+      updatedPoints.push(holdPoint)
     }
     updatedPaths[currentPathIndex] = { ...currentPath, points: updatedPoints }
 
@@ -235,12 +242,14 @@ export function toggleDrawingNoVideo() {
   })
 }
 
-export function createNewPath(color: string) {
+/** Add an empty path and make it current; in Speculate its clock starts at `startTime`. */
+export function createNewPath(color: string, startTime = 0) {
   console.log('Creating new path with color', color)
   invalidateSpeculateClock()
   drawingState.update((state) => {
     // Restored paths can hold ids above currentPathId, so never reuse one.
     const newPathId = Math.max(state.currentPathId, ...state.paths.map((p) => p.pathId)) + 1
+    setNewPathStart(newPathId, startTime)
     return {
       ...state,
       currentPathId: newPathId,
@@ -256,8 +265,11 @@ export function createNewPath(color: string) {
   })
 }
 
+/** Hold and final points repeat the last position; a real move may replace one. */
+const syntheticPoints = new WeakSet<Point>()
+
 /** Append points while recording, dropping any closer than the minimum interval in clock time. */
-export function addPointsToCurrentPath(points: Point[]) {
+export function addPointsToCurrentPath(points: Point[], synthetic = false) {
   drawingState.update((state) => {
     if (!state.shouldTrackMouse || points.length === 0) return state
 
@@ -266,12 +278,24 @@ export function addPointsToCurrentPath(points: Point[]) {
 
     const currentPath = state.paths[currentPathIndex]
     const updatedPoints = [...currentPath.points]
+    let changed = false
     for (const point of points) {
-      if (shouldKeepPoint(updatedPoints.at(-1)?.time, point.time)) {
-        updatedPoints.push(freezePoint(point))
+      const last = updatedPoints.at(-1)
+      if (!shouldKeepPoint(last?.time, point.time)) {
+        const replaces =
+          !synthetic &&
+          syntheticPoints.has(last!) &&
+          point.time >= last!.time &&
+          shouldKeepPoint(updatedPoints.at(-2)?.time, point.time)
+        if (!replaces) continue
+        updatedPoints.pop()
       }
+      const stored = freezePoint(point)
+      if (synthetic) syntheticPoints.add(stored)
+      updatedPoints.push(stored)
+      changed = true
     }
-    if (updatedPoints.length === currentPath.points.length) return state
+    if (!changed) return state
 
     const updatedPaths = [...state.paths]
     updatedPaths[currentPathIndex] = { ...currentPath, points: updatedPoints }
@@ -284,7 +308,10 @@ export function appendFinalPoint(time: number) {
   const state = get(drawingState)
   const lastPoint = state.paths.find((p) => p.pathId === state.currentPathId)?.points.at(-1)
   if (!lastPoint) return
-  addPointsToCurrentPath([{ x: lastPoint.x, y: lastPoint.y, time, pathId: state.currentPathId }])
+  addPointsToCurrentPath(
+    [{ x: lastPoint.x, y: lastPoint.y, time, pathId: state.currentPathId }],
+    true
+  )
 }
 
 /** Repeat the last position on the hold grid up to clock time `now` while the pointer is still. */
@@ -293,7 +320,10 @@ export function appendHoldPoints(now: number) {
   const lastPoint = state.paths.find((p) => p.pathId === state.currentPathId)?.points.at(-1)
   if (!state.shouldTrackMouse || !lastPoint) return
   const { x, y, pathId } = lastPoint
-  addPointsToCurrentPath(holdTimes(lastPoint.time, now).map((time) => ({ x, y, time, pathId })))
+  addPointsToCurrentPath(
+    holdTimes(lastPoint.time, now).map((time) => ({ x, y, time, pathId })),
+    true
+  )
 }
 
 export function renamePathById(pathId: number, name: string) {

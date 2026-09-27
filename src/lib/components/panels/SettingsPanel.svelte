@@ -4,11 +4,21 @@
   import { drawingConfig, rotateFloorPlan } from '$lib/stores/drawingConfig'
   import { drawingState } from '$lib/stores/drawingState'
   import PanelSection from './PanelSection.svelte'
-  import { TRAIL_LENGTHS, viewPrefs, type RecordingMode } from '$lib/stores/viewPrefs'
+  import {
+    TRAIL_LENGTHS,
+    viewPrefs,
+    type NewPathStart,
+    type RecordingMode,
+  } from '$lib/stores/viewPrefs'
 
   const recordingModes: { value: RecordingMode; label: string }[] = [
     { value: 'toggle', label: 'Click to toggle' },
     { value: 'hold', label: 'Hold to draw' },
+  ]
+
+  const newPathStarts: { value: NewPathStart; label: string }[] = [
+    { value: 'zero', label: '0:00' },
+    { value: 'current', label: 'Current time' },
   ]
 
   const strokeWeights = [1, 2, 3, 4, 5, 8, 10]
@@ -77,6 +87,32 @@
         Click once to start recording and again to pause.
       {/if}
     </p>
+
+    {#if !isTranscriptionMode}
+      <div class="flex flex-col gap-1">
+        <span id="new-path-start" class="text-sm">New path starts at</span>
+        <div class="join w-full" role="group" aria-labelledby="new-path-start">
+          {#each newPathStarts as option (option.value)}
+            {@const active = $viewPrefs.newPathStart === option.value}
+            <button
+              class="btn btn-sm join-item flex-1"
+              class:btn-active={active}
+              aria-pressed={active}
+              onclick={() => viewPrefs.update((p) => ({ ...p, newPathStart: option.value }))}
+            >
+              {option.label}
+            </button>
+          {/each}
+        </div>
+        <p class="text-xs text-base-content/60">
+          {#if $viewPrefs.newPathStart === 'current'}
+            A new path picks up the session clock where it is, for someone who arrives later.
+          {:else}
+            Every new path starts its own timeline at 0:00.
+          {/if}
+        </p>
+      </div>
+    {/if}
   </PanelSection>
 
   <PanelSection title="Sampling">

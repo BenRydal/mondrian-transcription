@@ -24,10 +24,11 @@
     sampleHold,
     speculateNow,
   } from './features/drawing'
+  import { PathLayer } from './features/pathLayer'
   import { formatClock } from '$lib/utils/time'
   import { resamplePath, sessionScale } from '$lib/timing/sampling'
   import { bindPlaybackState, setupVideo } from './features/video'
-  import { LocalVideoSource, type VideoSource } from '$lib/video/source'
+  import { LocalVideoSource, type VideoEvent, type VideoSource } from '$lib/video/source'
   import { YouTubeVideoSource } from '$lib/video/youtube'
   import VideoControls from '../components/video/VideoControls.svelte'
   import { getFittedImageDisplayRect } from '$lib/utils/drawingUtils'
@@ -116,6 +117,43 @@
     return watchVideoFrames(videoHtmlElement, frameEstimator)
   })
 
+  let redrawQueued = false
+  function requestRedraw() {
+    if (redrawQueued) return
+    redrawQueued = true
+    requestAnimationFrame(() => {
+      redrawQueued = false
+      if (p5Instance && !p5Instance.isLooping()) p5Instance.redraw()
+    })
+  }
+
+  /** Animate only while recording or playing; otherwise redraw on demand. */
+  function syncLoop() {
+    const p = p5Instance
+    if (!p) return
+    const { isDrawing, isVideoPlaying, shouldTrackMouse } = $drawingState
+    const playing = source !== null && !source.paused
+    const animate = isDrawing || isVideoPlaying || shouldTrackMouse || playing
+    if (animate && !p.isLooping()) p.loop()
+    else if (!animate && p.isLooping()) p.noLoop()
+    requestRedraw()
+  }
+
+  $effect(() => {
+    void [$drawingState, $drawingConfig, $viewPrefs]
+    syncLoop()
+  })
+
+  $effect(() => {
+    const video = source
+    if (!video) return
+    const events: VideoEvent[] = ['play', 'pause', 'ended', 'seeked', 'loadeddata', 'ratechange']
+    for (const e of events) video.addEventListener(e, syncLoop)
+    return () => {
+      for (const e of events) video.removeEventListener(e, syncLoop)
+    }
+  })
+
   /** Paused only: one frame, or one second with Shift. */
   function stepVideo(video: VideoSource, direction: 1 | -1, bySecond: boolean) {
     if (!video.paused || !(video.duration > 0)) return
@@ -152,9 +190,7 @@
 
   function handleSplitterEnd() {
     dragAxis = null
-    if (p5Instance) {
-      p5Instance.loop()
-    }
+    syncLoop()
   }
 
   onMount(() => {
@@ -221,6 +257,7 @@
     const { handlePressVideo, handlePressSpeculate, handleHoldStart, handleHoldEnd, handleMove } =
       setupDrawing(p5, () => canvasElt)
     let holdPointerId: number | null = null
+    const pathLayer = new PathLayer(requestRedraw)
 
     const canRecord = () =>
       $drawingConfig.isTranscriptionMode
@@ -268,6 +305,7 @@
       p5.strokeJoin(p5.ROUND)
 
       p5.noLoop()
+      syncLoop()
     }
 
     // Helper to draw rotated floor plan image
@@ -311,10 +349,8 @@
       sampleHold(source)
 
       drawRotatedImage()
-      drawPaths(p5)
+      drawPaths(p5, pathLayer)
     }
-
-    p5.loop()
   }
 
   /** Swap in a new video source; a restore keeps the paths and resumes at `restoreTime`. */
@@ -361,7 +397,7 @@
     youtubeAspect = aspect
     const next = new YouTubeVideoSource({ videoId, host: youtubeHost, startTime: restoreTime })
     attachSource(next, null, restoreTime)
-    p5Instance?.loop()
+    syncLoop()
   }
 
   export function setImage(image: HTMLImageElement, isRecovery = false) {
@@ -389,9 +425,7 @@
         imageHeight: image.height,
         imageElement: p5Img,
       }))
-      if (p5Instance) {
-        p5Instance.loop()
-      }
+      syncLoop()
     })
   }
 
@@ -410,7 +444,11 @@
       source.currentTime = 0
       source.pause()
     }
-    createNewPath(newColor)
+    const speculateStart =
+      !$drawingConfig.isTranscriptionMode && $viewPrefs.newPathStart === 'current'
+        ? speculateNow()
+        : 0
+    createNewPath(newColor, speculateStart)
 
     drawingState.update((state) => ({
       ...state,

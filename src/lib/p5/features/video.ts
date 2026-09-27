@@ -102,6 +102,7 @@ export function setupVideo(p5: p5) {
   }
 
   const checkVideoEnd = (source: VideoSource) => {
+    // Paused at the end: acting again would update the store and redraw forever.
     if (!source.paused && source.currentTime >= source.duration - 0.1) {
       appendFinalPoint(source.currentTime)
       source.pause()

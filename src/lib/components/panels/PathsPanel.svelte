@@ -39,6 +39,11 @@
     return formatTime(points[points.length - 1].time - points[0].time)
   }
 
+  function getPathSpan(points: { time: number }[]): string | undefined {
+    if (points.length === 0) return undefined
+    return `${formatTime(points[0].time)}–${formatTime(points[points.length - 1].time)}`
+  }
+
   function startEditing(pathId: number, currentName: string) {
     editingPathId = pathId
     editValue = currentName
@@ -109,7 +114,10 @@
             {formatPoints(path.points.length)}
           </span>
 
-          <span class="w-12 text-right text-sm tabular-nums text-base-content/50">
+          <span
+            class="w-12 text-right text-sm tabular-nums text-base-content/50"
+            title={getPathSpan(path.points)}
+          >
             {getPathDuration(path.points)}
           </span>
 

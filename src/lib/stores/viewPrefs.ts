@@ -7,10 +7,15 @@ export type RecordingMode = (typeof RECORDING_MODES)[number]
 
 export const TRAIL_LENGTHS = [0, 1, 3, 5] as const
 
+export const NEW_PATH_STARTS = ['zero', 'current'] as const
+export type NewPathStart = (typeof NEW_PATH_STARTS)[number]
+
 export interface ViewPrefs {
   playbackRate: number
   recordingMode: RecordingMode
   trailSeconds: number
+  /** Speculate: a new path starts at 0:00 or at the session clock's current time. */
+  newPathStart: NewPathStart
 }
 
 const STORAGE_KEY = 'mondrian-view-prefs'
@@ -22,6 +27,7 @@ export const defaultViewPrefs: ViewPrefs = {
   playbackRate: 1,
   recordingMode: 'toggle',
   trailSeconds: 3,
+  newPathStart: 'zero',
 }
 
 /** Drop unknown or invalid values so a stale or hand-edited entry can't break the app. */
@@ -37,6 +43,9 @@ export function sanitizeViewPrefs(raw: unknown): ViewPrefs {
   }
   if ((TRAIL_LENGTHS as readonly unknown[]).includes(r.trailSeconds)) {
     prefs.trailSeconds = r.trailSeconds as number
+  }
+  if ((NEW_PATH_STARTS as readonly unknown[]).includes(r.newPathStart)) {
+    prefs.newPathStart = r.newPathStart as NewPathStart
   }
   return prefs
 }

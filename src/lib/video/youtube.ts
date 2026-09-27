@@ -292,6 +292,7 @@ export class YouTubeVideoSource implements VideoSource {
     this.refreshDuration()
     this.settleReady()
     this.emit('loadedmetadata')
+    this.emit('loadeddata')
     this.emit('ratechange')
     this.emit('timeupdate')
   }

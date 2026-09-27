@@ -16,11 +16,11 @@ import {
   isInDrawableArea,
   convertToImageCoordinates,
   getFittedImageDisplayRect,
-  applyForwardRotation,
 } from '../../utils/drawingUtils'
 import { mediaClock, speculateClock, syncSpeculateClock } from '../../timing/sessionClocks'
 import { lastIndexAtOrBefore, trailRange } from '../../timing/timeWindow'
 import { viewPrefs } from '../../stores/viewPrefs'
+import { imageToDisplay, type PathLayer } from './pathLayer'
 
 type CanvasPos = { x: number; y: number }
 
@@ -179,7 +179,7 @@ export function sampleHold(video?: VideoSource | null, perfMs = performance.now(
   if (now !== null) appendHoldPoints(now)
 }
 
-export function drawPaths(p5: p5) {
+export function drawPaths(p5: p5, layer: PathLayer) {
   const state = get(drawingState)
   const config = get(drawingConfig)
 
@@ -188,22 +188,31 @@ export function drawPaths(p5: p5) {
 
   const rotation = config.floorPlanRotation
   const rect = getFittedImageDisplayRect(p5, getSplitPositionForMode(), imgW, imgH, rotation)
+  const m = imageToDisplay(imgW, imgH, rotation, rect)
+  const toDisplay = (pt: { x: number; y: number }) => ({
+    x: m.a * pt.x + m.c * pt.y + m.e,
+    y: m.b * pt.x + m.d * pt.y + m.f,
+  })
 
-  // Convert stored original image coords to rotated display coords
-  const toDisplay = (pt: { x: number; y: number }) => {
-    const { nx, ny } = applyForwardRotation(pt.x, pt.y, imgW, imgH, rotation)
-    return {
-      x: rect.x + nx * rect.w,
-      y: rect.y + ny * rect.h,
-    }
-  }
+  const ctx = p5.drawingContext as CanvasRenderingContext2D
+  layer.draw(ctx, {
+    key: {
+      width: ctx.canvas.width,
+      height: ctx.canvas.height,
+      density: p5.pixelDensity(),
+      rect,
+      rotation,
+      imgW,
+      imgH,
+      strokeWeight: config.strokeWeight,
+      continuous: config.isContinuousMode,
+    },
+    transform: m,
+    paths: state.paths,
+    recording: state.shouldTrackMouse,
+  })
 
   p5.push()
-
-  // Draw all path lines
-  state.paths.forEach((path) => {
-    drawPathLine(p5, path, toDisplay, config.strokeWeight, config.isContinuousMode)
-  })
 
   // Draw pulsing endpoints
   const activePath = state.paths.find((p) => p.pathId === state.currentPathId)
@@ -222,44 +231,14 @@ export function drawPaths(p5: p5) {
     if (path.visible === false || path.points.length === 0) return
 
     const endpoint =
-      path.pathId === state.currentPathId ? currentEndpoint! : findSyncedEndpoint(path, sessionTime)
+      path.pathId === state.currentPathId ? currentEndpoint : findSyncedEndpoint(path, sessionTime)
+    if (!endpoint) return
 
     const { x, y } = toDisplay(endpoint)
     drawPulsingMarker(p5, x, y, path.color, state.isDrawing ? p5.frameCount : 0)
   })
 
   p5.pop()
-}
-
-/** Draw a single path as a continuous line or discrete points */
-function drawPathLine(
-  p5: p5,
-  path: PathData,
-  toDisplay: (pt: { x: number; y: number }) => { x: number; y: number },
-  strokeWeight: number,
-  isContinuousMode: boolean
-) {
-  if (path.visible === false) return
-
-  p5.strokeWeight(strokeWeight)
-  p5.stroke(path.color)
-  p5.noFill()
-
-  if (isContinuousMode) {
-    if (path.points.length > 1) {
-      p5.beginShape()
-      path.points.forEach((pt) => p5.vertex(...(Object.values(toDisplay(pt)) as [number, number])))
-      p5.endShape()
-    } else if (path.points.length === 1) {
-      const { x, y } = toDisplay(path.points[0])
-      p5.point(x, y)
-    }
-  } else {
-    path.points.forEach((pt) => {
-      const { x, y } = toDisplay(pt)
-      p5.circle(x, y, strokeWeight)
-    })
-  }
 }
 
 function getSessionTime(isTranscriptionMode: boolean, videoTime: number): number {
@@ -273,9 +252,9 @@ export function speculateNow(): number {
   return speculateClock.timeAt(now)
 }
 
-/** Latest point of a path at or before the shared session time. */
-function findSyncedEndpoint(path: PathData, sessionTime: number): Point {
-  return path.points[Math.max(0, lastIndexAtOrBefore(path.points, sessionTime))]
+/** Latest point of a path at or before the shared session time; null before the path starts. */
+function findSyncedEndpoint(path: PathData, sessionTime: number): Point | null {
+  return path.points[lastIndexAtOrBefore(path.points, sessionTime)] ?? null
 }
 
 const TRAIL_BANDS = 8

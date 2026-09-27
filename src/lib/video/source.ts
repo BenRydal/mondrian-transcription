@@ -5,6 +5,7 @@ export type VideoEvent =
   | 'seeked'
   | 'timeupdate'
   | 'loadedmetadata'
+  | 'loadeddata'
   | 'durationchange'
   | 'ratechange'
   | 'error'
