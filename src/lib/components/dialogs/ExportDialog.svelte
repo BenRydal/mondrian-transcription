@@ -5,7 +5,7 @@
   import { drawingConfig } from '$lib/stores/drawingConfig'
   import { drawingState } from '$lib/stores/drawingState'
   import { formatPoints } from '$lib/utils/format'
-  import { exportFileName, FLOOR_PLAN_FILE } from '$lib/export/pathExport'
+  import { exportFileNames, FLOOR_PLAN_FILE } from '$lib/export/pathExport'
   import { hasRecordedData } from '$lib/stores/sessionRecovery'
   import { sessionEnd } from '$lib/timing/sampling'
   import { formatDuration } from '$lib/utils/time'
@@ -21,11 +21,13 @@
   // than derived because Modal renders its body whether or not it is open, so a derived
   // value would rescan every recorded point on every frame.
   let recordedTotal = $state(0)
+  let recordedEnd = 0
   let minutes = $state(0)
   let seconds = $state(0)
 
   const scaleSeconds = $derived(minutes * 60 + seconds)
   const paths = $derived($drawingState.paths)
+  const fileNames = $derived(exportFileNames(paths))
   const hasImage = $derived($drawingState.imageElement !== null)
   const hasExportableData = $derived(hasImage || hasRecordedData(paths))
 
@@ -37,8 +39,8 @@
       // recorded timings unchanged instead of compressing them into a fixed duration.
       // Seeded on open rather than in an effect, which would overwrite the fields as
       // they are typed into.
-      const end = sessionEnd(paths.map((path) => path.points))
-      recordedTotal = end > 0 ? Math.max(1, Math.round(end)) : 0
+      recordedEnd = sessionEnd(paths.map((path) => path.points))
+      recordedTotal = recordedEnd > 0 ? Math.max(1, Math.round(recordedEnd)) : 0
       const total = recordedTotal || DEFAULT_SCALE_SECONDS
       minutes = Math.floor(total / 60)
       seconds = total % 60
@@ -47,7 +49,9 @@
   }
 
   function confirmScale() {
-    drawingConfig.update((c) => ({ ...c, speculateScale: scaleSeconds }))
+    // The fields show whole seconds; an untouched default must export the exact length.
+    const total = recordedTotal > 0 && scaleSeconds === recordedTotal ? recordedEnd : scaleSeconds
+    drawingConfig.update((c) => ({ ...c, speculateScale: total }))
     showScaleModal = false
     showExportPreviewModal = true
   }
@@ -140,7 +144,7 @@
           <div class="flex items-center gap-2">
             <span class="w-3 h-3 rounded-full flex-shrink-0" style="background-color: {path.color}"
             ></span>
-            <span class="font-mono">{exportFileName(path, index)}</span>
+            <span class="font-mono">{fileNames[index]}</span>
           </div>
           <span class="text-base-content/50 text-xs">
             {formatPoints(path.points.length)} pts

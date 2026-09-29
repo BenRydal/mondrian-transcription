@@ -442,6 +442,23 @@
   }
 
   export function exportAll(onComplete?: () => void) {
+    let files: Record<string, Uint8Array>
+    try {
+      files = exportFiles()
+    } catch (err) {
+      window.console.error('Error preparing export:', err)
+      onComplete?.()
+      return
+    }
+
+    // Generate ZIP asynchronously (uses Web Workers, won't block UI)
+    zipBlob(files)
+      .then((blob) => downloadBlob(blob, EXPORT_ZIP_NAME))
+      .catch((err) => window.console.error('Error creating ZIP:', err))
+      .finally(() => onComplete?.())
+  }
+
+  function exportFiles(): Record<string, Uint8Array> {
     const imageElement = $drawingState?.imageElement
     const files: Record<string, Uint8Array> = {}
 
@@ -470,12 +487,7 @@
         speculateScale: $drawingConfig.speculateScale,
       })
     )
-
-    // Generate ZIP asynchronously (uses Web Workers, won't block UI)
-    zipBlob(files)
-      .then((blob) => downloadBlob(blob, EXPORT_ZIP_NAME))
-      .catch((err) => window.console.error('Error creating ZIP:', err))
-      .finally(() => onComplete?.())
+    return files
   }
 
   export function clearDrawing() {

@@ -12,12 +12,18 @@ interface ExportOptions {
   speculateScale: number
 }
 
-// The index prefix makes every name unique by construction, so two paths sharing a
-// name can no longer overwrite each other in the ZIP. It also keeps this function pure,
-// which is what lets the export preview show the same names the ZIP will contain.
-export function exportFileName(path: Pick<PathData, 'name'>, index: number): string {
-  const name = path.name?.replace(/[/\\:*?"<>|]/g, '_') || 'path'
-  return `${String(index + 1).padStart(2, '0')}-${name}.csv`
+// IGS uses the file name as the person's name, so names stay plain and only
+// collisions get a suffix; the preview calls this too so it matches the ZIP.
+export function exportFileNames(paths: readonly Pick<PathData, 'name' | 'points'>[]): string[] {
+  const taken = new Set<string>()
+  return paths.map((path, index) => {
+    if (path.points.length === 0) return ''
+    const base = path.name?.trim().replace(/[/\\:*?"<>|]/g, '_') || `path-${index + 1}`
+    let name = base
+    for (let n = 2; taken.has(name.toLowerCase()); n++) name = `${base}-${n}`
+    taken.add(name.toLowerCase())
+    return `${name}.csv`
+  })
 }
 
 export function pathCsvFiles(paths: readonly PathData[], options: ExportOptions) {
@@ -28,6 +34,7 @@ export function pathCsvFiles(paths: readonly PathData[], options: ExportOptions)
         options.speculateScale
       )
   const encoder = new TextEncoder()
+  const names = exportFileNames(paths)
   const files: Record<string, Uint8Array> = {}
   paths.forEach((path, index) => {
     if (path.points.length === 0) return
@@ -35,7 +42,7 @@ export function pathCsvFiles(paths: readonly PathData[], options: ExportOptions)
     const csv = rows
       .map((p) => `${p.x.toFixed(COORD_DECIMALS)},${p.y.toFixed(COORD_DECIMALS)},${p.time}`)
       .join('\n')
-    files[exportFileName(path, index)] = encoder.encode(`x,y,time\n${csv}`)
+    files[names[index]] = encoder.encode(`x,y,time\n${csv}`)
   })
   return files
 }
