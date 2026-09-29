@@ -1,6 +1,8 @@
 import type { PathData } from '$lib/stores/drawingState'
 import { resamplePath, sessionScale } from '$lib/timing/sampling'
 
+const COORD_DECIMALS = 2
+
 export const EXPORT_ZIP_NAME = 'transcription-export.zip'
 export const FLOOR_PLAN_FILE = 'floor-plan.png'
 
@@ -26,7 +28,9 @@ export function pathCsvFiles(paths: readonly PathData[], options: ExportOptions)
   paths.forEach((path, index) => {
     if (path.points.length === 0) return
     const rows = resamplePath(path.points, { rate: options.sampleRate, scale })
-    const csv = rows.map((p) => `${p.x},${p.y},${p.time}`).join('\n')
+    const csv = rows
+      .map((p) => `${p.x.toFixed(COORD_DECIMALS)},${p.y.toFixed(COORD_DECIMALS)},${p.time}`)
+      .join('\n')
     files[exportFileName(path, index)] = encoder.encode(`x,y,time\n${csv}`)
   })
   return files
