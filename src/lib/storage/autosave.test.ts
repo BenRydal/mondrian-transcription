@@ -2,7 +2,12 @@ import 'fake-indexeddb/auto'
 import { get } from 'svelte/store'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createAutosave, createSaveScheduler } from './autosave'
-import { SessionDb, StorageUnavailableError, type SnapshotInput } from './sessionDb'
+import {
+  SessionDb,
+  StorageUnavailableError,
+  type RestoredSession,
+  type SnapshotInput,
+} from './sessionDb'
 
 let dbCount = 0
 const freshName = () => `autosave-db-${++dbCount}`
@@ -181,6 +186,29 @@ describe('createAutosave', () => {
     db.close()
   })
 
+  it('keeps saving after one save throws', async () => {
+    const name = freshName()
+    let fail = true
+    const autosave = createAutosave({
+      getSnapshot: () => {
+        if (fail) throw new Error('boom')
+        return snapshot(3)
+      },
+      openDb: () => SessionDb.open({ dbName: name }),
+      locks: null,
+      storage: null,
+      persist: async () => true,
+    })
+    await autosave.init()
+    await autosave.flush().catch(() => {})
+    fail = false
+    await autosave.flush()
+    autosave.destroy()
+    const db = await SessionDb.open({ dbName: name })
+    expect(await latestPointCount(db)).toBe(3)
+    db.close()
+  })
+
   it('does not save when there is no data', async () => {
     const persist = vi.fn(async () => true)
     const autosave = createAutosave({
@@ -197,13 +225,13 @@ describe('createAutosave', () => {
     autosave.destroy()
   })
 
-  it('lets only one tab write a session; the second takes over when the first closes', async () => {
+  it('lets only one tab write a session; the second loads the latest when the first closes', async () => {
     const name = freshName()
     const seed = await SessionDb.open({ dbName: name })
     await seed.createSession('Shared')
     seed.close()
     const locks = new FakeLocks() as unknown as LockManager
-    const make = (points: number) =>
+    const make = (points: number, onTakeover?: (s: RestoredSession | null) => void) =>
       createAutosave({
         getSnapshot: () => snapshot(points),
         openDb: () => SessionDb.open({ dbName: name }),
@@ -212,9 +240,11 @@ describe('createAutosave', () => {
         persist: async () => true,
         delay: 10,
         maxWait: 20,
+        onTakeover,
       })
+    const onTakeover = vi.fn()
     const first = make(3)
-    const second = make(9)
+    const second = make(9, onTakeover)
     await first.init()
     await second.init()
     expect(get(first.status).state).toBe('idle')
@@ -226,10 +256,28 @@ describe('createAutosave', () => {
     expect(await latestPointCount(db, first.sessionId)).toBe(3)
 
     first.destroy()
-    await vi.waitFor(() => expect(get(second.status).state).toBe('saved'))
-    expect(await latestPointCount(db, first.sessionId)).toBe(9)
+    await vi.waitFor(() => expect(onTakeover).toHaveBeenCalledOnce())
+    expect(onTakeover.mock.calls[0][0]?.meta.pointCount).toBe(3)
+    expect(get(second.status).state).toBe('idle')
+    // The stale tab must not overwrite the newer work on its own.
+    await new Promise((r) => setTimeout(r, 50))
+    expect(await latestPointCount(db, first.sessionId)).toBe(3)
     db.close()
     second.destroy()
+  })
+
+  it('creates one session when a checkpoint races the first autosave', async () => {
+    const autosave = createAutosave({
+      getSnapshot: () => snapshot(4),
+      openDb: () => SessionDb.open({ dbName: freshName() }),
+      locks: null,
+      storage: null,
+      persist: async () => true,
+    })
+    await autosave.init()
+    await Promise.all([autosave.flush(), autosave.checkpoint('pin')])
+    expect(await autosave.listSessions()).toHaveLength(1)
+    autosave.destroy()
   })
 
   it('reports unavailable storage once and never throws', async () => {

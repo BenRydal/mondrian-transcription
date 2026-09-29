@@ -77,6 +77,8 @@ interface AutosaveOptions {
   storage?: Storage | null
   persist?: () => Promise<unknown>
   onNotice?: (message: string) => void
+  // Called when another tab releases this session; the page should show `session`.
+  onTakeover?: (session: RestoredSession | null) => void
   delay?: number
   maxWait?: number
 }
@@ -183,12 +185,24 @@ export function createAutosave(opts: AutosaveOptions) {
       ?.request(name, { signal: abort.signal }, () => {
         if (lock !== handle || sessionId !== id || destroyed) return
         isOwner = true
+        scheduler.cancel()
         db?.invalidate(id)
         setState('idle')
-        scheduler.schedule()
+        void reloadAfterTakeover(id)
         return held
       })
       .catch(() => {})
+  }
+
+  async function reloadAfterTakeover(id: string) {
+    let session: RestoredSession | null = null
+    try {
+      const store = await getDb()
+      session = store ? seen(await store.loadLatest(id)) : null
+    } catch (e) {
+      console.warn('Failed to read autosave after takeover:', e)
+    }
+    if (sessionId === id && !destroyed) opts.onTakeover?.(session)
   }
 
   async function openSession(id: string | null) {
@@ -209,11 +223,16 @@ export function createAutosave(opts: AutosaveOptions) {
     if (!unavailable) setState(isOwner ? 'idle' : 'other-tab')
   }
 
-  async function ensureSession(store: SessionDb): Promise<string> {
-    if (sessionId) return sessionId
-    const created = await store.createSession(nextSessionName)
-    await openSession(created.id)
-    return created.id
+  // Autosave and checkpoint can both get here first; they must share one new session.
+  let creating: Promise<string> | null = null
+  function ensureSession(store: SessionDb): Promise<string> {
+    if (sessionId) return Promise.resolve(sessionId)
+    creating ??= (async () => {
+      const created = await store.createSession(nextSessionName)
+      await openSession(created.id)
+      return created.id
+    })().finally(() => (creating = null))
+    return creating
   }
 
   async function saveOnce() {
@@ -264,11 +283,14 @@ export function createAutosave(opts: AutosaveOptions) {
       return running
     }
     running = (async () => {
-      do {
-        dirty = false
-        await saveOnce()
-      } while (dirty)
-      running = null
+      try {
+        do {
+          dirty = false
+          await saveOnce()
+        } while (dirty)
+      } finally {
+        running = null
+      }
     })()
     return running
   }

@@ -9,6 +9,7 @@
   import HelpPanel from '$lib/components/panels/HelpPanel.svelte'
   import HistoryPanel from '$lib/components/panels/HistoryPanel.svelte'
   import ConfirmDialog from '$lib/components/dialogs/ConfirmDialog.svelte'
+  import Modal from '$lib/components/dialogs/Modal.svelte'
   import ExportDialog from '$lib/components/dialogs/ExportDialog.svelte'
   import { CanvasFrame, ActivityBar, SidePanel, type ActivityBarItem } from 'svelte-p5-components'
   import { onMount } from 'svelte'
@@ -142,12 +143,14 @@
       floorPlan: state.imageElement ? floorPlanAsset : null,
       video: config.isTranscriptionMode ? videoAsset : null,
       videoSource: config.isTranscriptionMode ? youtubeSource : null,
+      lastPathId: state.lastPathId,
     }
   }
 
-  const autosave = createAutosave({ getSnapshot, onNotice: showNotice })
+  const autosave = createAutosave({ getSnapshot, onNotice: showNotice, onTakeover: handleTakeover })
   const autosaveStatus = autosave.status
   const canWrite = $derived(!['other-tab', 'unavailable'].includes($autosaveStatus.state))
+  const pausedByOtherTab = $derived($autosaveStatus.state === 'other-tab')
   const currentSession = $derived(sessions.find((s) => s.id === $autosaveStatus.sessionId) ?? null)
   const currentSessionName = $derived(
     currentSession
@@ -199,7 +202,6 @@
   }
 
   const NOTICES: Partial<Record<AutosaveState, string>> = {
-    'other-tab': 'Mondrian is open in another tab, so autosave is paused here.',
     unavailable: 'Autosave is unavailable in this window. Use Export to keep your work.',
   }
   const NOTICE_MS = 6000
@@ -218,7 +220,9 @@
 
   onMount(() => {
     autosave.init().then((session) => {
-      if (session && hasRecordedData(session.paths)) {
+      if (get(autosaveStatus).state === 'other-tab') {
+        // Paused: the other tab's work loads here only once that tab lets go.
+      } else if (session && hasRecordedData(session.paths)) {
         recoveredSession = session
         showRecoveryModal = true
       } else {
@@ -343,6 +347,7 @@
       ...state,
       paths,
       currentPathId: Math.max(...paths.map((p) => p.pathId), 0),
+      lastPathId: Math.max(state.lastPathId, meta.lastPathId ?? 0, ...paths.map((p) => p.pathId)),
       videoTime: meta.videoTime,
       imageWidth: meta.imageWidth,
       imageHeight: meta.imageHeight,
@@ -372,6 +377,7 @@
         videoAsset = { key: meta.videoKey, blob: video, name: meta.video.name, meta: meta.video }
         attachVideo(video, meta.video.name, meta.videoTime)
       } else {
+        detachVideo()
         reattachVideo = meta.video
         activePanel = renderedPanel = 'data'
       }
@@ -383,6 +389,24 @@
     applyRestoredSession(recoveredSession)
     showRecoveryModal = false
     recoveredSession = null
+  }
+
+  function handleTakeover(session: RestoredSession | null) {
+    if (session && hasRecordedData(session.paths)) {
+      resetWorkspace()
+      applyRestoredSession(session)
+      showNotice('The other tab closed, so this tab picked up its latest work.')
+    } else {
+      openWelcomeModal()
+    }
+    refreshHistory()
+  }
+
+  async function handleStartHere() {
+    await autosave.newSession()
+    resetWorkspace()
+    refreshHistory()
+    openWelcomeModal()
   }
 
   async function handleDiscardSession() {
@@ -417,6 +441,7 @@
         const id = nextPathId(state)
         const points = path.points.map((p) => freezePoint({ ...p, pathId: id }))
         paths.push({ ...path, pathId: id, points, name: `${label} (restored)` } as PathData)
+        return { ...state, ...STOPPED_TRACKING, paths, lastPathId: id }
       } else if (index >= 0) {
         paths[index] = path
       } else {
@@ -485,6 +510,7 @@
   }
 
   function attachYouTube(ref: YouTubeVideoRef, restoreTime?: number) {
+    videoBlobUrl.clear()
     videoAsset = null
     reattachVideo = null
     youtubeSource = ref
@@ -653,6 +679,18 @@
     onDiscard={handleDiscardSession}
   />
 {/if}
+
+<Modal open={pausedByOtherTab} title="Open in another tab" onClose={() => {}}>
+  <p class="mb-4 text-sm">
+    This session is open in another tab. This tab is paused so it cannot overwrite that work. Close
+    the other tab to continue here with its latest work, or start a new session in this tab.
+  </p>
+  <div class="flex justify-end">
+    <button class="btn btn-primary btn-sm" onclick={handleStartHere}
+      >Start a new session here</button
+    >
+  </div>
+</Modal>
 
 {#snippet dataIcon()}<IconData />{/snippet}
 {#snippet pathsIcon()}<IconPaths />{/snippet}
