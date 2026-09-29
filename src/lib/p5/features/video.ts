@@ -1,42 +1,60 @@
 import type p5 from 'p5'
-import { drawingState } from '../../stores/drawingState'
+import { drawingState, appendFinalPoint, STOPPED_TRACKING } from '../../stores/drawingState'
 import { get } from 'svelte/store'
-import { drawingConfig } from '../../stores/drawingConfig'
+import { drawingConfig, getVideoHeightPercent } from '../../stores/drawingConfig'
+import { isAtVideoEnd, type VideoSource } from '../../video/source'
+
+const stopTracking = () => drawingState.update((state) => ({ ...state, ...STOPPED_TRACKING }))
+
+function stopRecording(time: number) {
+  appendFinalPoint(time)
+  stopTracking()
+}
+
+export function bindPlaybackState(source: VideoSource) {
+  const onPlay = () => drawingState.update((state) => ({ ...state, isVideoPlaying: true }))
+  const onStop = () => stopRecording(source.currentTime)
+  source.addEventListener('play', onPlay)
+  source.addEventListener('pause', onStop)
+  source.addEventListener('ended', onStop)
+  return () => {
+    source.removeEventListener('play', onPlay)
+    source.removeEventListener('pause', onStop)
+    source.removeEventListener('ended', onStop)
+  }
+}
 
 export function setupVideo(p5: p5) {
-  const setVideo = (video: HTMLVideoElement) => {
-    const p5Vid = p5.createVideo([video.src])
+  const setVideo = (src: string, restoreTime?: number) => {
+    const p5Vid = p5.createVideo([src])
     const videoElt = p5Vid.elt as HTMLVideoElement
 
     // Ensure all properties are set correctly
     videoElt.loop = false
     videoElt.currentTime = 0
 
-    // Make sure metadata is loaded to get duration correctly
-    videoElt.addEventListener('loadedmetadata', () => {
-      // Reset the video time in drawingState to ensure timeline updates
-      drawingState.update((state) => ({
-        ...state,
-        videoTime: 0,
-      }))
-    })
+    videoElt.addEventListener(
+      'loadedmetadata',
+      () => {
+        const target = restoreTime ?? 0.1
+        try {
+          videoElt.currentTime = Math.min(target, videoElt.duration || target)
+        } catch (e) {
+          console.warn('Could not set initial currentTime', e)
+        }
+        drawingState.update((state) => ({
+          ...state,
+          videoTime: restoreTime ?? 0,
+        }))
+      },
+      { once: true }
+    )
 
     // Force load to trigger proper timeline setup
     videoElt.load()
 
-    // Set a small initial time to show the first frame
-    setTimeout(() => {
-      try {
-        videoElt.currentTime = 0.1
-      } catch (e) {
-        console.warn('Could not set initial currentTime', e)
-      }
-    }, 50)
-
     p5Vid.elt.addEventListener('loadeddata', () => {
-      if (p5.draw) {
-        p5.redraw()
-      }
+      p5.redraw()
 
       let frameCount = 0
       const tempDraw = () => {
@@ -50,35 +68,14 @@ export function setupVideo(p5: p5) {
     })
 
     p5Vid.hide()
-
-    p5Vid.elt.onplay = () => drawingState.update((state) => ({ ...state, isVideoPlaying: true }))
-
-    p5Vid.elt.onpause = () =>
-      drawingState.update((state) => ({
-        ...state,
-        isVideoPlaying: false,
-        shouldTrackMouse: false,
-        isDrawing: false,
-      }))
-
-    p5Vid.elt.onended = () =>
-      drawingState.update((state) => ({
-        ...state,
-        isVideoPlaying: false,
-        shouldTrackMouse: false,
-        isDrawing: false,
-      }))
-
     return p5Vid
   }
 
-  const updateVideoTime = (videoElement: p5.Element, lastVideoTime: number) => {
-    if (videoElement) {
-      const currentTime = (videoElement as any).elt.currentTime
-      if (currentTime !== lastVideoTime) {
-        drawingState.update((state) => ({ ...state, videoTime: currentTime }))
-        return currentTime
-      }
+  const updateVideoTime = (source: VideoSource, lastVideoTime: number) => {
+    const currentTime = source.currentTime
+    if (currentTime !== lastVideoTime) {
+      drawingState.update((state) => ({ ...state, videoTime: currentTime }))
+      return currentTime
     }
     return lastVideoTime
   }
@@ -86,27 +83,23 @@ export function setupVideo(p5: p5) {
   const drawVideo = (p5: p5, videoElement: p5.Element) => {
     const config = get(drawingConfig)
     const splitX = (p5.width * config.splitPosition) / 100
+    const slotH = (p5.height * getVideoHeightPercent()) / 100
     const aspectRatio = videoElement.elt.videoWidth / videoElement.elt.videoHeight
-    const displayHeight = Math.min(p5.height, splitX / aspectRatio)
-    const yOffset = (p5.height - displayHeight) / 2
+    if (!(aspectRatio > 0)) return
+    const displayHeight = Math.min(slotH, splitX / aspectRatio)
+    const displayWidth = displayHeight * aspectRatio
+    const xOffset = (splitX - displayWidth) / 2
+    const yOffset = (slotH - displayHeight) / 2
 
-    p5.image(videoElement, 0, yOffset, splitX, displayHeight)
+    p5.image(videoElement, xOffset, yOffset, displayWidth, displayHeight)
   }
 
-  const checkVideoEnd = (videoElement: p5.Element) => {
-    if (videoElement && (videoElement as any).elt) {
-      const video = (videoElement as any).elt
-      if (video.currentTime >= video.duration - 0.1) {
-        video.pause()
-        video.currentTime = video.duration
-
-        drawingState.update((state) => ({
-          ...state,
-          isVideoPlaying: false,
-          shouldTrackMouse: false,
-          isDrawing: false,
-        }))
-      }
+  const checkVideoEnd = (source: VideoSource) => {
+    if (!source.paused && isAtVideoEnd(source)) {
+      appendFinalPoint(source.currentTime)
+      source.pause()
+      source.currentTime = source.duration
+      stopTracking()
     }
   }
 

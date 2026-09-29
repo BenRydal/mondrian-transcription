@@ -1,3 +1,4 @@
+/// <reference types="vite/client" />
 import 'unplugin-icons/types/svelte'
 
 // See https://svelte.dev/docs/kit/types#app.d.ts

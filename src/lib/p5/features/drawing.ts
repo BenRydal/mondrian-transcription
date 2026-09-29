@@ -1,9 +1,14 @@
+import { isAtVideoEnd, type VideoSource } from '../../video/source'
 import type p5 from 'p5'
 import type { Point } from '../types/sketch'
 import { get } from 'svelte/store'
 import {
   drawingState,
-  addPointToCurrentPath,
+  addPointsToCurrentPath,
+  appendFinalPoint,
+  appendHoldPoints,
+  findCurrentPath,
+  syncClockToCurrentPath,
   toggleDrawing,
   toggleDrawingNoVideo,
   type PathData,
@@ -13,132 +18,160 @@ import {
   isInDrawableArea,
   convertToImageCoordinates,
   getFittedImageDisplayRect,
-  applyForwardRotation,
 } from '../../utils/drawingUtils'
-import { TimeBasedSampler, AdaptiveSampler, IndexBasedSampler } from './samplers'
+import { mediaClock, speculateClock } from '../../timing/sessionClocks'
+import { lastIndexAtOrBefore, trailRange } from '../../timing/timeWindow'
+import { viewPrefs } from '../../stores/viewPrefs'
+import { applyAffine, imageToDisplay, type PathLayer } from './pathLayer'
+import { pulseClock, pulseScale } from '../../utils/pulse'
 
-const initialConfig = get(drawingConfig)
+type CanvasPos = { x: number; y: number }
 
-// Fixed-interval sampler (original behavior for transcription mode)
-export const timeSampler = new TimeBasedSampler(initialConfig.pollingRate / 1000)
+const isOverUi = (e: PointerEvent) =>
+  !!(e.target as HTMLElement | null)?.closest?.('[data-ui-element]')
 
-// Adaptive sampler with heartbeat (used for both modes when adaptive is ON)
-export const adaptiveSampler = new AdaptiveSampler(
-  initialConfig.pollingRate / 1000, // activeInterval (fast sampling when moving)
-  initialConfig.heartbeatInterval / 1000, // heartbeatInterval (slow sampling when stationary)
-  2 // minMovement in pixels
-)
-
-// Fixed index-based sampler (original behavior for speculate mode)
-export const indexSampler = new IndexBasedSampler(initialConfig.pollingRate)
-
-/** Reset all samplers to initial state. Call when starting a new recording session. */
-export function resetAllSamplers() {
-  timeSampler.reset()
-  adaptiveSampler.reset()
-  indexSampler.reset()
+export function observeVideo(video: VideoSource, perfMs: number) {
+  mediaClock.observe(video.currentTime, perfMs, !video.paused, video.playbackRate)
 }
 
-export function setupDrawing(p5: p5) {
-  drawingConfig.subscribe((config) => {
-    timeSampler.setInterval(config.pollingRate / 1000)
-    adaptiveSampler.setActiveInterval(config.pollingRate / 1000)
-    adaptiveSampler.setHeartbeatInterval(config.heartbeatInterval / 1000)
-    indexSampler.setStep(config.pollingRate)
-  })
+export function setupDrawing(p5: p5, getCanvas: () => HTMLCanvasElement | null) {
+  const toCanvas = (e: PointerEvent): CanvasPos => {
+    const rect = getCanvas()?.getBoundingClientRect()
+    return { x: e.clientX - (rect?.left ?? 0), y: e.clientY - (rect?.top ?? 0) }
+  }
 
-  const addCurrentPoint = () => {
+  const isDrawableEvent = (e: PointerEvent) => {
+    if (isOverUi(e)) return false
+    const { x, y } = toCanvas(e)
+    return isInDrawableArea(p5, x, y)
+  }
+
+  const recordPointerEvent = (event: PointerEvent, video?: VideoSource | null) => {
     const state = get(drawingState)
-    const config = get(drawingConfig)
-    if (!state.shouldTrackMouse || !isInDrawableArea(p5, p5.mouseX, p5.mouseY)) return
+    if (!state.shouldTrackMouse) return
+    const { isTranscriptionMode } = get(drawingConfig)
 
-    const curPath = state.paths.find((p) => p.pathId === state.currentPathId)
-    if (!curPath) return
-
-    const coords = convertToImageCoordinates(p5, p5.mouseX, p5.mouseY)
-
-    let time: number
-    let shouldAdd = false
-
-    if (config.isTranscriptionMode) {
-      time = state.videoTime
-      if (config.useAdaptiveSampling) {
-        // Adaptive sampling: fast when moving, heartbeat when stationary
-        const result = adaptiveSampler.shouldSample(time, coords)
-        shouldAdd = result.shouldAdd
-      } else {
-        // Fixed interval sampling (original behavior)
-        shouldAdd = timeSampler.shouldSample(time)
-      }
+    let clockTime: (perfMs: number) => number
+    if (isTranscriptionMode) {
+      if (!video || video.paused) return
+      observeVideo(video, performance.now())
+      clockTime = (ms) => mediaClock.timeAt(ms)
     } else {
-      // Speculate mode
-      if (config.useAdaptiveSampling) {
-        // Adaptive sampling: use wall-clock for movement detection,
-        // but store incremental time from last point to avoid jumps
-        const wallTime = performance.now() / 1000
-        const result = adaptiveSampler.shouldSample(wallTime, coords)
-        shouldAdd = result.shouldAdd
-
-        if (shouldAdd) {
-          const lastPoint = curPath.points.at(-1)
-          // First point starts at 0, subsequent points increment by the actual interval used
-          time = lastPoint ? lastPoint.time + result.timeIncrement : 0
-        }
-      } else {
-        // Fixed index-based sampling (original behavior)
-        shouldAdd = indexSampler.shouldSample()
-        time = indexSampler.getPseudoTime()
-      }
+      clockTime = (ms) => speculateClock.timeAt(ms)
     }
 
-    if (!shouldAdd) return
-
-    const point: Point = {
-      ...coords,
-      time,
-      pathId: state.currentPathId,
+    const coalesced = event.getCoalescedEvents?.() ?? []
+    const samples = coalesced.length > 0 ? coalesced : [event]
+    const points: Point[] = []
+    for (const e of samples) {
+      const { x, y } = toCanvas(e)
+      if (!isInDrawableArea(p5, x, y)) continue
+      points.push({
+        ...convertToImageCoordinates(p5, x, y),
+        time: clockTime(e.timeStamp),
+        pathId: state.currentPathId,
+      })
     }
-
-    addPointToCurrentPath(point)
+    addPointsToCurrentPath(points)
   }
 
-  const handleMousePressedVideo = (videoElement?: HTMLVideoElement) => {
-    if (isInDrawableArea(p5, p5.mouseX, p5.mouseY)) {
-      const state = get(drawingState)
+  const startVideoTake = (event: PointerEvent, video: VideoSource) => {
+    mediaClock.reset()
+    toggleDrawing(video)
+    recordPointerEvent(event, video)
+  }
 
-      if (videoElement && videoElement.currentTime >= videoElement.duration - 0.1) {
-        return
-      }
-      if (!state.shouldTrackMouse) {
-        resetAllSamplers()
-      }
-      toggleDrawing(videoElement)
+  const stopVideoTake = (event: PointerEvent, video: VideoSource) => {
+    observeVideo(video, performance.now())
+    appendFinalPoint(mediaClock.timeAt(event.timeStamp))
+    toggleDrawing(video)
+  }
+
+  const startSpeculateTake = (event: PointerEvent) => {
+    speculateClock.start(event.timeStamp)
+    toggleDrawingNoVideo()
+    recordPointerEvent(event)
+  }
+
+  const stopSpeculateTake = (event: PointerEvent) => {
+    appendFinalPoint(speculateClock.timeAt(event.timeStamp))
+    speculateClock.pause(event.timeStamp)
+    toggleDrawingNoVideo()
+  }
+
+  const handlePressVideo = (event: PointerEvent, video: VideoSource) => {
+    if (!isDrawableEvent(event) || isAtVideoEnd(video)) return
+    if (get(drawingState).shouldTrackMouse) stopVideoTake(event, video)
+    else startVideoTake(event, video)
+  }
+
+  const handlePressSpeculate = (event: PointerEvent) => {
+    if (!isDrawableEvent(event)) return
+    syncClockToCurrentPath(get(drawingState), performance.now())
+    if (get(drawingState).shouldTrackMouse) stopSpeculateTake(event)
+    else startSpeculateTake(event)
+  }
+
+  const handleHoldStart = (event: PointerEvent, video: VideoSource | null): boolean => {
+    if (get(drawingState).shouldTrackMouse || !isDrawableEvent(event)) return false
+    if (get(drawingConfig).isTranscriptionMode) {
+      if (!video || isAtVideoEnd(video)) return false
+      startVideoTake(event, video)
+    } else {
+      syncClockToCurrentPath(get(drawingState), performance.now())
+      startSpeculateTake(event)
+    }
+    return true
+  }
+
+  const handleHoldEnd = (event: PointerEvent, video: VideoSource | null) => {
+    if (!get(drawingState).shouldTrackMouse) return
+    recordPointerEvent(event, video)
+    if (get(drawingConfig).isTranscriptionMode) {
+      if (video) stopVideoTake(event, video)
+    } else {
+      stopSpeculateTake(event)
     }
   }
 
-  const handleMousePressedSpeculateMode = () => {
-    if (isInDrawableArea(p5, p5.mouseX, p5.mouseY)) {
-      const state = get(drawingState)
-      if (!state.shouldTrackMouse) {
-        // Reset time-based samplers (for fresh movement detection)
-        timeSampler.reset()
-        adaptiveSampler.reset()
-        // Sync index sampler to current path's point count (preserves state after rewind/forward)
-        const curPath = state.paths.find((p) => p.pathId === state.currentPathId)
-        indexSampler.reset(curPath?.points.length ?? 0)
-      }
-      toggleDrawingNoVideo()
-    }
+  const handleMove = (event: PointerEvent, video?: VideoSource | null) => {
+    if (isOverUi(event)) return
+    recordPointerEvent(event, video)
   }
 
-  return {
-    handleMousePressedVideo,
-    handleMousePressedSpeculateMode,
-    addCurrentPoint,
+  return { handlePressVideo, handlePressSpeculate, handleHoldStart, handleHoldEnd, handleMove }
+}
+
+export function endCurrentTake(video?: VideoSource | null) {
+  if (!get(drawingState).shouldTrackMouse) return
+  const now = performance.now()
+  if (get(drawingConfig).isTranscriptionMode) {
+    if (video) {
+      observeVideo(video, now)
+      appendFinalPoint(mediaClock.timeAt(now))
+    }
+  } else {
+    appendFinalPoint(speculateClock.timeAt(now))
+    speculateClock.pause(now)
   }
 }
 
-export function drawPaths(p5: p5) {
+function recordingClockTime(video: VideoSource | null | undefined, perfMs: number) {
+  if (!get(drawingState).shouldTrackMouse) return null
+  if (get(drawingConfig).isTranscriptionMode) {
+    if (!video || video.paused) return null
+    observeVideo(video, perfMs)
+    return mediaClock.timeAt(perfMs)
+  }
+  return speculateClock.running ? speculateClock.timeAt(perfMs) : null
+}
+
+export function sampleHold(video?: VideoSource | null, perfMs = performance.now()) {
+  const now = recordingClockTime(video, perfMs)
+  if (now !== null) appendHoldPoints(now)
+}
+
+export function drawPaths(p5: p5, layer: PathLayer) {
   const state = get(drawingState)
   const config = get(drawingConfig)
 
@@ -147,97 +180,104 @@ export function drawPaths(p5: p5) {
 
   const rotation = config.floorPlanRotation
   const rect = getFittedImageDisplayRect(p5, getSplitPositionForMode(), imgW, imgH, rotation)
+  const m = imageToDisplay(imgW, imgH, rotation, rect)
+  const toDisplay = (pt: { x: number; y: number }) => applyAffine(m, pt)
 
-  // Convert stored original image coords to rotated display coords
-  const toDisplay = (pt: { x: number; y: number }) => {
-    const { nx, ny } = applyForwardRotation(pt.x, pt.y, imgW, imgH, rotation)
-    return {
-      x: rect.x + nx * rect.w,
-      y: rect.y + ny * rect.h,
-    }
-  }
+  const ctx = p5.drawingContext as CanvasRenderingContext2D
+  layer.draw(ctx, {
+    key: {
+      width: ctx.canvas.width,
+      height: ctx.canvas.height,
+      density: p5.pixelDensity(),
+      rect,
+      rotation,
+      imgW,
+      imgH,
+      strokeWeight: config.strokeWeight,
+      continuous: config.isContinuousMode,
+    },
+    transform: m,
+    paths: state.paths,
+    recording: state.shouldTrackMouse,
+  })
 
   p5.push()
 
-  // Draw all path lines
-  state.paths.forEach((path) => {
-    drawPathLine(p5, path, toDisplay, config.strokeWeight, config.isContinuousMode)
-  })
-
   // Draw pulsing endpoints
-  const activePath = state.paths.find((p) => p.pathId === state.currentPathId)
-  const currentEndpoint = activePath?.points.at(-1) ?? null
+  const currentEndpoint = findCurrentPath(state)?.points.at(-1) ?? null
+  const sessionTime = getSessionTime(config.isTranscriptionMode, state.videoTime)
 
+  const { trailSeconds } = get(viewPrefs)
+  if (trailSeconds > 0 && (state.isDrawing || state.isVideoPlaying)) {
+    for (const path of state.paths) {
+      if (path.pathId === state.currentPathId || path.visible === false) continue
+      drawTrail(p5, path, sessionTime, trailSeconds, toDisplay, config.strokeWeight)
+    }
+  }
+
+  const pulse = pulseScale(pulseClock(state.isDrawing))
   state.paths.forEach((path) => {
     if (path.visible === false || path.points.length === 0) return
 
     const endpoint =
-      path.pathId === state.currentPathId
-        ? currentEndpoint!
-        : findSyncedEndpoint(path, activePath, currentEndpoint, config.isTranscriptionMode)
+      path.pathId === state.currentPathId ? currentEndpoint : findSyncedEndpoint(path, sessionTime)
+    if (!endpoint) return
 
     const { x, y } = toDisplay(endpoint)
-    drawPulsingMarker(p5, x, y, path.color, state.isDrawing ? p5.frameCount : 0)
+    drawPulsingMarker(p5, x, y, path.color, pulse)
   })
 
   p5.pop()
 }
 
-/** Draw a single path as a continuous line or discrete points */
-function drawPathLine(
-  p5: p5,
-  path: PathData,
-  toDisplay: (pt: { x: number; y: number }) => { x: number; y: number },
-  strokeWeight: number,
-  isContinuousMode: boolean
-) {
-  if (path.visible === false) return
-
-  p5.strokeWeight(strokeWeight)
-  p5.stroke(path.color)
-  p5.noFill()
-
-  if (isContinuousMode) {
-    if (path.points.length > 1) {
-      p5.beginShape()
-      path.points.forEach((pt) => p5.vertex(...(Object.values(toDisplay(pt)) as [number, number])))
-      p5.endShape()
-    } else if (path.points.length === 1) {
-      const { x, y } = toDisplay(path.points[0])
-      p5.point(x, y)
-    }
-  } else {
-    path.points.forEach((pt) => {
-      const { x, y } = toDisplay(pt)
-      p5.circle(x, y, strokeWeight)
-    })
-  }
+function getSessionTime(isTranscriptionMode: boolean, videoTime: number): number {
+  return isTranscriptionMode ? videoTime : speculateNow()
 }
 
-/** Find the synced endpoint for a path based on the current active path's position */
-function findSyncedEndpoint(
-  path: PathData,
-  activePath: PathData | undefined,
-  currentEndpoint: Point | null,
-  isTranscriptionMode: boolean
-): Point {
-  if (!currentEndpoint || !activePath) {
-    return path.points[0]
-  }
+export function speculateNow(): number {
+  const now = performance.now()
+  syncClockToCurrentPath(get(drawingState), now)
+  return speculateClock.timeAt(now)
+}
 
-  if (isTranscriptionMode) {
-    // Transcription mode: find closest point in time (all paths share video time)
-    return path.points.reduce((closest, pt) => {
-      const prevDiff = Math.abs(closest.time - currentEndpoint.time)
-      const currDiff = Math.abs(pt.time - currentEndpoint.time)
-      return currDiff < prevDiff ? pt : closest
-    }, path.points[0])
-  } else {
-    // Speculate mode: sync by point index. Synthetic time values differ across paths
-    // (heartbeat vs active sampling rates), making elapsed-time comparison unreliable.
-    const activeIndex = activePath.points.length - 1
-    const targetIndex = Math.min(activeIndex, path.points.length - 1)
-    return path.points[targetIndex]
+function findSyncedEndpoint(path: PathData, sessionTime: number): Point | null {
+  return path.points[lastIndexAtOrBefore(path.points, sessionTime)] ?? null
+}
+
+const TRAIL_BANDS = 8
+
+function drawTrail(
+  p5: p5,
+  path: PathData,
+  sessionTime: number,
+  seconds: number,
+  toDisplay: (pt: { x: number; y: number }) => { x: number; y: number },
+  strokeWeight: number
+) {
+  const range = trailRange(path.points, sessionTime, seconds)
+  if (!range || range.end === range.start) return
+  const { points } = path
+  const tStart = sessionTime - seconds
+  const band = (i: number) =>
+    Math.min(TRAIL_BANDS - 1, Math.floor(((points[i].time - tStart) / seconds) * TRAIL_BANDS))
+  const color = p5.color(path.color)
+
+  p5.noFill()
+  p5.strokeWeight(strokeWeight * 2)
+  let i = range.start
+  while (i < range.end) {
+    const b = band(i + 1)
+    color.setAlpha((255 * (b + 1)) / TRAIL_BANDS)
+    p5.stroke(color)
+    p5.beginShape()
+    const first = toDisplay(points[i])
+    p5.vertex(first.x, first.y)
+    while (i < range.end && band(i + 1) === b) {
+      i++
+      const { x, y } = toDisplay(points[i])
+      p5.vertex(x, y)
+    }
+    p5.endShape()
   }
 }
 
@@ -247,11 +287,9 @@ function drawPulsingMarker(
   x: number,
   y: number,
   color: string,
-  frameCount: number,
+  pulse: number,
   markerSize: number = 15
 ) {
-  const pulseScale = (Math.sin(frameCount * 0.05) + 1) * 0.25 + 0.5
-
   p5.noStroke()
   const c = p5.color(color)
   c.setAlpha(50)
@@ -259,12 +297,12 @@ function drawPulsingMarker(
 
   // Draw expanding rings
   for (let i = 4; i > 0; i--) {
-    const size = markerSize * (1.5 + i * 0.5) * pulseScale
+    const size = markerSize * (1.5 + i * 0.5) * pulse
     p5.circle(x, y, size)
   }
 
   // Draw center dot
-  p5.circle(x, y, markerSize * pulseScale)
+  p5.circle(x, y, markerSize * pulse)
   p5.fill(255)
-  p5.circle(x, y, markerSize * 0.5 * pulseScale)
+  p5.circle(x, y, markerSize * 0.5 * pulse)
 }

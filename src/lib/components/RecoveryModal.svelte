@@ -1,25 +1,42 @@
 <script lang="ts">
+  import { onMount } from 'svelte'
   import {
-    type SavedSession,
+    countRecordedPaths,
     getSessionAge,
     getTotalPointCount,
   } from '$lib/stores/sessionRecovery'
+  import { formatBytes, formatClockTime } from '$lib/utils/format'
+  import type { RestoredSession } from '$lib/storage/sessionDb'
   import IconRestore from '~icons/material-symbols/history'
   import IconInfo from '~icons/material-symbols/info-outline'
 
   interface Props {
-    session: SavedSession
+    session: RestoredSession
     onRestore: () => void
     onDiscard: () => void
   }
 
   let { session, onRestore, onDiscard }: Props = $props()
 
-  const pathCount = session.paths.filter((p) => p.points.length > 0).length
-  const totalPoints = getTotalPointCount(session.paths)
-  const sessionAge = getSessionAge(session.timestamp)
-  const mode = session.config.isTranscriptionMode ? 'Transcription' : 'Speculate'
-  const hasFloorPlan = !!session.floorPlanDataUrl
+  onMount(() => {
+    const handleKeydown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onDiscard()
+    }
+    window.addEventListener('keydown', handleKeydown)
+    return () => window.removeEventListener('keydown', handleKeydown)
+  })
+
+  const pathCount = $derived(countRecordedPaths(session.paths))
+  const totalPoints = $derived(getTotalPointCount(session.paths))
+  const sessionAge = $derived(getSessionAge(session.meta.savedAt))
+  const isTranscription = $derived(session.meta.config.isTranscriptionMode)
+  const hasFloorPlan = $derived(!!session.floorPlan)
+  const videoMeta = $derived(session.meta.video)
+  const hasVideo = $derived(!!session.video)
+  const needsVideo = $derived(isTranscription && !hasVideo)
+  const missing = $derived(
+    [!hasFloorPlan && 'floor plan', needsVideo && 'video'].filter(Boolean).join(' and ')
+  )
 </script>
 
 <div class="modal modal-open" data-ui-element>
@@ -32,12 +49,13 @@
     <div class="py-4 space-y-3">
       <p class="text-base-content/70">
         Found unsaved work from <span class="font-medium">{sessionAge}</span>
+        <span class="text-base-content/50">(saved {formatClockTime(session.meta.savedAt)})</span>
       </p>
 
       <div class="bg-base-200 rounded-lg p-3 space-y-1 text-sm">
         <div class="flex justify-between">
           <span class="text-base-content/60">Mode:</span>
-          <span class="font-medium">{mode}</span>
+          <span class="font-medium">{isTranscription ? 'Transcription' : 'Speculate'}</span>
         </div>
         <div class="flex justify-between">
           <span class="text-base-content/60">Paths:</span>
@@ -51,21 +69,24 @@
           <span class="text-base-content/60">Floor plan:</span>
           <span class="font-medium">{hasFloorPlan ? 'Saved' : 'Not saved'}</span>
         </div>
+        {#if isTranscription}
+          <div class="flex justify-between">
+            <span class="text-base-content/60">Video:</span>
+            <span class="font-medium">{hasVideo ? 'Saved' : 'Not saved'}</span>
+          </div>
+        {/if}
       </div>
 
-      {#if session.config.isTranscriptionMode}
+      {#if missing}
         <div class="alert alert-info text-sm py-2">
           <IconInfo class="h-5 w-5 shrink-0" />
-          {#if !hasFloorPlan}
-            <span>You'll need to re-upload your floor plan and video to continue recording.</span>
-          {:else}
-            <span>You'll need to re-upload your video to continue recording.</span>
-          {/if}
-        </div>
-      {:else if !hasFloorPlan}
-        <div class="alert alert-info text-sm py-2">
-          <IconInfo class="h-5 w-5 shrink-0" />
-          <span>You'll need to re-upload your floor plan to continue recording.</span>
+          <span>
+            You'll need to re-upload your {missing} to continue recording.
+            {#if needsVideo && videoMeta}
+              Use the same file: <span class="font-medium">{videoMeta.name}</span>
+              ({formatBytes(videoMeta.size)}).
+            {/if}
+          </span>
         </div>
       {/if}
     </div>
