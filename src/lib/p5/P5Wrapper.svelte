@@ -364,13 +364,16 @@
     if (!isRecovery && $drawingState.imageElement) startNewPath()
   }
 
-  export function setVideo(video: HTMLVideoElement, restoreTime?: number) {
-    video.loop = false
+  // Returns the element p5 created so callers can read metadata off the video that is
+  // actually being drawn, rather than keeping a second one alive just to report duration.
+  export function setVideo(src: string, restoreTime?: number): HTMLVideoElement {
     const { setVideo: setupP5Video } = setupVideo(p5Instance!)
-    const p5Video = setupP5Video(video, restoreTime)
+    const p5Video = setupP5Video(src, restoreTime)
     const elt = (p5Video as { elt: HTMLVideoElement }).elt
     elt.loop = false
+    elt.autoplay = false
     attachSource(new LocalVideoSource(elt), p5Video, restoreTime)
+    return elt
   }
 
   export function getVideoError() {

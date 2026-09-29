@@ -486,11 +486,7 @@
   }
 
   function attachVideo(source: Blob, name: string, restoreTime?: number) {
-    const video = window.document.createElement('video')
-    video.src = window.URL.createObjectURL(source)
-    video.autoplay = false
-    video.loop = false
-    p5Component.setVideo(video, restoreTime)
+    const video = p5Component.setVideo(window.URL.createObjectURL(source), restoreTime)
     videoName = name
     return video
   }

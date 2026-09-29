@@ -25,8 +25,8 @@ export function bindPlaybackState(source: VideoSource) {
 }
 
 export function setupVideo(p5: p5) {
-  const setVideo = (video: HTMLVideoElement, restoreTime?: number) => {
-    const p5Vid = p5.createVideo([video.src])
+  const setVideo = (src: string, restoreTime?: number) => {
+    const p5Vid = p5.createVideo([src])
     const videoElt = p5Vid.elt as HTMLVideoElement
 
     // Ensure all properties are set correctly
