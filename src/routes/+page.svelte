@@ -28,6 +28,7 @@
   import { hasRecordedData } from '$lib/stores/sessionRecovery'
   import { formatBytes } from '$lib/utils/format'
   import { downloadBlob } from '$lib/utils/download'
+  import { blobUrlSlot } from '$lib/utils/blobUrl'
   import { randomId } from '$lib/utils/id'
   import { isCheckpointShortcut } from '$lib/utils/keyboard'
   import { createAutosave, SessionBusyError, type AutosaveState } from '$lib/storage/autosave'
@@ -107,6 +108,8 @@
   let recoveredSession = $state.raw<RestoredSession | null>(null)
   let showEmptyPathWarning = $state(false)
   let notice = $state<string | null>(null)
+  const floorPlanBlobUrl = blobUrlSlot()
+  const videoBlobUrl = blobUrlSlot()
   let floorPlanAsset: AssetInput | null = null
   let videoAsset: (AssetInput & { meta: VideoMeta }) | null = null
   let reattachVideo = $state<VideoMeta | null>(null)
@@ -281,6 +284,8 @@
       unsubscribeStatus()
       clearTimeout(noticeTimer)
       autosave.destroy()
+      floorPlanBlobUrl.clear()
+      videoBlobUrl.clear()
     }
   })
 
@@ -295,6 +300,7 @@
 
   function detachVideo() {
     p5Component.clearVideo()
+    videoBlobUrl.clear()
     videoName = null
     videoAsset = null
     reattachVideo = null
@@ -304,6 +310,7 @@
   function resetWorkspace() {
     p5Component.clearDrawing()
     detachVideo()
+    floorPlanBlobUrl.clear()
     pendingSessionName = null
     floorPlanAsset = null
     floorPlanName = null
@@ -350,7 +357,7 @@
         floorPlanName = name
       }
       image.onerror = () => console.warn('Failed to restore floor plan image from saved session')
-      image.src = window.URL.createObjectURL(floorPlan)
+      image.src = floorPlanBlobUrl.set(floorPlan)
     } else {
       floorPlanAsset = null
       floorPlanName = null
@@ -486,7 +493,7 @@
   }
 
   function attachVideo(source: Blob, name: string, restoreTime?: number) {
-    const video = p5Component.setVideo(window.URL.createObjectURL(source), restoreTime)
+    const video = p5Component.setVideo(videoBlobUrl.set(source), restoreTime)
     videoName = name
     return video
   }
@@ -536,7 +543,7 @@
     const file = (event.target as HTMLInputElement).files?.[0]
     if (file) {
       const image = new window.Image()
-      image.src = window.URL.createObjectURL(file)
+      image.src = floorPlanBlobUrl.set(file)
       image.onload = () => {
         void pin('Before new floor plan')
         floorPlanAsset = { key: randomId(), blob: file, name: file.name }
