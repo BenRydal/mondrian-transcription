@@ -62,6 +62,7 @@ export interface SnapshotInput {
   floorPlan: AssetInput | null
   video: (AssetInput & { meta: VideoMeta }) | null
   videoSource?: YouTubeVideoRef | null
+  lastPathId?: number
 }
 
 interface SaveOptions {
@@ -355,6 +356,7 @@ export class SessionDb {
       paths: plan.manifests.map(summarize),
     }
     if (input.videoSource) meta.videoSource = input.videoSource
+    if (input.lastPathId) meta.lastPathId = input.lastPathId
     const sig = snapshotSig(plan.manifests, meta)
     const last = index.entries.at(-1)
     if (kind === 'auto' && last && sig === index.lastSig) {

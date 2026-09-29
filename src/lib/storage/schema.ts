@@ -68,6 +68,7 @@ export interface SnapshotMeta {
   videoKey: string | null
   video: (VideoMeta & { status: VideoStatus }) | null
   videoSource?: YouTubeVideoRef
+  lastPathId?: number
   paths: PathSummary[]
 }
 

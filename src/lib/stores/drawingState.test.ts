@@ -52,6 +52,7 @@ describe('new path start time', () => {
       ...s,
       shouldTrackMouse: false,
       currentPathId: 1,
+      lastPathId: 1,
       paths: [
         {
           pathId: 1,
@@ -88,5 +89,25 @@ describe('new path start time', () => {
     deletePathById(2)
     deletePathById(1)
     expect(clockOnCurrentPath(3)).toBe(0)
+  })
+})
+
+describe('path ids', () => {
+  beforeEach(() => {
+    drawingState.update((s) => ({ ...s, currentPathId: 0, lastPathId: 0, paths: [] }))
+  })
+
+  it('never reissues the id of a deleted path', () => {
+    createNewPath('#f00')
+    createNewPath('#0f0')
+    deletePathById(2)
+    createNewPath('#00f')
+    expect(get(drawingState).paths.map((p) => p.pathId)).toEqual([1, 3])
+  })
+
+  it('gives the replacement empty path a fresh id when the last path is deleted', () => {
+    createNewPath('#f00')
+    deletePathById(1)
+    expect(get(drawingState).paths.map((p) => p.pathId)).toEqual([2])
   })
 })

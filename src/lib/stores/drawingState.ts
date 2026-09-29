@@ -35,6 +35,8 @@ interface DrawingState {
   videoTime: number
   imageElement: p5.Image | null
   currentPathId: number
+  // Highest pathId ever used in this session, so a deleted path's id is never reissued.
+  lastPathId: number
   isJumping: boolean
 }
 
@@ -48,6 +50,7 @@ const initialState: DrawingState = {
   videoTime: 0,
   imageElement: null,
   currentPathId: 0,
+  lastPathId: 0,
   isJumping: false,
 }
 
@@ -91,8 +94,8 @@ function holdPoint(last: Point, time: number, pathId: number): Point {
   return point
 }
 
-export function nextPathId(state: Pick<DrawingState, 'paths' | 'currentPathId'>) {
-  return Math.max(state.currentPathId, ...state.paths.map((p) => p.pathId)) + 1
+export function nextPathId(state: Pick<DrawingState, 'paths' | 'currentPathId' | 'lastPathId'>) {
+  return Math.max(state.lastPathId, state.currentPathId, ...state.paths.map((p) => p.pathId)) + 1
 }
 
 export function syncClockToCurrentPath(state: DrawingState, now: number) {
@@ -245,6 +248,7 @@ export function createNewPath(color: string, startTime = 0) {
     return {
       ...state,
       currentPathId: newPathId,
+      lastPathId: newPathId,
       paths: [
         ...state.paths,
         {
@@ -328,19 +332,28 @@ export function deletePathById(pathId: number) {
   invalidateSpeculateClock()
   drawingState.update((state) => {
     const updatedPaths = state.paths.filter((p) => p.pathId !== pathId)
+    const freshId = nextPathId(state)
 
     // If no paths remain, create a new empty path (consistent with Clear All behavior)
     const newPaths =
-      updatedPaths.length === 0 ? [{ points: [], color: PATH_COLORS[0], pathId: 1 }] : updatedPaths
+      updatedPaths.length === 0
+        ? [{ points: [], color: PATH_COLORS[0], pathId: freshId }]
+        : updatedPaths
 
     const newCurrentPathId =
       updatedPaths.length === 0
-        ? 1
+        ? freshId
         : state.currentPathId === pathId
           ? (updatedPaths.at(-1)?.pathId ?? 0)
           : state.currentPathId
 
-    return { ...state, ...STOPPED_TRACKING, paths: newPaths, currentPathId: newCurrentPathId }
+    return {
+      ...state,
+      ...STOPPED_TRACKING,
+      paths: newPaths,
+      currentPathId: newCurrentPathId,
+      lastPathId: Math.max(state.lastPathId, pathId, newCurrentPathId),
+    }
   })
 }
 
