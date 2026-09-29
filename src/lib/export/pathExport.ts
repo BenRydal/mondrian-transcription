@@ -12,8 +12,12 @@ interface ExportOptions {
   speculateScale: number
 }
 
+// The index prefix makes every name unique by construction, so two paths sharing a
+// name can no longer overwrite each other in the ZIP. It also keeps this function pure,
+// which is what lets the export preview show the same names the ZIP will contain.
 export function exportFileName(path: Pick<PathData, 'name'>, index: number): string {
-  return `${path.name || `path-${index + 1}`}.csv`
+  const name = path.name?.replace(/[/\\:*?"<>|]/g, '_') || 'path'
+  return `${String(index + 1).padStart(2, '0')}-${name}.csv`
 }
 
 export function pathCsvFiles(paths: readonly PathData[], options: ExportOptions) {
