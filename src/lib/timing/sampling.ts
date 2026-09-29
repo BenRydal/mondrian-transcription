@@ -42,9 +42,15 @@ interface ResampleOptions {
   holdGap?: number
 }
 
-export function sessionScale(paths: TimedPoint[][], duration: number): number {
+/** Latest recorded time across every path, or 0 when nothing has been recorded. */
+export function sessionEnd(paths: TimedPoint[][]): number {
   let end = 0
   for (const path of paths) for (const p of path) end = Math.max(end, p.time)
+  return end
+}
+
+export function sessionScale(paths: TimedPoint[][], duration: number): number {
+  const end = sessionEnd(paths)
   return end > 0 ? duration / end : 1
 }
 

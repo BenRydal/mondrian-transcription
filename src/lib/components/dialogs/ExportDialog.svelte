@@ -7,14 +7,22 @@
   import { formatPoints } from '$lib/utils/format'
   import { exportFileName, FLOOR_PLAN_FILE } from '$lib/export/pathExport'
   import { hasRecordedData } from '$lib/stores/sessionRecovery'
+  import { sessionEnd } from '$lib/timing/sampling'
+  import { formatDuration } from '$lib/utils/time'
 
   let { onSavePath }: { onSavePath: (onComplete?: () => void) => void } = $props()
+
+  const DEFAULT_SCALE_SECONDS = 10
 
   let showScaleModal = $state(false)
   let showExportPreviewModal = $state(false)
   let isExporting = $state(false)
+  // Set when the scale modal opens; 0 when nothing has been drawn yet. Captured rather
+  // than derived because Modal renders its body whether or not it is open, so a derived
+  // value would rescan every recorded point on every frame.
+  let recordedTotal = $state(0)
   let minutes = $state(0)
-  let seconds = $state(10)
+  let seconds = $state(0)
 
   const scaleSeconds = $derived(minutes * 60 + seconds)
   const paths = $derived($drawingState.paths)
@@ -25,6 +33,15 @@
     if ($drawingConfig.isTranscriptionMode) {
       showExportPreviewModal = true
     } else {
+      // Default to the length actually drawn, so clicking straight through exports the
+      // recorded timings unchanged instead of compressing them into a fixed duration.
+      // Seeded on open rather than in an effect, which would overwrite the fields as
+      // they are typed into.
+      const end = sessionEnd(paths.map((path) => path.points))
+      recordedTotal = end > 0 ? Math.max(1, Math.round(end)) : 0
+      const total = recordedTotal || DEFAULT_SCALE_SECONDS
+      minutes = Math.floor(total / 60)
+      seconds = total % 60
       showScaleModal = true
     }
   }
@@ -51,8 +68,13 @@
   onClose={() => (showScaleModal = false)}
 >
   <p class="mb-4 text-sm">
-    In <strong>Speculate Mode</strong>, all paths are scaled by one factor so the session ends at
-    the chosen duration. Paths keep their relative timing. Enter total time below:
+    {#if recordedTotal > 0}
+      Recorded over <strong>{formatDuration(recordedTotal)}</strong>. Export at this length to keep
+      your original timings, or set a different total to stretch or squeeze your data across a
+      different time period.
+    {:else}
+      Set how long the export should be. Your paths stretch or squeeze evenly to fit.
+    {/if}
   </p>
 
   <div class="flex gap-2 mb-2">

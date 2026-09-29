@@ -3,6 +3,7 @@ import { SessionClock } from './clock'
 import {
   holdTimes,
   resamplePath,
+  sessionEnd,
   sessionScale,
   shouldKeepPoint,
   thinByTime,
@@ -282,5 +283,18 @@ describe('hold points', () => {
       const still = a.filter((p) => p.time > 1 && p.time <= 2)
       expect(still.every((p) => Math.abs(p.x - 100) < 1e-9)).toBe(true)
     }
+  })
+})
+
+describe('sessionEnd', () => {
+  const p = (times: number[]) => times.map((time) => ({ x: 0, y: 0, time }))
+
+  it('returns the latest time across every path', () => {
+    expect(sessionEnd([p([0, 4.5]), p([0, 12.25]), p([0, 3])])).toBe(12.25)
+  })
+
+  it('returns 0 when nothing has been recorded', () => {
+    expect(sessionEnd([])).toBe(0)
+    expect(sessionEnd([[], []])).toBe(0)
   })
 })
