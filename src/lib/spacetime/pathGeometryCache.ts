@@ -75,7 +75,11 @@ function drawVertices(
   end: number,
   toScene: (pt: Point) => Vec3
 ) {
-  p.beginShape()
-  for (let i = start; i < end; i++) p.vertex(...toScene(points[i]))
+  // Not PATH: p5 tessellates PATH shapes inside buildGeometry, scrambling self-crossing strokes.
+  p.beginShape(p.LINES)
+  for (let i = start + 1; i < end; i++) {
+    p.vertex(...toScene(points[i - 1]))
+    p.vertex(...toScene(points[i]))
+  }
   p.endShape()
 }
