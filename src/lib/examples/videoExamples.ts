@@ -43,46 +43,6 @@ const VIDEO_EXAMPLES: readonly VideoExample[] = [
     videoId: 'OJSZCK4GPQY',
     aspect: WIDE,
   },
-  {
-    id: 'example-5',
-    group: 'TIMSS Classroom Video Study',
-    title: 'Czech: Density',
-    duration: '49 min',
-    videoId: 'xrisdnH5GmQ',
-    aspect: FOUR_THREE,
-  },
-  {
-    id: 'example-6',
-    group: 'TIMSS Classroom Video Study',
-    title: 'Japan: Angles',
-    duration: '52 min',
-    videoId: 'nLDXU2c0vLw',
-    aspect: FOUR_THREE,
-  },
-  {
-    id: 'example-7',
-    group: 'TIMSS Classroom Video Study',
-    title: 'US: Linear Equations',
-    duration: '44 min',
-    videoId: '5Eg1fJ-ZpQs',
-    aspect: FOUR_THREE,
-  },
-  {
-    id: 'example-8',
-    group: 'TIMSS Classroom Video Study',
-    title: 'US: Rocks',
-    duration: '41 min',
-    videoId: 'gPb_ST74bpg',
-    aspect: FOUR_THREE,
-  },
-  {
-    id: 'example-9',
-    group: 'TIMSS Classroom Video Study',
-    title: 'Netherlands: Pythagorean Theorem',
-    duration: '50 min',
-    videoId: 'P5Lxj2nfGzc',
-    aspect: FOUR_THREE,
-  },
 ]
 
 export const floorPlanUrl = (example: VideoExample) => `/examples/video/${example.id}.png`
