@@ -7,7 +7,7 @@ import { lastIndexAtOrBefore } from '$lib/timing/timeWindow'
 export type Vec3 = [number, number, number]
 export type TimedPoint = { x: number; y: number; time: number }
 
-export const MIN_TIME_SPAN = 10
+export const MIN_TIME_SPAN = 8
 export const DEFAULT_PITCH = Math.PI / 5
 export const MIN_PITCH = 0.05
 export const MAX_PITCH = Math.PI / 2 - 0.01
@@ -54,17 +54,31 @@ export function timeExtent(paths: { points: TimedPoint[] }[], now: number): numb
 }
 
 const NICE_STEPS = [1, 2, 5, 10, 15, 30, 60, 120, 300, 600, 900, 1800, 3600]
+// Each span is ~1.5x the last, so every rescale feels the same size.
+const AXIS_SPANS = [
+  10, 15, 20, 30, 45, 60, 90, 120, 180, 240, 360, 480, 600, 900, 1200, 1800, 2700, 3600, 5400, 7200,
+  10800, 14400,
+]
+const AXIS_FILL = 0.85
+const LONG_SPAN_STEP = 7200
+const MAX_TICK_INTERVALS = 5
 
-export function timeAxis(extent: number, target = 4): { span: number; ticks: number[] } {
-  if (!(extent > 0)) return { span: 0, ticks: [0] }
-  const raw = extent / target
-  const step = NICE_STEPS.find((s) => s >= raw) ?? Math.ceil(raw / 3600) * 3600
-  const count = Math.ceil(extent / step - 1e-9)
-  return { span: count * step, ticks: Array.from({ length: count + 1 }, (_, i) => i * step) }
+function tickStep(span: number): number {
+  const nice = NICE_STEPS.find((s) => span % s === 0 && span / s <= MAX_TICK_INTERVALS)
+  return nice ?? Math.ceil(span / MAX_TICK_INTERVALS / 3600) * 3600
 }
 
-const AXIS_EASE_TAU = 0.1
-const TICK_FADE_SECONDS = 0.25
+export function timeAxis(extent: number, fill = AXIS_FILL): { span: number; ticks: number[] } {
+  if (!(extent > 0)) return { span: 0, ticks: [0] }
+  const needed = extent / fill
+  const span =
+    AXIS_SPANS.find((s) => s >= needed) ?? Math.ceil(needed / LONG_SPAN_STEP) * LONG_SPAN_STEP
+  const step = tickStep(span)
+  return { span, ticks: Array.from({ length: span / step + 1 }, (_, i) => i * step) }
+}
+
+const AXIS_EASE_TAU = 0.25
+const TICK_FADE_SECONDS = 0.4
 
 export function easeSpan(
   shown: number,

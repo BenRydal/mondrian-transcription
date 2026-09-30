@@ -101,40 +101,44 @@ describe('timeExtent', () => {
 })
 
 describe('timeAxis', () => {
-  it('rounds the axis up to a labelled tick so the top is always marked', () => {
-    expect(timeAxis(10)).toEqual({ span: 10, ticks: [0, 5, 10] })
-    expect(timeAxis(14)).toEqual({ span: 15, ticks: [0, 5, 10, 15] })
-    expect(timeAxis(60)).toEqual({ span: 60, ticks: [0, 15, 30, 45, 60] })
+  it('picks the next span with headroom and labels it with round ticks', () => {
+    expect(timeAxis(8)).toEqual({ span: 10, ticks: [0, 2, 4, 6, 8, 10] })
+    expect(timeAxis(12)).toEqual({ span: 15, ticks: [0, 5, 10, 15] })
+    expect(timeAxis(40)).toEqual({ span: 60, ticks: [0, 15, 30, 45, 60] })
     expect(timeAxis(100)).toEqual({ span: 120, ticks: [0, 30, 60, 90, 120] })
   })
 
-  it('always contains the extent and ends on its last tick', () => {
+  it('grows before the content reaches the top', () => {
+    expect(timeAxis(8.5).span).toBe(10)
+    expect(timeAxis(8.6).span).toBe(15)
     for (const extent of [0.5, 7, 10.01, 13, 20.01, 59, 61, 299, 1234, 5000, 90000]) {
-      const { span, ticks } = timeAxis(extent, 4)
-      expect(span).toBeGreaterThanOrEqual(extent)
+      const { span, ticks } = timeAxis(extent)
+      expect(extent / span).toBeLessThanOrEqual(0.85)
       expect(ticks[0]).toBe(0)
       expect(ticks.at(-1)).toBe(span)
-      expect(ticks.length).toBeGreaterThanOrEqual(2)
-      expect(ticks.length).toBeLessThanOrEqual(9)
+      expect(ticks.length).toBeGreaterThanOrEqual(4)
+      expect(ticks.length).toBeLessThanOrEqual(6)
     }
   })
 
-  it('grows in steps and never shrinks while the extent grows', () => {
-    const spans = new Set<number>()
-    let previous = 0
-    for (let extent = 10; extent <= 400; extent += 0.05) {
+  it('grows in even steps of about 1.5x and never shrinks while the extent grows', () => {
+    const spans: number[] = []
+    for (let extent = 8; extent <= 4 * 3600; extent += 0.25) {
       const { span } = timeAxis(extent)
-      expect(span).toBeGreaterThanOrEqual(previous)
-      previous = span
-      spans.add(span)
+      if (span !== spans.at(-1)) spans.push(span)
     }
-    expect(spans.size).toBeLessThan(40)
+    spans.slice(1).forEach((span, i) => {
+      expect(span / spans[i]).toBeGreaterThanOrEqual(1.25)
+      expect(span / spans[i]).toBeLessThanOrEqual(1.5)
+    })
+    expect(spans.slice(0, 8)).toEqual([10, 15, 20, 30, 45, 60, 90, 120])
   })
 
   it('scales to long sessions', () => {
     const { span, ticks } = timeAxis(3 * 3600)
     expect(ticks[1]).toBe(3600)
-    expect(span).toBe(3 * 3600)
+    expect(span).toBe(4 * 3600)
+    expect(timeAxis(5 * 3600).span).toBe(6 * 3600)
   })
 
   it('handles an empty extent', () => {
@@ -241,15 +245,17 @@ describe('drag inertia', () => {
 })
 
 describe('axis easing', () => {
-  const settle = (shown: number, target: number, content: number, fps: number) => {
+  const settle = (shown: number, target: number, content: number, fps: number, seconds = 2) => {
     const trace = [shown]
-    for (let i = 0; i < fps; i++) trace.push(easeSpan(trace.at(-1)!, target, content, 1 / fps))
+    for (let i = 0; i < fps * seconds; i++)
+      trace.push(easeSpan(trace.at(-1)!, target, content, 1 / fps))
     return trace
   }
 
-  it('reaches the target within about 300 ms and then holds it exactly', () => {
+  it('eases into the target over about 0.7 s and then holds it exactly', () => {
     const up = settle(10, 15, 10.2, 60)
-    expect(Math.abs(up[18] - 15)).toBeLessThan(0.05 * 5)
+    expect(up[12]).toBeLessThan(14)
+    expect(Math.abs(up[45] - 15)).toBeLessThan(0.05 * 5)
     expect(up.at(-1)).toBe(15)
     const down = settle(30, 15, 12, 120)
     expect(down.at(-1)).toBe(15)
@@ -291,11 +297,11 @@ describe('tick fading', () => {
     let alphas = fadeTicks(new Map(), [0, 5, 10], 0)
     alphas = fadeTicks(alphas, [0, 10], 0.1)
     expect(alphas.get(0)).toBe(1)
-    expect(alphas.get(5)).toBeCloseTo(0.6)
+    expect(alphas.get(5)).toBeCloseTo(0.75)
     alphas = fadeTicks(alphas, [0, 10, 20], 0.1)
-    expect(alphas.get(20)).toBeCloseTo(0.4)
-    expect(alphas.get(5)).toBeCloseTo(0.2)
-    alphas = fadeTicks(alphas, [0, 10, 20], 0.2)
+    expect(alphas.get(20)).toBeCloseTo(0.25)
+    expect(alphas.get(5)).toBeCloseTo(0.5)
+    alphas = fadeTicks(alphas, [0, 10, 20], 0.4)
     expect(alphas.has(5)).toBe(false)
     expect(alphas.get(20)).toBe(1)
   })
