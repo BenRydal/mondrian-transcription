@@ -15,7 +15,7 @@
     fileLabel: string
     onNewPath: () => void
     onExport: () => void
-    onModeSwitch: () => void
+    onModeSwitch: (isTranscriptionMode: boolean) => void
   } = $props()
 
   const modes = [
@@ -33,7 +33,7 @@
 
   function confirmSwitch() {
     const isTranscriptionMode = pendingMode === true
-    onModeSwitch()
+    onModeSwitch(isTranscriptionMode)
     drawingConfig.update((c) => ({ ...c, isTranscriptionMode }))
     pendingMode = null
   }

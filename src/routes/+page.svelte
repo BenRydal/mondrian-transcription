@@ -590,11 +590,16 @@
     p5Component.startNewPath()
   }
 
-  function handleModeSwitch() {
+  function handleModeSwitch(isTranscriptionMode: boolean) {
     void pin('Before mode switch')
     p5Component.clearDrawing()
     detachVideo()
     p5Component.startNewPath()
+    // Speculate needs a floor plan to draw on: without one, points collapse to the
+    // image origin and the session controls stay hidden. Start on a blank grid instead.
+    if (!isTranscriptionMode && !get(drawingState).imageElement) {
+      loadExampleData('grid', { checkpoint: null })
+    }
   }
 
   function handleNewPath() {
@@ -614,7 +619,7 @@
 
   function handleTryExample() {
     if ($drawingConfig.isTranscriptionMode) {
-      handleModeSwitch()
+      handleModeSwitch(false)
       drawingConfig.update((c) => ({ ...c, isTranscriptionMode: false }))
     }
     loadExampleData('classroom')
@@ -655,16 +660,26 @@
       .catch((e) => console.warn('Could not keep example floor plan for autosave:', e))
   }
 
-  function loadExampleData(imageID: string) {
+  // Examples whose display name should not read as a file name.
+  const EXAMPLE_NAMES: Record<string, string> = { grid: 'Blank grid' }
+
+  function loadExampleData(
+    imageID: string,
+    options: { checkpoint?: string | null; name?: string } = {}
+  ) {
+    const {
+      checkpoint = 'Before loading example',
+      name = EXAMPLE_NAMES[imageID] ?? `${imageID}.png`,
+    } = options
     const filePath = `/examples/${imageID}.png`
     const image = new window.Image()
     image.src = filePath
     image.onload = () => {
-      void pin('Before loading example')
+      if (checkpoint) void pin(checkpoint)
       p5Component.setImage(image)
-      floorPlanName = `${imageID}.png`
+      floorPlanName = name
       floorPlanAsset = null
-      keepExampleFloorPlan(filePath, randomId(), floorPlanName)
+      keepExampleFloorPlan(filePath, randomId(), name)
     }
     image.onerror = (error) => {
       window.console.error(`Error loading example image from ${filePath}:`, error)
