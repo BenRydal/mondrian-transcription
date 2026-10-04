@@ -33,7 +33,7 @@ export const VIDEO_EXAMPLES: readonly VideoExample[] = [
   },
   {
     id: 'example-4',
-    title: '3rd Grade Discussion Odd/Even Numbers',
+    title: '3rd Grade Discussion',
     duration: '7 min',
     videoId: 'OJSZCK4GPQY',
     aspect: WIDE,

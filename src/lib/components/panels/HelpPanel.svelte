@@ -53,12 +53,6 @@
       above the floor plan. Keep drawing on the flat floor plan; the 3D view follows along. A pulsing
       dot marks where each path is while you record.
     </p>
-    <ul class="flex flex-col gap-1 text-sm text-base-content/70">
-      <li>Drag to rotate, scroll to zoom</li>
-      <li>Double-click to reset the camera</li>
-      <li>The pause button (or <kbd class="kbd kbd-sm">S</kbd>) stops the spin</li>
-      <li>Drag the dividers to resize the video, 3D view and floor plan</li>
-    </ul>
   </PanelSection>
 
   <PanelSection title="Keyboard Shortcuts">
