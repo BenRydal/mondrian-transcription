@@ -57,6 +57,7 @@ No installation required—runs entirely in your browser.
 - **Frame-Rate Independent Timing** — Points are timestamped from pointer events on one session clock and exported on a shared time grid.
 - **Autosave, Checkpoints and Sessions** — Work is saved in the browser as you go, with named checkpoints, earlier versions, per-path restore and multiple sessions.
 - **Flexible Export** — Download a ZIP containing a CSV for each path plus your floor plan, ready for the Interaction Geography Slicer.
+- **Re-open an Export** — Drop an exported ZIP, or loose path CSVs with a floor plan, back on the Data panel and keep tracing on top of them.
 
 ---
 
@@ -78,7 +79,7 @@ Mondrian saves your work in the browser (IndexedDB) while you draw, so a crash o
 
 The **History** panel holds:
 
-- **Session** — switch between sessions, rename or delete them, and export or import a session's full history as a ZIP to move it to another browser or computer.
+- **Session** — switch between sessions, rename or delete them, and export a session's full history as a ZIP to move it to another browser or computer. **Import ZIP** accepts either kind of export, the same as the Data panel.
 - **Versions & checkpoints** — autosaved versions plus checkpoints you create yourself (`Ctrl/⌘ S`). Mondrian also saves a checkpoint before risky actions such as Clear All or restoring an older version. You can restore a whole version, or restore a single path either in place or as a new path.
 
 Only one tab can edit a session at a time. If you open Mondrian in a second tab, that tab pauses so it can't overwrite your work. Close the first tab and the second one continues with its latest work, or choose **Start a new session here** to work on something else in parallel.
@@ -105,14 +106,28 @@ Jump lengths can be changed under Settings.
 
 ## Output Format
 
-Export produces a ZIP file containing:
+Export gives you a ZIP holding one CSV per path plus your floor plan (`floor-plan.png`).
 
-- One CSV per path with columns `x`, `y`, `time`. `x` and `y` are floor-plan pixel coordinates rounded to 2 decimals, and `time` is in seconds, resampled to the export sample rate (10 per second by default, set under Settings → Sampling).
-- Your floor plan image (`floor-plan.png`).
+Each CSV has three columns: `x`, `y` and `time`. The coordinates are pixels on the floor plan, and the time is in seconds, sampled ten times a second by default (change it under Settings → Sampling).
 
-Each CSV is named after its path (`Teacher.csv`), or `path-N.csv` if the path has no name. The [Interaction Geography Slicer](https://www.interactiongeography.org) uses the file name as the person's name and matches it to speakers in a transcript, so name your paths the way the speakers appear there. If two paths share a name, the second is exported as `Teacher-2.csv`, and so on.
+Each file is named after its path, so `Teacher.csv`, or `path-2.csv` if you never named it. The [Interaction Geography Slicer](https://www.interactiongeography.org) treats that file name as the person's name and matches it to speakers in a transcript — so name your paths the way the speakers appear there. Two paths with the same name become `Teacher.csv` and `Teacher-2.csv`.
 
-In Speculate mode, export asks how long the session should last. The default is the length you actually drew, which keeps your timings unchanged. Enter a different total to stretch or squeeze all paths evenly onto a new time scale.
+In Speculate mode, export asks how long the session should be. Keep the default to export the timings you drew, or enter a different total to stretch or squeeze every path to fit.
+
+### Importing
+
+Drop an export back onto the **Data** panel, or use **Import data**. Mondrian works out which kind it is: a session archive opens as a new session, and a data export replaces the floor plan and paths in the session you are in. Either way a checkpoint is saved first, so you can undo it from History.
+
+You can also pick the files directly instead of a ZIP — any number of CSVs, plus one image for the floor plan.
+
+What happens next:
+
+- **Your imported paths become a backdrop.** Recording starts a new, empty path on top of them, so you can trace another person without touching what you imported.
+- **Times are read for the mode you are in** — video seconds in Transcription mode, session seconds in Speculate mode.
+- **In Transcription mode you need the video back** before you can record. Mondrian shows a prompt asking for it.
+- **If the floor plan is the wrong one**, the paths land in the wrong place and Mondrian says so. Import again with the right image to replace both. Use import rather than the **Floor Plan** button, which deletes your paths in Speculate mode.
+
+Writing your own CSVs works too. The header is optional, `x`, `y` and `time` can be in any order, extra columns are ignored, and bad rows are skipped. Keep values unquoted, as commas inside quotes are not understood. Round-tripping is slightly lossy, since export rounds coordinates and puts times on an even grid.
 
 ---
 
@@ -167,7 +182,6 @@ yarn format   # Auto-format code
 | [TypeScript](https://www.typescriptlang.org)                             | Type safety     |
 | [p5.js](https://p5js.org)                                                | Canvas drawing  |
 | [Tailwind CSS](https://tailwindcss.com) + [DaisyUI](https://daisyui.com) | Styling         |
-| [Papa Parse](https://www.papaparse.com)                                  | CSV handling    |
 | [fflate](https://github.com/101arrowz/fflate)                            | ZIP compression |
 
 </details>

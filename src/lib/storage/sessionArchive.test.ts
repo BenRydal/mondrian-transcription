@@ -42,6 +42,21 @@ function input(paths: PathData[], video = false): SnapshotInput {
 }
 
 describe('session archive', () => {
+  // The ZIP sniff in pathImport already reads the file, so it hands these bytes straight
+  // over rather than making a second copy of a possibly huge archive.
+  it('unpacks from raw bytes as well as a Blob', async () => {
+    const db = await SessionDb.open({ dbName: freshName() })
+    const source = await db.createSession('Lab')
+    await db.save(source.id, input([path(10, 1)]))
+    const archive = await packSession((await db.exportSession(source.id))!)
+    db.close()
+
+    const fromBytes = await unpackSession(new Uint8Array(await archive.arrayBuffer()))
+    const fromBlob = await unpackSession(archive)
+    expect(fromBytes.session).toEqual(fromBlob.session)
+    expect(fromBytes.chunks).toEqual(fromBlob.chunks)
+  })
+
   it('round-trips a session with its whole history into a new session', async () => {
     const db = await SessionDb.open({ dbName: freshName() })
     const source = await db.createSession('Lab')

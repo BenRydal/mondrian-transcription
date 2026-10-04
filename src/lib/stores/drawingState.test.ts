@@ -6,6 +6,8 @@ import {
   deletePathById,
   drawingState,
   handleForwardSpeculateMode,
+  PATH_COLORS,
+  replacePathsWithImported,
 } from './drawingState'
 import { speculateClock, syncSpeculateClock } from '../timing/sessionClocks'
 
@@ -109,5 +111,74 @@ describe('path ids', () => {
     createNewPath('#f00')
     deletePathById(1)
     expect(get(drawingState).paths.map((p) => p.pathId)).toEqual([2])
+  })
+})
+
+describe('replacePathsWithImported', () => {
+  beforeEach(() => {
+    drawingState.update((s) => ({ ...s, currentPathId: 0, lastPathId: 0, paths: [] }))
+  })
+
+  const imported = (...names: string[]) =>
+    names.map((name, i) => ({ name, points: [{ x: i, y: i * 2, time: i * 0.1 }] }))
+
+  it('names the paths after their files and cycles the palette', () => {
+    replacePathsWithImported(imported('Teacher', 'Student'))
+    const paths = get(drawingState).paths
+    expect(paths.map((p) => p.name)).toEqual(['Teacher', 'Student'])
+    expect(paths.map((p) => p.color)).toEqual([PATH_COLORS[0], PATH_COLORS[1]])
+  })
+
+  // The id is stored per point by encodeChunk, so an unstamped point would autosave wrong.
+  it('stamps every point with its own path id', () => {
+    replacePathsWithImported(imported('Teacher', 'Student'))
+    const paths = get(drawingState).paths
+    expect(paths.map((p) => p.points.map((pt) => pt.pathId))).toEqual([[1], [2]])
+  })
+
+  it('continues ids past every id the session has used', () => {
+    createNewPath('#f00')
+    createNewPath('#0f0')
+    deletePathById(2)
+    replacePathsWithImported(imported('Teacher'))
+    expect(get(drawingState).paths.map((p) => p.pathId)).toEqual([3])
+    expect(get(drawingState).lastPathId).toBe(3)
+  })
+
+  // Recording must not append to imported data, so the caller starts a new path after
+  // this; the last imported path is current only so that startNewPath's guard passes.
+  it('leaves the last imported path current', () => {
+    replacePathsWithImported(imported('Teacher', 'Student'))
+    expect(get(drawingState).currentPathId).toBe(2)
+  })
+
+  it('stops recording and drops the previous paths', () => {
+    createNewPath('#f00')
+    addPointsToCurrentPath([{ x: 9, y: 9, time: 0, pathId: 1 }])
+    replacePathsWithImported(imported('Teacher'))
+    const state = get(drawingState)
+    expect(state.paths.map((p) => p.name)).toEqual(['Teacher'])
+    expect(state.shouldTrackMouse).toBe(false)
+    expect(state.isDrawing).toBe(false)
+  })
+
+  it('freezes the imported points', () => {
+    replacePathsWithImported(imported('Teacher'))
+    expect(Object.isFrozen(get(drawingState).paths[0].points[0])).toBe(true)
+  })
+
+  // P5Wrapper.startNewPath() refuses to add a path when the current one is empty, and
+  // the import relies on it to leave the imported paths as a backdrop. If this breaks,
+  // recording silently appends to the last imported path instead.
+  it('leaves a non-empty current path, so startNewPath will add a fresh one', () => {
+    replacePathsWithImported(imported('Teacher'))
+    const state = get(drawingState)
+    const current = state.paths.find((p) => p.pathId === state.currentPathId)
+    expect(current?.points.length).toBeGreaterThan(0)
+  })
+
+  it('drops a blank file name rather than storing it', () => {
+    replacePathsWithImported([{ name: '  ', points: [{ x: 0, y: 0, time: 0 }] }])
+    expect(get(drawingState).paths[0].name).toBeUndefined()
   })
 })

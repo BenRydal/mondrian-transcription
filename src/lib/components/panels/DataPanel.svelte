@@ -2,6 +2,7 @@
   import IconUpload from '~icons/material-symbols/upload'
   import IconImage from '~icons/material-symbols/image'
   import IconVideo from '~icons/material-symbols/videocam'
+  import IconFolderZip from '~icons/material-symbols/folder-zip-outline'
   import IconInfo from '~icons/material-symbols/info-outline'
   import { drawingConfig } from '$lib/stores/drawingConfig'
   import type { AutosaveStatus } from '$lib/storage/autosave'
@@ -14,6 +15,8 @@
   let {
     onImageUpload,
     onVideoUpload,
+    onZipUpload,
+    onLooseUpload,
     onSelectExample,
     onSelectVideoExample,
     autosave,
@@ -21,6 +24,8 @@
   }: {
     onImageUpload: (event: Event) => void
     onVideoUpload: (event: Event) => void
+    onZipUpload: (file: File) => void
+    onLooseUpload: (csvs: File[], floorPlan: File | null) => void
     onSelectExample: (id: string) => void
     onSelectVideoExample: (example: VideoExample) => void
     autosave: AutosaveStatus
@@ -39,31 +44,67 @@
 
   let isDraggingFile = $state(false)
 
+  // Browsers report ZIP and CSV types inconsistently, and sometimes as an empty string,
+  // so the extension is the reliable half of those two. Image types are reported
+  // reliably, so isImage stays on the MIME type rather than chasing a list of formats.
+  const isZip = (file: File) =>
+    file.name.toLowerCase().endsWith('.zip') || file.type.includes('zip')
+  const isCsv = (file: File) => file.name.toLowerCase().endsWith('.csv') || file.type === 'text/csv'
+  const isImage = (file: File) => file.type.startsWith('image/')
+
   function routeFile(file: File, event: Event) {
     if (file.type.startsWith('video/')) {
       onVideoUpload(event)
-    } else if (file.type.startsWith('image/')) {
+    } else if (isImage(file)) {
       onImageUpload(event)
     } else {
-      window.alert('Please upload a video or image file')
+      window.alert('Please upload a video, an image, CSV files, or a Mondrian ZIP export')
       return false
     }
     return true
   }
 
+  /**
+   * One selection can mix kinds. A ZIP is self-contained so it wins outright; otherwise
+   * any CSVs make this a data import, with a single image taken as the floor plan.
+   */
+  function routeFiles(files: File[], event: Event) {
+    const zip = files.find(isZip)
+    if (zip) {
+      if (files.length > 1) {
+        window.alert(`Importing ${zip.name}. The other selected files were ignored.`)
+      }
+      onZipUpload(zip)
+      return true
+    }
+
+    const csvs = files.filter(isCsv)
+    if (csvs.length === 0) return routeFile(files[0], event)
+
+    const images = files.filter(isImage)
+    if (images.length > 1) {
+      window.alert('Choose at most one floor plan image to go with your CSV files')
+      return false
+    }
+    onLooseUpload(csvs, images[0] ?? null)
+    return true
+  }
+
   function handleFileUpload(event: Event) {
-    const file = (event.target as HTMLInputElement).files?.[0]
-    if (!file) return
-    if (routeFile(file, event)) (event.target as HTMLInputElement).value = ''
+    const input = event.target as HTMLInputElement
+    const files = [...(input.files ?? [])]
+    if (files.length === 0) return
+    routeFiles(files, event)
+    // Cleared even when routing failed: otherwise re-picking the same files fires no
+    // change event, and the second attempt looks like a dead button.
+    input.value = ''
   }
 
   function handleDrop(e: DragEvent) {
     e.preventDefault()
     isDraggingFile = false
-    const file = e.dataTransfer?.files[0]
-    if (!file) return
-
-    routeFile(file, asFileInputEvent(file))
+    const files = [...(e.dataTransfer?.files ?? [])]
+    if (files.length > 0) routeFiles(files, asFileInputEvent(files[0]))
   }
 
   function asFileInputEvent(file: File): Event {
@@ -96,7 +137,10 @@
     >
       <IconUpload class="w-8 h-8 mx-auto mb-2 text-base-content/40" />
       <p class="text-sm text-base-content/70">Drag & drop files here</p>
-      <p class="text-xs text-base-content/50">or use the buttons below</p>
+      <p class="text-xs text-base-content/50">
+        A floor plan{$drawingConfig.isTranscriptionMode ? ', a video' : ''}, path CSVs, or an
+        exported ZIP
+      </p>
     </div>
     <div class="flex gap-2">
       <label class="btn btn-sm btn-outline flex-1">
@@ -112,6 +156,20 @@
         </label>
       {/if}
     </div>
+    <label class="btn btn-sm btn-outline">
+      <IconFolderZip class="w-4 h-4" />
+      Import data
+      <input
+        type="file"
+        class="hidden"
+        multiple
+        accept=".zip,application/zip,.csv,text/csv,image/*"
+        onchange={handleFileUpload}
+      />
+    </label>
+    <p class="text-xs text-base-content/50">
+      An exported ZIP, or path CSVs with an optional floor plan image.
+    </p>
     {#if autosave.videoStatus === 'needs-reattach' && !reattachVideo}
       <p class="text-xs text-base-content/50">
         The video is too large to keep in the browser; you'll re-attach it after a reload.
