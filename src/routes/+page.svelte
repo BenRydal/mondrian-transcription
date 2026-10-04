@@ -72,6 +72,8 @@
   let panelWidth = $state(300)
   let pendingDeletePathId = $state<number | null>(null)
   let showClearAllModal = $state(false)
+  type PendingFloorPlan = { kind: 'example'; id: string } | { kind: 'file'; file: File }
+  let pendingFloorPlan = $state<PendingFloorPlan | null>(null)
   let exportDialog: ExportDialog
   let floorPlanName = $state<string | null>(null)
   let videoName = $state<string | null>(null)
@@ -567,16 +569,47 @@
 
   function handleImageUpload(event: Event) {
     const file = (event.target as HTMLInputElement).files?.[0]
-    if (file) {
-      const image = new window.Image()
-      image.src = floorPlanBlobUrl.set(file)
-      image.onload = () => {
-        void pin('Before new floor plan')
-        floorPlanAsset = { key: randomId(), blob: file, name: file.name }
-        p5Component.setImage(image)
-        floorPlanName = file.name
-      }
+    if (file) requestFloorPlan({ kind: 'file', file })
+  }
+
+  function loadFloorPlanFile(file: File) {
+    const image = new window.Image()
+    image.src = floorPlanBlobUrl.set(file)
+    image.onload = () => {
+      void pin('Before new floor plan')
+      floorPlanAsset = { key: randomId(), blob: file, name: file.name }
+      p5Component.setImage(image)
+      floorPlanName = file.name
     }
+  }
+
+  /**
+   * Loading a floor plan clears every recorded path in Speculate mode (see setImage in
+   * P5Wrapper). Confirm first, as mode switching and Clear All already do. Recovery is
+   * exempt: a restored session waiting for its floor plan keeps its paths.
+   */
+  function floorPlanChangeErasesPaths() {
+    return (
+      !$drawingConfig.isTranscriptionMode &&
+      livePathIds.size > 0 &&
+      $drawingState.imageElement !== null
+    )
+  }
+
+  function requestFloorPlan(next: PendingFloorPlan) {
+    if (floorPlanChangeErasesPaths()) pendingFloorPlan = next
+    else applyFloorPlan(next)
+  }
+
+  function applyFloorPlan(next: PendingFloorPlan) {
+    if (next.kind === 'example') loadExampleData(next.id)
+    else loadFloorPlanFile(next.file)
+  }
+
+  function confirmFloorPlan() {
+    const next = pendingFloorPlan
+    pendingFloorPlan = null
+    if (next) applyFloorPlan(next)
   }
 
   function handleSavePath(onComplete?: () => void) {
@@ -622,7 +655,7 @@
       handleModeSwitch(false)
       drawingConfig.update((c) => ({ ...c, isTranscriptionMode: false }))
     }
-    loadExampleData('classroom')
+    requestFloorPlan({ kind: 'example', id: 'classroom' })
     closeWelcomeModal()
   }
 
@@ -750,7 +783,7 @@
               <DataPanel
                 onImageUpload={handleImageUpload}
                 onVideoUpload={handleVideoUpload}
-                onSelectExample={loadExampleData}
+                onSelectExample={(id) => requestFloorPlan({ kind: 'example', id })}
                 onSelectVideoExample={loadVideoExample}
                 autosave={$autosaveStatus}
                 {reattachVideo}
@@ -815,6 +848,15 @@
   onConfirm={confirmDeletePath}
   onCancel={() => (pendingDeletePathId = null)}
   class="w-72"
+/>
+
+<ConfirmDialog
+  open={pendingFloorPlan !== null}
+  title="Replace Floor Plan?"
+  message="Loading a different floor plan will delete all recorded paths. A checkpoint is saved first, so you can restore them from History."
+  confirmLabel="Replace"
+  onConfirm={confirmFloorPlan}
+  onCancel={() => (pendingFloorPlan = null)}
 />
 
 <ConfirmDialog
