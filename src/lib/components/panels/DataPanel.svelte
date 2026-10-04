@@ -28,10 +28,11 @@
   } = $props()
 
   const examples = [
-    { id: 'classroom', label: 'Classroom Space' },
-    { id: 'museum', label: 'Museum Gallery' },
     { id: 'basketball', label: 'Basketball Court' },
     { id: 'grid', label: 'Blank Grid' },
+    { id: 'cafe', label: 'Cafe' },
+    { id: 'classroom', label: 'Classroom' },
+    { id: 'museum', label: 'Museum Gallery' },
   ]
 
   const videoExampleGroups = groupVideoExamples()
