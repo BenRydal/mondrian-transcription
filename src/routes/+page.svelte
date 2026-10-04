@@ -72,8 +72,11 @@
   let panelWidth = $state(300)
   let pendingDeletePathId = $state<number | null>(null)
   let showClearAllModal = $state(false)
-  type PendingFloorPlan = { kind: 'example'; id: string } | { kind: 'file'; file: File }
-  let pendingFloorPlan = $state<PendingFloorPlan | null>(null)
+  type PendingLoad =
+    | { kind: 'example'; id: string }
+    | { kind: 'file'; file: File }
+    | { kind: 'videoExample'; example: VideoExample }
+  let pendingLoad = $state<PendingLoad | null>(null)
   let exportDialog: ExportDialog
   let floorPlanName = $state<string | null>(null)
   let videoName = $state<string | null>(null)
@@ -569,7 +572,7 @@
 
   function handleImageUpload(event: Event) {
     const file = (event.target as HTMLInputElement).files?.[0]
-    if (file) requestFloorPlan({ kind: 'file', file })
+    if (file) requestLoad({ kind: 'file', file })
   }
 
   function loadFloorPlanFile(file: File) {
@@ -584,11 +587,12 @@
   }
 
   /**
-   * Loading a floor plan clears every recorded path in Speculate mode (see setImage in
-   * P5Wrapper). Confirm first, as mode switching and Clear All already do. Recovery is
-   * exempt: a restored session waiting for its floor plan keeps its paths.
+   * An example video resets the whole workspace into a fresh session. A floor plan only
+   * erases paths in Speculate mode (see setImage in P5Wrapper), and recovery is exempt
+   * there: a restored session still waiting for its floor plan keeps its paths.
    */
-  function floorPlanChangeErasesPaths() {
+  function loadErasesWork(next: PendingLoad) {
+    if (next.kind === 'videoExample') return livePathIds.size > 0
     return (
       !$drawingConfig.isTranscriptionMode &&
       livePathIds.size > 0 &&
@@ -596,20 +600,23 @@
     )
   }
 
-  function requestFloorPlan(next: PendingFloorPlan) {
-    if (floorPlanChangeErasesPaths()) pendingFloorPlan = next
-    else applyFloorPlan(next)
+  function requestLoad(next: PendingLoad) {
+    if (loadErasesWork(next)) pendingLoad = next
+    else applyLoad(next)
   }
 
-  function applyFloorPlan(next: PendingFloorPlan) {
+  function applyLoad(next: PendingLoad) {
     if (next.kind === 'example') loadExampleData(next.id)
-    else loadFloorPlanFile(next.file)
+    else if (next.kind === 'file') loadFloorPlanFile(next.file)
+    else if (next.kind === 'videoExample') {
+      loadVideoExample(next.example).catch(() => showNotice('Could not load that example video.'))
+    }
   }
 
-  function confirmFloorPlan() {
-    const next = pendingFloorPlan
-    pendingFloorPlan = null
-    if (next) applyFloorPlan(next)
+  function confirmLoad() {
+    const next = pendingLoad
+    pendingLoad = null
+    if (next) applyLoad(next)
   }
 
   function handleSavePath(onComplete?: () => void) {
@@ -655,7 +662,7 @@
       handleModeSwitch(false)
       drawingConfig.update((c) => ({ ...c, isTranscriptionMode: false }))
     }
-    requestFloorPlan({ kind: 'example', id: 'classroom' })
+    requestLoad({ kind: 'example', id: 'classroom' })
     closeWelcomeModal()
   }
 
@@ -754,6 +761,8 @@
         onNewPath={handleNewPath}
         onExport={() => exportDialog.start()}
         onModeSwitch={handleModeSwitch}
+        hasPaths={livePathIds.size > 0}
+        hasVideo={videoName !== null}
       />
     {/snippet}
 
@@ -783,8 +792,8 @@
               <DataPanel
                 onImageUpload={handleImageUpload}
                 onVideoUpload={handleVideoUpload}
-                onSelectExample={(id) => requestFloorPlan({ kind: 'example', id })}
-                onSelectVideoExample={loadVideoExample}
+                onSelectExample={(id) => requestLoad({ kind: 'example', id })}
+                onSelectVideoExample={(example) => requestLoad({ kind: 'videoExample', example })}
                 autosave={$autosaveStatus}
                 {reattachVideo}
               />
@@ -851,12 +860,21 @@
 />
 
 <ConfirmDialog
-  open={pendingFloorPlan !== null}
+  open={pendingLoad?.kind === 'videoExample'}
+  title="Load Example Video?"
+  message="This starts a new session and clears the current floor plan, video and recorded paths. Your current session is kept in the History panel, so you can switch back to it."
+  confirmLabel="Load Example"
+  onConfirm={confirmLoad}
+  onCancel={() => (pendingLoad = null)}
+/>
+
+<ConfirmDialog
+  open={!!pendingLoad && pendingLoad.kind !== 'videoExample'}
   title="Replace Floor Plan?"
   message="Loading a different floor plan will delete all recorded paths. A checkpoint is saved first, so you can restore them from History."
   confirmLabel="Replace"
-  onConfirm={confirmFloorPlan}
-  onCancel={() => (pendingFloorPlan = null)}
+  onConfirm={confirmLoad}
+  onCancel={() => (pendingLoad = null)}
 />
 
 <ConfirmDialog
