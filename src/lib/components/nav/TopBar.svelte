@@ -11,11 +11,15 @@
     onNewPath,
     onExport,
     onModeSwitch,
+    hasPaths,
+    hasVideo,
   }: {
     fileLabel: string
     onNewPath: () => void
     onExport: () => void
-    onModeSwitch: () => void
+    onModeSwitch: (isTranscriptionMode: boolean) => void
+    hasPaths: boolean
+    hasVideo: boolean
   } = $props()
 
   const modes = [
@@ -25,17 +29,31 @@
 
   let pendingMode = $state<boolean | null>(null)
 
+  // Only paths are checkpointed, and only when some have been recorded: an empty session
+  // saves no snapshot, so a dropped video has to be loaded again by hand.
+  const switchMessage = $derived(
+    hasPaths
+      ? hasVideo
+        ? 'Switching modes will erase all recorded paths and remove the current video. A checkpoint is saved first, so you can restore the paths from History.'
+        : 'Switching modes will erase all recorded paths. A checkpoint is saved first, so you can restore them from History.'
+      : 'Switching modes will remove the current video. You will need to load it again.'
+  )
+
   function requestMode(isTranscriptionMode: boolean) {
-    if (isTranscriptionMode !== $drawingConfig.isTranscriptionMode) {
-      pendingMode = isTranscriptionMode
-    }
+    if (isTranscriptionMode === $drawingConfig.isTranscriptionMode) return
+    // Only worth confirming when the switch would actually discard something.
+    if (hasPaths || hasVideo) pendingMode = isTranscriptionMode
+    else switchMode(isTranscriptionMode)
+  }
+
+  function switchMode(isTranscriptionMode: boolean) {
+    onModeSwitch(isTranscriptionMode)
+    drawingConfig.update((c) => ({ ...c, isTranscriptionMode }))
+    pendingMode = null
   }
 
   function confirmSwitch() {
-    const isTranscriptionMode = pendingMode === true
-    onModeSwitch()
-    drawingConfig.update((c) => ({ ...c, isTranscriptionMode }))
-    pendingMode = null
+    switchMode(pendingMode === true)
   }
 </script>
 
@@ -87,7 +105,7 @@
 <ConfirmDialog
   open={pendingMode !== null}
   title="Switch Mode?"
-  message="Switching modes will erase all recorded data. Do you want to continue?"
+  message={switchMessage}
   confirmLabel="Switch"
   onConfirm={confirmSwitch}
   onCancel={() => (pendingMode = null)}

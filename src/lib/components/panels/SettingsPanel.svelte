@@ -1,7 +1,5 @@
 <script lang="ts">
-  import IconRotateLeft from '~icons/material-symbols/rotate-left'
-  import IconRotateRight from '~icons/material-symbols/rotate-right'
-  import { drawingConfig, rotateFloorPlan } from '$lib/stores/drawingConfig'
+  import { drawingConfig } from '$lib/stores/drawingConfig'
   import { drawingState } from '$lib/stores/drawingState'
   import PanelSection from './PanelSection.svelte'
   import SegmentedControl from '$lib/components/SegmentedControl.svelte'
@@ -26,7 +24,6 @@
   const exportSampleRates = [1, 2, 5, 10, 20, 30, 60]
 
   const isTranscriptionMode = $derived($drawingConfig.isTranscriptionMode)
-  const hasImage = $derived($drawingState.imageElement !== null)
   const isRecording = $derived($drawingState.shouldTrackMouse)
 
   const jumpRange = $derived(
@@ -185,32 +182,4 @@
       />
     </label>
   </PanelSection>
-
-  {#if hasImage}
-    <PanelSection title="Floor Plan">
-      <div class="flex items-center gap-2">
-        <button
-          class="btn btn-sm btn-outline flex-1"
-          onclick={() => rotateFloorPlan('ccw')}
-          title={isRecording ? 'Stop recording to rotate' : 'Rotate counterclockwise'}
-          disabled={isRecording}
-        >
-          <IconRotateLeft class="w-4 h-4" />
-          Rotate left
-        </button>
-        <button
-          class="btn btn-sm btn-outline flex-1"
-          onclick={() => rotateFloorPlan('cw')}
-          title={isRecording ? 'Stop recording to rotate' : 'Rotate clockwise'}
-          disabled={isRecording}
-        >
-          <IconRotateRight class="w-4 h-4" />
-          Rotate right
-        </button>
-      </div>
-      {#if isRecording}
-        <p class="text-xs text-base-content/60">Stop recording to rotate.</p>
-      {/if}
-    </PanelSection>
-  {/if}
 </div>

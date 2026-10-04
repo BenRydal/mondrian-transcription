@@ -164,7 +164,7 @@
     </button>
     <label class="btn btn-xs btn-ghost" class:btn-disabled={!canWrite}>
       <IconUpload class="w-3.5 h-3.5" />
-      Import history
+      Import session
       <input
         type="file"
         class="hidden"

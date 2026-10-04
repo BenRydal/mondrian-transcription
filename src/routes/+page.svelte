@@ -21,13 +21,14 @@
     deletePathById,
     freezePoint,
     nextPathId,
+    replacePathsWithImported,
     STOPPED_TRACKING,
     type PathData,
   } from '$lib/stores/drawingState'
   import { drawingConfig } from '$lib/stores/drawingConfig'
   import { invalidateSpeculateClock } from '$lib/timing/sessionClocks'
   import { hasRecordedData } from '$lib/stores/sessionRecovery'
-  import { formatBytes } from '$lib/utils/format'
+  import { formatBytes, formatPoints } from '$lib/utils/format'
   import { downloadBlob } from '$lib/utils/download'
   import { blobUrlSlot } from '$lib/utils/blobUrl'
   import { randomId } from '$lib/utils/id'
@@ -51,6 +52,12 @@
     packSession,
     unpackSession,
   } from '$lib/storage/sessionArchive'
+  import {
+    ImportError,
+    readLooseFiles,
+    readMondrianZip,
+    type DataExport,
+  } from '$lib/import/pathImport'
   import IconWarning from '~icons/material-symbols/warning-outline'
   import IconInfo from '~icons/material-symbols/info-outline'
   import IconData from '~icons/material-symbols/folder-open-outline'
@@ -72,6 +79,12 @@
   let panelWidth = $state(300)
   let pendingDeletePathId = $state<number | null>(null)
   let showClearAllModal = $state(false)
+  type PendingLoad =
+    | { kind: 'example'; id: string }
+    | { kind: 'file'; file: File }
+    | { kind: 'videoExample'; example: VideoExample }
+    | { kind: 'importData'; data: DataExport; plan: LoadedPlan | null }
+  let pendingLoad = $state<PendingLoad | null>(null)
   let exportDialog: ExportDialog
   let floorPlanName = $state<string | null>(null)
   let videoName = $state<string | null>(null)
@@ -495,9 +508,10 @@
     }
   }
 
-  async function handleImportHistory(file: File) {
+  /** Takes the bytes the ZIP sniff already read, rather than reading the file again. */
+  async function handleImportHistory(bytes: Uint8Array) {
     try {
-      const bundle = await unpackSession(file)
+      const bundle = await unpackSession(bytes)
       await pin('Before import')
       const session = await autosave.importSession(bundle)
       resetWorkspace()
@@ -567,16 +581,164 @@
 
   function handleImageUpload(event: Event) {
     const file = (event.target as HTMLInputElement).files?.[0]
-    if (file) {
-      const image = new window.Image()
-      image.src = floorPlanBlobUrl.set(file)
-      image.onload = () => {
-        void pin('Before new floor plan')
-        floorPlanAsset = { key: randomId(), blob: file, name: file.name }
-        p5Component.setImage(image)
-        floorPlanName = file.name
-      }
+    if (file) requestLoad({ kind: 'file', file })
+  }
+
+  function loadFloorPlanFile(file: File) {
+    const image = new window.Image()
+    image.src = floorPlanBlobUrl.set(file)
+    image.onload = () => {
+      void pin('Before new floor plan')
+      floorPlanAsset = { key: randomId(), blob: file, name: file.name }
+      p5Component.setImage(image)
+      floorPlanName = file.name
     }
+  }
+
+  // Shown instead of the ZIP's internal file name, which would also become the session
+  // name (see currentSessionName).
+  const IMPORTED_FLOOR_PLAN = 'Imported floor plan'
+
+  interface LoadedPlan {
+    image: HTMLImageElement
+    blob: Blob
+  }
+
+  /**
+   * Decode the floor plan up front, so a damaged image is reported before any of the
+   * session is replaced and the apply step below can then be synchronous.
+   */
+  function decodeFloorPlan(data: DataExport): Promise<LoadedPlan | null> {
+    if (!data.floorPlan) return Promise.resolve(null)
+    const blob = new Blob([data.floorPlan.bytes as Uint8Array<ArrayBuffer>], {
+      type: data.floorPlan.type,
+    })
+    return new Promise((resolve, reject) => {
+      const image = new window.Image()
+      image.onload = () => resolve({ image, blob })
+      image.onerror = () => reject(new ImportError('The floor plan image could not be read.'))
+      // The slot revokes the URL of the plan being replaced. Harmless even if the import
+      // is then cancelled: p5 holds its own copy of that image, and autosave holds the blob.
+      image.src = floorPlanBlobUrl.set(blob)
+    })
+  }
+
+  /**
+   * A ZIP is either kind of Mondrian export. A session archive opens as its own session,
+   * so hand it to the history importer; a data export replaces this session's floor plan
+   * and paths, which needs the confirm dialog first.
+   */
+  async function handleZipUpload(file: File) {
+    try {
+      const contents = await readMondrianZip(file)
+      // Awaited so a failure lands in the catch below instead of going unhandled.
+      if (contents.kind === 'session') return await handleImportHistory(contents.bytes)
+      const { data } = contents
+      requestLoad({ kind: 'importData', data, plan: await decodeFloorPlan(data) })
+    } catch (e) {
+      showNotice(e instanceof ImportError ? e.message : 'Could not read that ZIP.')
+    }
+  }
+
+  /** CSVs picked straight from disk, with at most one image to use as the floor plan. */
+  async function handleLooseUpload(csvs: File[], floorPlan: File | null) {
+    try {
+      const data = await readLooseFiles(csvs, floorPlan)
+      requestLoad({ kind: 'importData', data, plan: await decodeFloorPlan(data) })
+    } catch (e) {
+      showNotice(e instanceof ImportError ? e.message : 'Could not read those files.')
+    }
+  }
+
+  async function loadImportedData(data: DataExport, plan: LoadedPlan | null) {
+    // Awaited, not fire-and-forget: the paths are replaced after this point, so the
+    // checkpoint has to capture them first.
+    await pin('Before import')
+    replacePathsWithImported(data.paths)
+
+    if (plan) {
+      // Only when the plan itself is replaced: imported coordinates are in unrotated
+      // image space, and the recovery path of setImage skips its own rotation reset.
+      drawingConfig.update((c) => ({ ...c, floorPlanRotation: 0 }))
+      floorPlanAsset = { key: randomId(), blob: plan.blob, name: IMPORTED_FLOOR_PLAN }
+      // Recovery mode: without it, setImage clears the paths just imported. Note it sets
+      // imageWidth/imageHeight from its own loadImage callback, so those trail this tick.
+      p5Component.setImage(plan.image, true)
+      floorPlanName = IMPORTED_FLOOR_PLAN
+      autosave.schedule()
+    }
+
+    // Imported paths are a backdrop to trace over, so recording starts a new path rather
+    // than appending to one of them. This also rewinds the video and resets the clock.
+    p5Component.startNewPath()
+
+    const count = data.paths.length
+    const unread = data.skipped.length
+    const notes = [
+      `Imported ${count} ${count === 1 ? 'path' : 'paths'} ` +
+        `(${formatPoints(data.pointCount)} points)${plan ? ' and a floor plan' : ''}.`,
+      'Started a new path.',
+    ]
+    if (unread) notes.push(`${unread} file${unread === 1 ? '' : 's'} could not be read.`)
+    if (fallsOutsidePlan(data, plan)) {
+      notes.push('Some points fall outside the floor plan, so it may not be the right one.')
+    }
+    showNotice(notes.join(' '))
+  }
+
+  /**
+   * Imported coordinates are never clamped, so points recorded on a larger floor plan are
+   * simply clipped — leaving a blank canvas that reads as a failed import rather than as a
+   * mismatched plan. Worth saying out loud.
+   */
+  function fallsOutsidePlan(data: DataExport, plan: LoadedPlan | null) {
+    // Our own decode gives the dimensions now; p5 only reports them a tick later.
+    const state = get(drawingState)
+    const width = plan?.image.width ?? state.imageWidth
+    const height = plan?.image.height ?? state.imageHeight
+    if (!width || !height) return false
+    return data.paths.some((path) =>
+      path.points.some((p) => p.x < 0 || p.y < 0 || p.x > width || p.y > height)
+    )
+  }
+
+  /**
+   * An example video resets the whole workspace into a fresh session. A floor plan only
+   * erases paths in Speculate mode (see setImage in P5Wrapper), and recovery is exempt
+   * there: a restored session still waiting for its floor plan keeps its paths.
+   */
+  function loadErasesWork(next: PendingLoad) {
+    // A video example resets the whole workspace into a new session; an import replaces
+    // the paths itself, in either mode, rather than relying on setImage to clear them.
+    if (next.kind === 'videoExample' || next.kind === 'importData') return livePathIds.size > 0
+    return (
+      !$drawingConfig.isTranscriptionMode &&
+      livePathIds.size > 0 &&
+      $drawingState.imageElement !== null
+    )
+  }
+
+  function requestLoad(next: PendingLoad) {
+    if (loadErasesWork(next)) pendingLoad = next
+    else applyLoad(next)
+  }
+
+  function applyLoad(next: PendingLoad) {
+    if (next.kind === 'example') loadExampleData(next.id)
+    else if (next.kind === 'file') loadFloorPlanFile(next.file)
+    else if (next.kind === 'importData') {
+      loadImportedData(next.data, next.plan).catch(() =>
+        showNotice('Could not finish that import.')
+      )
+    } else if (next.kind === 'videoExample') {
+      loadVideoExample(next.example).catch(() => showNotice('Could not load that example video.'))
+    }
+  }
+
+  function confirmLoad() {
+    const next = pendingLoad
+    pendingLoad = null
+    if (next) applyLoad(next)
   }
 
   function handleSavePath(onComplete?: () => void) {
@@ -590,11 +752,22 @@
     p5Component.startNewPath()
   }
 
-  function handleModeSwitch() {
+  /**
+   * `fallbackPlan: false` is for callers that load their own floor plan straight after,
+   * so the blank grid is neither loaded nor announced.
+   */
+  function handleModeSwitch(isTranscriptionMode: boolean, { fallbackPlan = true } = {}) {
     void pin('Before mode switch')
     p5Component.clearDrawing()
     detachVideo()
     p5Component.startNewPath()
+    // Speculate needs a floor plan to draw on: without one, points collapse to the
+    // image origin and the session controls stay hidden. Start on a blank grid instead,
+    // and say so — a grid appearing unannounced reads as something the user did.
+    if (!isTranscriptionMode && fallbackPlan && !get(drawingState).imageElement) {
+      loadExampleData('grid', { checkpoint: null })
+      showNotice('Started on a blank grid. Load a floor plan or example from the Data panel.')
+    }
   }
 
   function handleNewPath() {
@@ -614,10 +787,10 @@
 
   function handleTryExample() {
     if ($drawingConfig.isTranscriptionMode) {
-      handleModeSwitch()
+      handleModeSwitch(false, { fallbackPlan: false })
       drawingConfig.update((c) => ({ ...c, isTranscriptionMode: false }))
     }
-    loadExampleData('classroom')
+    requestLoad({ kind: 'example', id: 'classroom' })
     closeWelcomeModal()
   }
 
@@ -655,16 +828,26 @@
       .catch((e) => console.warn('Could not keep example floor plan for autosave:', e))
   }
 
-  function loadExampleData(imageID: string) {
+  // Examples whose display name should not read as a file name.
+  const EXAMPLE_NAMES: Record<string, string> = { grid: 'Blank grid' }
+
+  function loadExampleData(
+    imageID: string,
+    options: { checkpoint?: string | null; name?: string } = {}
+  ) {
+    const {
+      checkpoint = 'Before loading example',
+      name = EXAMPLE_NAMES[imageID] ?? `${imageID}.png`,
+    } = options
     const filePath = `/examples/${imageID}.png`
     const image = new window.Image()
     image.src = filePath
     image.onload = () => {
-      void pin('Before loading example')
+      if (checkpoint) void pin(checkpoint)
       p5Component.setImage(image)
-      floorPlanName = `${imageID}.png`
+      floorPlanName = name
       floorPlanAsset = null
-      keepExampleFloorPlan(filePath, randomId(), floorPlanName)
+      keepExampleFloorPlan(filePath, randomId(), name)
     }
     image.onerror = (error) => {
       window.console.error(`Error loading example image from ${filePath}:`, error)
@@ -706,6 +889,8 @@
         onNewPath={handleNewPath}
         onExport={() => exportDialog.start()}
         onModeSwitch={handleModeSwitch}
+        hasPaths={livePathIds.size > 0}
+        hasVideo={videoName !== null}
       />
     {/snippet}
 
@@ -735,8 +920,10 @@
               <DataPanel
                 onImageUpload={handleImageUpload}
                 onVideoUpload={handleVideoUpload}
-                onSelectExample={loadExampleData}
-                onSelectVideoExample={loadVideoExample}
+                onZipUpload={handleZipUpload}
+                onLooseUpload={handleLooseUpload}
+                onSelectExample={(id) => requestLoad({ kind: 'example', id })}
+                onSelectVideoExample={(example) => requestLoad({ kind: 'videoExample', example })}
                 autosave={$autosaveStatus}
                 {reattachVideo}
               />
@@ -758,7 +945,7 @@
                     onRename={(id, name) => autosave.renameSession(id, name).then(refreshHistory)}
                     onDelete={(s) => (pendingDeleteSession = s)}
                     onExport={handleExportHistory}
-                    onImport={handleImportHistory}
+                    onImport={handleZipUpload}
                   />
                 {/snippet}
                 {#snippet historySection()}
@@ -800,6 +987,33 @@
   onConfirm={confirmDeletePath}
   onCancel={() => (pendingDeletePathId = null)}
   class="w-72"
+/>
+
+<ConfirmDialog
+  open={pendingLoad?.kind === 'videoExample'}
+  title="Load Example Video?"
+  message="This starts a new session and clears the current floor plan, video and recorded paths. Your current session is kept in the History panel, so you can switch back to it."
+  confirmLabel="Load Example"
+  onConfirm={confirmLoad}
+  onCancel={() => (pendingLoad = null)}
+/>
+
+<ConfirmDialog
+  open={pendingLoad?.kind === 'file' || pendingLoad?.kind === 'example'}
+  title="Replace Floor Plan?"
+  message="Loading a different floor plan will delete all recorded paths. A checkpoint is saved first, so you can restore them from History."
+  confirmLabel="Replace"
+  onConfirm={confirmLoad}
+  onCancel={() => (pendingLoad = null)}
+/>
+
+<ConfirmDialog
+  open={pendingLoad?.kind === 'importData'}
+  title="Replace this session's data?"
+  message="Importing replaces the floor plan and every recorded path in this session. A checkpoint is saved first, so you can restore them from History."
+  confirmLabel="Import"
+  onConfirm={confirmLoad}
+  onCancel={() => (pendingLoad = null)}
 />
 
 <ConfirmDialog

@@ -3,7 +3,7 @@ import { writable, get } from 'svelte/store'
 import type p5 from 'p5'
 import type { Point } from '../p5/types/sketch'
 import { drawingConfig } from '../stores/drawingConfig'
-import { holdTimes, shouldKeepPoint } from '../timing/sampling'
+import { holdTimes, shouldKeepPoint, type TimedPoint } from '../timing/sampling'
 import {
   speculateClock,
   syncSpeculateClock,
@@ -257,6 +257,36 @@ export function createNewPath(color: string, startTime = 0) {
           pathId: newPathId,
         },
       ],
+    }
+  })
+}
+
+/**
+ * Replace every path with imported ones, to be traced over rather than appended to.
+ * Ids continue from lastPathId so a deleted path's id is never reissued, and each point
+ * carries its path's id because the id is stored per point (see encodeChunk).
+ */
+export function replacePathsWithImported(
+  imported: readonly { name: string; points: readonly TimedPoint[] }[]
+) {
+  invalidateSpeculateClock()
+  drawingState.update((state) => {
+    let nextId = nextPathId(state)
+    const paths = imported.map((path, index) => {
+      const pathId = nextId++
+      return {
+        pathId,
+        color: PATH_COLORS[index % PATH_COLORS.length],
+        name: path.name.trim() || undefined,
+        points: path.points.map((p) => freezePoint({ x: p.x, y: p.y, time: p.time, pathId })),
+      }
+    })
+    return {
+      ...state,
+      ...STOPPED_TRACKING,
+      paths,
+      currentPathId: paths.at(-1)?.pathId ?? state.currentPathId,
+      lastPathId: Math.max(state.lastPathId, ...paths.map((p) => p.pathId)),
     }
   })
 }

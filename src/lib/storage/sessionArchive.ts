@@ -1,5 +1,5 @@
-import { strFromU8, strToU8, unzip, type AsyncZippable, type Unzipped } from 'fflate'
-import { zipBlob } from '$lib/utils/zip'
+import { strFromU8, strToU8, type AsyncZippable, type Unzipped } from 'fflate'
+import { unzipAsync, zipBlob } from '$lib/utils/zip'
 import { CHUNK_STRIDE, chunkLength, type ChunkRecord } from './chunks'
 import {
   isValidManifest,
@@ -33,11 +33,6 @@ interface ArchiveManifest {
 }
 
 export class ArchiveError extends Error {}
-
-const unzipAsync = (data: Uint8Array) =>
-  new Promise<Unzipped>((resolve, reject) =>
-    unzip(data, (err, files) => (err ? reject(err) : resolve(files)))
-  )
 
 async function blobBytes(blob: Blob) {
   return new Uint8Array(await blob.arrayBuffer())
@@ -81,10 +76,11 @@ function fail(message: string): never {
   throw new ArchiveError(message)
 }
 
-export async function unpackSession(file: Blob): Promise<SessionBundle> {
+/** Takes raw bytes as well as a Blob, so a caller that already read the file can reuse them. */
+export async function unpackSession(source: Blob | Uint8Array): Promise<SessionBundle> {
   let files: Unzipped
   try {
-    files = await unzipAsync(await blobBytes(file))
+    files = await unzipAsync(source instanceof Uint8Array ? source : await blobBytes(source))
   } catch {
     fail('This file is not a Mondrian session archive.')
   }
