@@ -8,6 +8,7 @@
     drawingConfig,
     getSplitPositionForMode,
     hasLeftColumn,
+    rotateFloorPlan,
     SPACE_TIME_SPLIT_RANGE,
     SPLIT_POSITION_RANGE,
     videoHeightPercent,
@@ -48,6 +49,8 @@
   import IconInfo from '~icons/material-symbols/info-outline'
   import IconVideoOff from '~icons/material-symbols/videocam-off-outline'
   import IconUpload from '~icons/material-symbols/upload'
+  import IconRotateLeft from '~icons/material-symbols/rotate-left'
+  import IconRotateRight from '~icons/material-symbols/rotate-right'
   import { isShortcutEvent } from '$lib/utils/keyboard'
   import { hasRecordedData } from '$lib/stores/sessionRecovery'
   import { clamp } from '$lib/utils/math'
@@ -640,6 +643,33 @@
         ></div>
       </button>
     {/if}
+  {/if}
+
+  <!-- data-ui-element is load-bearing: without it, isOverUi lets a click through and
+       pressing these buttons would start a trace. -->
+  {#if $drawingState.imageElement}
+    <div class="absolute top-4 right-4 join shadow-md" data-ui-element>
+      <button
+        class="btn btn-sm btn-square join-item"
+        onclick={() => rotateFloorPlan('ccw')}
+        aria-label="Rotate floor plan counterclockwise"
+        title={$drawingState.shouldTrackMouse
+          ? 'Stop recording to rotate'
+          : 'Rotate counterclockwise'}
+        disabled={$drawingState.shouldTrackMouse}
+      >
+        <IconRotateLeft class="w-4 h-4" />
+      </button>
+      <button
+        class="btn btn-sm btn-square join-item"
+        onclick={() => rotateFloorPlan('cw')}
+        aria-label="Rotate floor plan clockwise"
+        title={$drawingState.shouldTrackMouse ? 'Stop recording to rotate' : 'Rotate clockwise'}
+        disabled={$drawingState.shouldTrackMouse}
+      >
+        <IconRotateRight class="w-4 h-4" />
+      </button>
+    </div>
   {/if}
 
   {#if source}
