@@ -34,14 +34,19 @@
 <div class="flex flex-col gap-6 px-3 py-4">
   <PanelSection title="Getting Started">
     <p class="text-sm text-base-content/70">
+      Select a mode in the top bar.
+      <span class="font-medium text-base-content">Transcription</span> traces over a floor plan
+      alongside a video, which timestamps each point to playback.
+      <span class="font-medium text-base-content">Speculate</span> traces over a floor plan only,
+      and keeps its own time as you draw.
       {#if $viewPrefs.recordingMode === 'hold'}
-        Hold the mouse, pen or finger down on the floor plan to trace; let go to pause.
+        Hold down on the floor plan to trace, let go to pause.
       {:else}
-        Click the floor plan to start tracing, click again to pause.
+        Click the floor plan to trace, click again to pause.
       {/if}
-      Change this under Settings, Recording.
+      One path per person, added under Paths.
     </p>
-    <button class="btn btn-sm btn-outline" onclick={onOpenWelcome}>
+    <button class="btn btn-sm btn-outline self-start" onclick={onOpenWelcome}>
       <IconHelp class="w-4 h-4" />
       Welcome Guide
     </button>
