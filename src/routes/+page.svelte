@@ -752,15 +752,21 @@
     p5Component.startNewPath()
   }
 
-  function handleModeSwitch(isTranscriptionMode: boolean) {
+  /**
+   * `fallbackPlan: false` is for callers that load their own floor plan straight after,
+   * so the blank grid is neither loaded nor announced.
+   */
+  function handleModeSwitch(isTranscriptionMode: boolean, { fallbackPlan = true } = {}) {
     void pin('Before mode switch')
     p5Component.clearDrawing()
     detachVideo()
     p5Component.startNewPath()
     // Speculate needs a floor plan to draw on: without one, points collapse to the
-    // image origin and the session controls stay hidden. Start on a blank grid instead.
-    if (!isTranscriptionMode && !get(drawingState).imageElement) {
+    // image origin and the session controls stay hidden. Start on a blank grid instead,
+    // and say so — a grid appearing unannounced reads as something the user did.
+    if (!isTranscriptionMode && fallbackPlan && !get(drawingState).imageElement) {
       loadExampleData('grid', { checkpoint: null })
+      showNotice('Started on a blank grid. Load a floor plan or example from the Data panel.')
     }
   }
 
@@ -781,7 +787,7 @@
 
   function handleTryExample() {
     if ($drawingConfig.isTranscriptionMode) {
-      handleModeSwitch(false)
+      handleModeSwitch(false, { fallbackPlan: false })
       drawingConfig.update((c) => ({ ...c, isTranscriptionMode: false }))
     }
     requestLoad({ kind: 'example', id: 'classroom' })
