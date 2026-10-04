@@ -10,7 +10,8 @@
   import { formatBytes } from '$lib/utils/format'
   import { formatDuration } from '$lib/utils/time'
   import SegmentedControl from '$lib/components/SegmentedControl.svelte'
-  import { groupVideoExamples, type VideoExample } from '$lib/examples/videoExamples'
+  import PanelSection from './PanelSection.svelte'
+  import { VIDEO_EXAMPLES, type VideoExample } from '$lib/examples/videoExamples'
 
   let {
     onImageUpload,
@@ -39,8 +40,6 @@
     { id: 'classroom', label: 'Classroom' },
     { id: 'museum', label: 'Museum Gallery' },
   ]
-
-  const videoExampleGroups = groupVideoExamples()
 
   // The two reasons to bring files in: setting up something to trace, or reopening work
   // that already exists. Kept local rather than in viewPrefs — this component stays
@@ -202,39 +201,40 @@
         </label>
       {/if}
     </div>
-    <!-- Examples belong here: loading one is the same job as uploading a floor plan. -->
-    {#if !$drawingConfig.isTranscriptionMode}
-      <p class="text-xs text-base-content/50">Or start from an example floor plan:</p>
-      <ul class="menu w-full p-0">
-        {#each examples as example (example.id)}
-          <li>
-            <button onclick={() => onSelectExample(example.id)}>{example.label}</button>
-          </li>
-        {/each}
-      </ul>
-    {:else}
-      <p class="text-xs text-base-content/50">
-        Or trace an example video from scratch. Opens as a new session.
-      </p>
-      <ul class="menu w-full p-0" data-testid="video-examples">
-        {#each videoExampleGroups as { group, items } (group)}
-          <li class="menu-title px-2 pt-2 pb-1 text-xs">{group}</li>
-          {#each items as example (example.id)}
-            <li>
-              <button
-                class="flex justify-between gap-2"
-                onclick={() => onSelectVideoExample(example)}
-              >
-                <span>{example.title}</span>
-                <span class="text-xs text-base-content/50 tabular-nums shrink-0"
-                  >{example.duration}</span
+    <!-- Examples belong on this tab: loading one is the same job as uploading a floor plan,
+         but they get their own heading and rule so the two routes read as separate. -->
+    <div class="border-t border-base-300 pt-3">
+      <PanelSection
+        title={$drawingConfig.isTranscriptionMode ? 'Example videos' : 'Example floor plans'}
+      >
+        {#if !$drawingConfig.isTranscriptionMode}
+          <ul class="menu w-full p-0">
+            {#each examples as example (example.id)}
+              <li>
+                <button onclick={() => onSelectExample(example.id)}>{example.label}</button>
+              </li>
+            {/each}
+          </ul>
+        {:else}
+          <p class="text-xs text-base-content/50">Trace from an example floor plan and video.</p>
+          <ul class="menu w-full p-0" data-testid="video-examples">
+            {#each VIDEO_EXAMPLES as example (example.id)}
+              <li>
+                <button
+                  class="flex justify-between gap-2"
+                  onclick={() => onSelectVideoExample(example)}
                 >
-              </button>
-            </li>
-          {/each}
-        {/each}
-      </ul>
-    {/if}
+                  <span>{example.title}</span>
+                  <span class="text-xs text-base-content/50 tabular-nums shrink-0"
+                    >{example.duration}</span
+                  >
+                </button>
+              </li>
+            {/each}
+          </ul>
+        {/if}
+      </PanelSection>
+    </div>
   {:else}
     <label class="btn btn-sm btn-outline">
       <IconFolderZip class="w-4 h-4" />
