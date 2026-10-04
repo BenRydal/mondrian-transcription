@@ -9,7 +9,7 @@
   import type { VideoMeta } from '$lib/storage/sessionDb'
   import { formatBytes } from '$lib/utils/format'
   import { formatDuration } from '$lib/utils/time'
-  import PanelSection from './PanelSection.svelte'
+  import SegmentedControl from '$lib/components/SegmentedControl.svelte'
   import { groupVideoExamples, type VideoExample } from '$lib/examples/videoExamples'
 
   let {
@@ -41,6 +41,23 @@
   ]
 
   const videoExampleGroups = groupVideoExamples()
+
+  // The two reasons to bring files in: setting up something to trace, or reopening work
+  // that already exists. Kept local rather than in viewPrefs — this component stays
+  // mounted while the panel is closed, so the choice already survives closing and
+  // reopening, and only resets after visiting another panel.
+  type DataTab = 'new' | 'existing'
+  const tabs: { value: DataTab; label: string }[] = [
+    { value: 'new', label: 'New recording' },
+    { value: 'existing', label: 'Open existing' },
+  ]
+  let tab = $state<DataTab>('new')
+
+  // A session restored without its video force-opens this panel to ask for it, and the
+  // Video button it names lives on the first tab. Switching away again is still allowed.
+  $effect(() => {
+    if (reattachVideo) tab = 'new'
+  })
 
   let isDraggingFile = $state(false)
 
@@ -117,31 +134,60 @@
   }
 </script>
 
-<div class="flex flex-col gap-6 px-3 py-4">
-  <PanelSection title="Upload">
-    <div
-      class="border-2 border-dashed rounded-lg p-4 text-center transition-colors {isDraggingFile
-        ? 'border-primary bg-primary/5'
-        : 'border-base-300'}"
-      ondragover={(e) => {
-        e.preventDefault()
-        isDraggingFile = true
-      }}
-      ondragleave={(e) => {
-        e.preventDefault()
-        isDraggingFile = false
-      }}
-      ondrop={handleDrop}
-      role="region"
-      aria-label="Drop files to upload"
-    >
-      <IconUpload class="w-8 h-8 mx-auto mb-2 text-base-content/40" />
-      <p class="text-sm text-base-content/70">Drag & drop files here</p>
-      <p class="text-xs text-base-content/50">
-        A floor plan{$drawingConfig.isTranscriptionMode ? ', a video' : ''}, path CSVs, or an
-        exported ZIP
-      </p>
+<div class="flex flex-col gap-4 px-3 py-4">
+  <SegmentedControl
+    options={tabs}
+    value={tab}
+    onSelect={(next) => (tab = next)}
+    label="What to bring in"
+    class="w-full"
+    itemClass="flex-1"
+  />
+
+  <!-- One target for both tabs: routeFiles dispatches on the file, not on the tab, so a
+       ZIP dropped while setting up still works rather than being refused. -->
+  <div
+    class="border-2 border-dashed rounded-lg p-4 text-center transition-colors {isDraggingFile
+      ? 'border-primary bg-primary/5'
+      : 'border-base-300'}"
+    ondragover={(e) => {
+      e.preventDefault()
+      isDraggingFile = true
+    }}
+    ondragleave={(e) => {
+      e.preventDefault()
+      isDraggingFile = false
+    }}
+    ondrop={handleDrop}
+    role="region"
+    aria-label="Drop files to upload"
+  >
+    <IconUpload class="w-8 h-8 mx-auto mb-2 text-base-content/40" />
+    <p class="text-sm text-base-content/70">Drag & drop files here</p>
+    <p class="text-xs text-base-content/50">
+      Floor plan{$drawingConfig.isTranscriptionMode ? ', video' : ''}, path CSVs, or an exported ZIP
+    </p>
+  </div>
+
+  {#if autosave.videoStatus === 'needs-reattach' && !reattachVideo}
+    <p class="text-xs text-base-content/50">
+      The video is too large to keep in the browser; you'll re-attach it after a reload.
+    </p>
+  {/if}
+  {#if reattachVideo}
+    <div class="alert alert-info text-sm py-2" data-testid="reattach-prompt">
+      <IconInfo class="h-5 w-5 shrink-0" />
+      <span>
+        Re-attach the video with the Video button:
+        <span class="font-medium">{reattachVideo.name}</span>
+        ({formatBytes(reattachVideo.size)}{reattachVideo.duration
+          ? `, ${formatDuration(reattachVideo.duration)}`
+          : ''})
+      </span>
     </div>
+  {/if}
+
+  {#if tab === 'new'}
     <div class="flex gap-2">
       <label class="btn btn-sm btn-outline flex-1">
         <IconImage class="w-4 h-4" />
@@ -156,41 +202,9 @@
         </label>
       {/if}
     </div>
-    <label class="btn btn-sm btn-outline">
-      <IconFolderZip class="w-4 h-4" />
-      Import data
-      <input
-        type="file"
-        class="hidden"
-        multiple
-        accept=".zip,application/zip,.csv,text/csv,image/*"
-        onchange={handleFileUpload}
-      />
-    </label>
-    <p class="text-xs text-base-content/50">
-      An exported ZIP, or path CSVs with an optional floor plan image.
-    </p>
-    {#if autosave.videoStatus === 'needs-reattach' && !reattachVideo}
-      <p class="text-xs text-base-content/50">
-        The video is too large to keep in the browser; you'll re-attach it after a reload.
-      </p>
-    {/if}
-    {#if reattachVideo}
-      <div class="alert alert-info text-sm py-2" data-testid="reattach-prompt">
-        <IconInfo class="h-5 w-5 shrink-0" />
-        <span>
-          Re-attach the video with the Video button:
-          <span class="font-medium">{reattachVideo.name}</span>
-          ({formatBytes(reattachVideo.size)}{reattachVideo.duration
-            ? `, ${formatDuration(reattachVideo.duration)}`
-            : ''})
-        </span>
-      </div>
-    {/if}
-  </PanelSection>
-
-  {#if !$drawingConfig.isTranscriptionMode}
-    <PanelSection title="Example Data">
+    <!-- Examples belong here: loading one is the same job as uploading a floor plan. -->
+    {#if !$drawingConfig.isTranscriptionMode}
+      <p class="text-xs text-base-content/50">Or start from an example floor plan:</p>
       <ul class="menu w-full p-0">
         {#each examples as example (example.id)}
           <li>
@@ -198,11 +212,9 @@
           </li>
         {/each}
       </ul>
-    </PanelSection>
-  {:else}
-    <PanelSection title="Example Videos">
+    {:else}
       <p class="text-xs text-base-content/50">
-        A floor plan and YouTube video to trace from scratch. Opens as a new session.
+        Or trace an example video from scratch. Opens as a new session.
       </p>
       <ul class="menu w-full p-0" data-testid="video-examples">
         {#each videoExampleGroups as { group, items } (group)}
@@ -222,6 +234,22 @@
           {/each}
         {/each}
       </ul>
-    </PanelSection>
+    {/if}
+  {:else}
+    <label class="btn btn-sm btn-outline">
+      <IconFolderZip class="w-4 h-4" />
+      Import paths & floor plan
+      <input
+        type="file"
+        class="hidden"
+        multiple
+        accept=".zip,application/zip,.csv,text/csv,image/*"
+        onchange={handleFileUpload}
+      />
+    </label>
+    <p class="text-xs text-base-content/50">
+      A previous export: a ZIP, or path CSVs with an optional floor plan image. Replaces the floor
+      plan and paths in this session.
+    </p>
   {/if}
 </div>

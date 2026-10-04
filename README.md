@@ -79,7 +79,7 @@ Mondrian saves your work in the browser (IndexedDB) while you draw, so a crash o
 
 The **History** panel holds:
 
-- **Session** — switch between sessions, rename or delete them, and export a session's full history as a ZIP to move it to another browser or computer. **Import ZIP** accepts either kind of export, the same as the Data panel.
+- **Session** — switch between sessions, rename or delete them, and export a session's full history as a ZIP to move it to another browser or computer. **Import session** accepts either kind of export, as does the Data panel.
 - **Versions & checkpoints** — autosaved versions plus checkpoints you create yourself (`Ctrl/⌘ S`). Mondrian also saves a checkpoint before risky actions such as Clear All or restoring an older version. You can restore a whole version, or restore a single path either in place or as a new path.
 
 Only one tab can edit a session at a time. If you open Mondrian in a second tab, that tab pauses so it can't overwrite your work. Close the first tab and the second one continues with its latest work, or choose **Start a new session here** to work on something else in parallel.
@@ -116,7 +116,7 @@ In Speculate mode, export asks how long the session should be. Keep the default 
 
 ### Importing
 
-Drop an export back onto the **Data** panel, or use **Import data**. Mondrian works out which kind it is: a session archive opens as a new session, and a data export replaces the floor plan and paths in the session you are in. Either way a checkpoint is saved first, so you can undo it from History.
+Drop an export back onto the **Data** panel, or switch that panel to **Open existing** and use **Import paths & floor plan**. Mondrian works out which kind it is: a session archive opens as a new session, and a data export replaces the floor plan and paths in the session you are in. Either way a checkpoint is saved first, so you can undo it from History.
 
 You can also pick the files directly instead of a ZIP — any number of CSVs, plus one image for the floor plan.
 
