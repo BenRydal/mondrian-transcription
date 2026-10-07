@@ -4,8 +4,16 @@
   import IconKeyboard from '~icons/material-symbols/keyboard'
   import IconUpload from '~icons/material-symbols/upload'
   import IconDownload from '~icons/material-symbols/download'
-  import IconShield from '~icons/material-symbols/shield-outline'
   import IconScience from '~icons/material-symbols/science'
+  // Same mark the History panel and the recovery modal use.
+  import IconHistory from '~icons/material-symbols/history'
+  import IconShieldLock from '~icons/material-symbols/shield-lock-outline'
+  import IconCite from '~icons/material-symbols/school-outline'
+  // material-symbols has no brand marks, so the GitHub logo comes from mdi.
+  import IconGithub from '~icons/mdi/github'
+
+  const CITATION =
+    'Shapiro, B. R., Silvis, D., & Hall, R. (2025). Visualization as theory and experience: interactive qualitative data visualization for the learning sciences. Journal of the Learning Sciences, 34(5), 840–871.'
 
   export let onClose: () => void
   export let onTryExample: (() => void) | undefined = undefined
@@ -94,14 +102,12 @@
           </div>
         </div>
 
-        <!-- Privacy note -->
+        <!-- Auto-backup note. The privacy claim itself lives in the footer. -->
         <div
           class="flex items-center gap-2 text-sm text-green-700 mt-5 pt-4 border-t border-base-200"
         >
-          <IconShield class="w-5 h-5 flex-shrink-0" />
-          <span
-            >All data stays in your browser. Auto-backup saves your work locally in case of errors.</span
-          >
+          <IconHistory class="w-5 h-5 flex-shrink-0" />
+          <span>Auto-backup saves your work locally in case of errors.</span>
         </div>
 
         <!-- Footer actions -->
@@ -129,21 +135,42 @@
     </div>
 
     <!-- Footer -->
-    <div
-      class="border-t border-base-300 bg-base-200/50 px-4 py-3 text-sm text-base-content/50 flex flex-wrap items-center justify-center gap-x-3 gap-y-1"
-    >
-      <a
-        href="https://github.com/BenRydal/mondrian-transcription"
-        class="hover:underline"
-        target="_blank">Open source (GPL v3)</a
-      >
-      <span>·</span>
-      <a
-        href="https://doi.org/10.1080/10508406.2025.2537945"
-        target="_blank"
-        class="text-primary hover:underline"
-        >Shapiro, Silvis, & Hall (2025). <em>Visualization as Theory and Experience</em></a
-      >
+    <div class="border-t border-base-300 bg-base-200/50 px-4 py-3 text-sm text-base-content/50">
+      <div class="flex flex-wrap items-center justify-center gap-x-4 gap-y-2">
+        <!-- Same green as the auto-backup note above, on both icon and text. -->
+        <span
+          class="flex items-center gap-1.5 text-green-700"
+          title="Your data never leaves your device"
+        >
+          <IconShieldLock class="text-base" /> 100% private, runs in your browser
+        </span>
+        <span aria-hidden="true">•</span>
+        <a
+          href="https://github.com/BenRydal/mondrian-transcription"
+          target="_blank"
+          title="GPL v3"
+          class="flex items-center gap-1.5 hover:underline"
+        >
+          <IconGithub class="text-base" /> Open source
+        </a>
+        <span aria-hidden="true">•</span>
+        <a
+          href="https://doi.org/10.1080/10508406.2025.2537945"
+          target="_blank"
+          title={CITATION}
+          class="flex items-center gap-1.5 hover:underline"
+        >
+          <IconCite class="text-base" /> Cite
+        </a>
+      </div>
+      <p class="text-center text-base-content/70 mt-3">
+        Designed by
+        <a href="https://www.benrydal.com" target="_blank" class="hover:underline"
+          >Ben Rydal Shapiro</a
+        >
+        and
+        <a href="https://www.edwinzhao.com" target="_blank" class="hover:underline">Edwin Zhao</a>
+      </p>
     </div>
   </div>
 
